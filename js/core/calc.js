@@ -53,7 +53,8 @@ COF.Calc = (function () {
     (p.voies || []).forEach(function (v) {
       var def = voieDef(p, v.key);
       if (!def) return;
-      for (var r = 1; r <= (v.rang || 0); r++) {
+      var base = rangsDe(def)[0];         // 1 en général, 4 (ou 3) en prestige
+      for (var r = base; r <= (v.rang || 0); r++) {
         var c = def.caps.filter(function (x) { return x.r === r; })[0];
         if (c) out.push({ cap: c, voie: def, voieKey: v.key, rang: v.rang });
       }
@@ -61,7 +62,12 @@ COF.Calc = (function () {
     return out;
   }
 
-  /* Résout une clé de voie : "profil.brute" | "peuple.humain" | "mage" */
+  /* Résout une clé de voie :
+       "peuple.humain"          voie de peuple
+       "mage"                   voie du mage
+       "profil.brute"           voie du profil principal
+       "hyb.guerrier.combat"    voie d'un autre profil (profil hybride)
+       "prestige.colosse"       voie de prestige                        */
   function voieDef(p, key) {
     if (key === 'mage') return COF.VOIE_MAGE;
     var parts = key.split('.');
@@ -69,9 +75,37 @@ COF.Calc = (function () {
       var pe = COF.PEUPLES[parts[1]];
       return pe && pe.voie ? pe.voie : null;
     }
+    if (parts[0] === 'prestige') {
+      return (COF.PRESTIGE && COF.PRESTIGE[parts[1]]) || null;
+    }
+    if (parts[0] === 'hyb') {
+      var pro = COF.PROFILS[parts[1]];
+      if (!pro) return null;
+      var v = pro.voies.filter(function (x) { return x.id === parts[2]; })[0];
+      if (!v) return null;
+      return { id: v.id, nom: v.nom + ' (' + pro.nom + ')', caps: v.caps, profil: pro.id };
+    }
     var pr = profil(p);
     if (!pr) return null;
     return pr.voies.filter(function (v) { return v.id === parts[1]; })[0] || null;
+  }
+
+  function estPrestige(key) { return key.indexOf('prestige.') === 0; }
+
+  /* Rangs disponibles dans une voie (1-5, ou 4-8 / 3-7 en prestige) */
+  function rangsDe(voie) {
+    return voie.caps.map(function (c) { return c.r; }).sort(function (a, b) { return a - b; });
+  }
+
+  /* Niveau requis pour un rang donné, selon le type de voie */
+  function niveauRequis(key, rang) {
+    if (estPrestige(key)) return COF.RULES.prestigeNiveau[rang] || 99;
+    return COF.RULES.rangNiveau[rang] || 99;
+  }
+
+  /* Voie de prestige actuellement choisie (une seule par carrière) */
+  function prestigeActive(p) {
+    return (p.voies || []).filter(function (v) { return estPrestige(v.key); })[0] || null;
   }
 
   function sorts(p) {
@@ -115,22 +149,24 @@ COF.Calc = (function () {
     };
   }
 
-  /* Points de capacité : 2 par niveau après le 1er, + les 3 voies gratuites du niveau 1 */
+  /* Points de capacité : 2 par niveau après le 1er.
+     Trois rangs 1 sont gratuits à la création (2 voies de profil + la voie de peuple). */
   function pointsCapacite(p) {
     var n = p.niveau || 1;
     var f = famille(p);
     var dispo = 2 * (n - 1);
+    if (f && f.id === 'mage') dispo += 1;   // capacité de rang 2 offerte aux mages
+    var gratuits = 3;
     var depense = 0;
     (p.voies || []).forEach(function (v) {
-      var estPeuple = v.key.indexOf('peuple.') === 0 || v.key === 'mage';
-      for (var r = 1; r <= (v.rang || 0); r++) {
-        // les 2 rangs 1 de profil et le rang 1 de peuple sont gratuits à la création
-        if (r === 1) continue;
+      var def = voieDef(p, v.key);
+      if (!def) return;
+      var base = rangsDe(def)[0];
+      for (var r = base; r <= (v.rang || 0); r++) {
+        if (r === 1 && gratuits > 0) { gratuits--; continue; }
         depense += COF.RULES.rangCout[r] || 2;
       }
     });
-    // capacité de rang 2 offerte aux mages
-    if (f && f.id === 'mage') dispo += 1;
     return { dispo: dispo, depense: depense, reste: dispo - depense };
   }
 
@@ -150,9 +186,7 @@ COF.Calc = (function () {
 
   /* Vérifie si un rang peut être acquis */
   function peutAcquerir(p, key, rang) {
-    var niv = p.niveau || 1;
-    var requis = COF.RULES.rangNiveau[rang] || 99;
-    return niv >= requis;
+    return (p.niveau || 1) >= niveauRequis(key, rang);
   }
 
   function rangDe(p, key) {
@@ -167,6 +201,8 @@ COF.Calc = (function () {
     def: def, init: init, attaques: attaques, deEvo: deEvo, ctx: ctx,
     capacites: capacites, sorts: sorts, voieDef: voieDef,
     competences: competences, pointsCapacite: pointsCapacite,
-    peutAcquerir: peutAcquerir, rangDe: rangDe, nivAttaque: nivAttaque
+    peutAcquerir: peutAcquerir, rangDe: rangDe, nivAttaque: nivAttaque,
+    estPrestige: estPrestige, rangsDe: rangsDe, niveauRequis: niveauRequis,
+    prestigeActive: prestigeActive
   };
 })();

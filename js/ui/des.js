@@ -113,8 +113,8 @@ COF.UI.Plus = (function () {
       '<div class="s">Oracle oui/non, tables d\'événements, générateur de donjons et de PNJ</div></div></div>' +
       '<div class="ligne"><div class="info"><div class="t">🗺️ Objets magiques & trésors</div>' +
       '<div class="s">Tables de trésor et catalogue d\'objets</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">⚔️ Voies de prestige</div>' +
-      '<div class="s">Les voies génériques et par famille, du rang 4 au rang 8</div></div></div>' +
+      '<div class="ligne"><div class="info"><div class="t">🐺 Compagnons</div>' +
+      '<div class="s">Loup, familier, golem, monture : fiches liées au personnage</div></div></div>' +
       '</div></div>';
 
     $('#plus-contenu').innerHTML = h;
