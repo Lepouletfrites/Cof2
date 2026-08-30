@@ -221,8 +221,8 @@ COF.UI.Voies = (function () {
           ((COF.RULES.rangCout[c.r] || 2) > 1 ? 's' : '') + ')</button>';
         else h += '<span class="note">Niveau ' + COF.Calc.niveauRequis(key, c.r) + ' requis</span>';
       }
-      if (c.dmg && acquise) h += '<button class="btn btn-sm" data-vact="dmg" data-k="' + key +
-        '" data-r="' + c.r + '">🎲 ' + esc(c.dmg) + '</button>';
+      if (c.dmg && acquise) h += '<button class="btn btn-sm" data-vact="attaquer" data-k="' + key +
+        '" data-r="' + c.r + '">Attaquer</button>';
       h += '</div></div>';
     });
     h += '</div></div>';
@@ -257,12 +257,9 @@ COF.UI.Voies = (function () {
         if (v.rang < base) C.voies = C.voies.filter(function (x) { return x.key !== key; });
       }
       sauver(); rendre();
-    } else if (act === 'dmg') {
+    } else if (act === 'attaquer') {
       var cap = def.caps.filter(function (x) { return x.r === +node.getAttribute('data-r'); })[0];
-      COF.UI.jet({
-        titre: cap.n, sousTitre: def.nom + ' · rang ' + cap.r,
-        dmg: cap.dmg, sansD20: true, ctx: COF.Calc.ctx(C, v ? v.rang : cap.r)
-      });
+      COF.UI.jetCapacite(cap, def.nom, v ? v.rang : cap.r);
     }
   }
 

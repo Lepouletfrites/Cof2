@@ -80,16 +80,28 @@ COF.UI = COF.UI || {};
        ctx        : contexte pour les formules
        type       : 'attaque' | 'carac' | 'libre' | 'soins'
        sansD20    : true pour ne lancer que les dommages
+       attaqueTypes : [{id,label,mod}, ...] pour choisir contact/distance/magique
+       attaqueDefaut: id du type actif par défaut (sinon le premier)
      }
      ============================================================ */
   function jet(cfg) {
     cfg = cfg || {};
-    var etat = { bonus: false, malus: false, mod: cfg.mod || 0, diff: cfg.difficulte || null };
+    var defautAtt = cfg.attaqueTypes &&
+      (cfg.attaqueTypes.filter(function (t) { return t.id === cfg.attaqueDefaut; })[0] || cfg.attaqueTypes[0]);
+    var modInitial = defautAtt ? defautAtt.mod : (cfg.mod || 0);
+    var etat = { bonus: false, malus: false, mod: modInitial, diff: cfg.difficulte || null };
 
     var html = '';
     html += '<div class="note" style="margin-bottom:12px">' + esc(cfg.sousTitre || '') + '</div>';
 
     if (!cfg.sansD20) {
+      if (cfg.attaqueTypes) {
+        html += '<div class="chips" style="margin-bottom:10px">' +
+          cfg.attaqueTypes.map(function (t) {
+            return '<span class="chip' + (t === defautAtt ? ' on' : '') + '" data-att="' + t.id + '" data-v="' + t.mod + '">' +
+              esc(t.label) + ' ' + sgn(t.mod) + '</span>';
+          }).join('') + '</div>';
+      }
       html += '<div class="options">' +
         '<div class="opt" data-o="bonus">🎲 Dé bonus</div>' +
         '<div class="opt" data-o="malus">💀 Dé malus</div>' +
@@ -106,6 +118,9 @@ COF.UI = COF.UI || {};
         '<label style="margin-left:auto">Difficulté / DEF</label><input type="number" id="j-diff" value="' + (etat.diff === null ? '' : etat.diff) + '" placeholder="—">' +
         '</div>';
       html += '<button class="btn btn-plein btn-bloc" id="j-lancer">Lancer le d20</button>';
+      if (cfg.dmg) {
+        html += '<button class="btn btn-bloc" id="j-dmg-skip" style="margin-top:8px">Dégâts seuls (sans test d\'attaque)</button>';
+      }
     } else {
       html += '<button class="btn btn-plein btn-bloc" id="j-dmg-direct">Lancer ' + esc(cfg.dmg) + '</button>';
     }
@@ -120,6 +135,14 @@ COF.UI = COF.UI || {};
           $$('.opt', root).forEach(function (x) {
             x.classList.toggle('on', etat[x.getAttribute('data-o')]);
           });
+        });
+      });
+
+      $$('[data-att]', root).forEach(function (ch) {
+        ch.addEventListener('click', function () {
+          $$('[data-att]', root).forEach(function (x) { x.classList.remove('on'); });
+          ch.classList.add('on');
+          $('#j-mod', root).value = ch.getAttribute('data-v');
         });
       });
 
@@ -145,9 +168,36 @@ COF.UI = COF.UI || {};
       if (bd) bd.addEventListener('click', function () {
         afficherDmg(cfg, false, root, true);
       });
+
+      var skip = $('#j-dmg-skip', root);
+      if (skip) skip.addEventListener('click', function () {
+        afficherDmg(cfg, false, root, true);
+      });
     });
   }
   COF.UI.jet = jet;
+
+  /* Ouvre un jet d'attaque générique (contact/distance/magique) pour une
+     capacité de combat (voie de profil, prestige ou hybride). Ne gère
+     aucun coût en PM : réservé aux capacités qui ne sont pas des sorts. */
+  function jetCapacite(cap, voieNom, rangCourant) {
+    var C = COF.Store.actif();
+    var K = COF.Calc;
+    var a = K.attaques(C);
+    var types = [
+      { id: 'contact', label: 'Contact', mod: a.contact },
+      { id: 'distance', label: 'Distance', mod: a.distance },
+      { id: 'magique', label: 'Magique', mod: a.magique }
+    ];
+    jet({
+      titre: cap.n,
+      sousTitre: voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : ''),
+      attaqueTypes: types, attaqueDefaut: cap.s ? 'magique' : 'contact',
+      dmg: cap.dmg || null, dmgLabel: 'Dommages',
+      ctx: K.ctx(C, rangCourant), type: 'attaque'
+    });
+  }
+  COF.UI.jetCapacite = jetCapacite;
 
   function lancerTest(cfg, etat, root) {
     vibre(12);

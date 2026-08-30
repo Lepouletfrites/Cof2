@@ -223,7 +223,7 @@ COF.UI.Fiche = (function () {
             '<div class="t">' + c.r + '. ' + esc(c.n) + ' ' + pucesCap(c) + '</div>' +
             '<div class="s">' + esc(c.d.length > 90 ? c.d.slice(0, 90) + '…' : c.d) + '</div></div>' +
             '<div class="actions">' +
-            (c.dmg ? '<button class="btn btn-or btn-sm" data-act="cap-dmg" data-v="' + x.voieKey + '" data-r="' + c.r + '">' + esc(c.dmg) + '</button>' : '') +
+            (c.dmg ? '<button class="btn btn-or btn-sm" data-act="cap-attaquer" data-v="' + x.voieKey + '" data-r="' + c.r + '">Attaquer</button>' : '') +
             '<button class="btn btn-sm" data-act="cap-info" data-v="' + x.voieKey + '" data-r="' + c.r + '">?</button>' +
             '</div></div>';
         });
@@ -385,13 +385,10 @@ COF.UI.Fiche = (function () {
         lancerSort(x);
         break;
       }
-      case 'cap-dmg': {
+      case 'cap-attaquer': {
         var x2 = trouverCap(node.getAttribute('data-v'), +node.getAttribute('data-r'));
         if (!x2) break;
-        COF.UI.jet({
-          titre: x2.cap.n, sousTitre: x2.voie.nom + ' · rang ' + x2.cap.r,
-          dmg: x2.cap.dmg, sansD20: true, ctx: K.ctx(C, x2.rang)
-        });
+        COF.UI.jetCapacite(x2.cap, x2.voie.nom, x2.rang);
         break;
       }
       case 'cap-info': {
@@ -483,30 +480,83 @@ COF.UI.Fiche = (function () {
     })[0];
   }
 
+  /* Le coût en PM n'est débité qu'au moment où le joueur confirme le
+     lancement (bouton « Lancer le sort »), jamais en ouvrant la fenêtre. */
   function lancerSort(x) {
     var K = COF.Calc, c = x.cap;
-    var cout = c.r;
-    if (C.pm < cout) {
-      if (!confirm('Il manque des points de mana (' + C.pm + '/' + cout + ').\nUtiliser la brûlure de mana ? (' + cout + 'd' + K.drType(C) + ' PV sacrifiés)')) return;
-      var perte = COF.Dice.dommages(cout + 'd' + K.drType(C), K.ctx(C), {});
-      C.pv = Math.max(0, C.pv - perte.total);
-      alert('Brûlure de mana : ' + perte.total + ' PV sacrifiés.');
-    } else {
-      C.pm -= cout;
-    }
-    sauver();
+    var peutConcentration = c.a === 'A';   // seule une action d'attaque peut devenir une action limitée
+    var etat = { concentration: false };
 
-    var estSoin = /soigne|récupère|rend|PV/.test(c.d) && /soin|guéri|récupération|rend/i.test(c.d);
-    var a = K.attaques(C);
-    COF.UI.jet({
-      titre: c.n,
-      sousTitre: x.voie.nom + ' · rang ' + c.r + ' · ' + cout + ' PM dépensés (reste ' + C.pm + ')' +
-        (c.d ? ' — ' + c.d.slice(0, 120) : ''),
-      mod: a.magique, difficulte: null,
-      dmg: c.dmg || null, dmgLabel: estSoin ? 'Soins' : 'Dommages',
-      ctx: K.ctx(C, x.rang), type: estSoin ? 'soins' : 'attaque'
-    });
-    rendre();
+    function coutActuel() {
+      return (peutConcentration && etat.concentration) ? Math.max(0, c.r - 2) : c.r;
+    }
+
+    function contenu() {
+      var cout = coutActuel();
+      var manque = C.pm < cout;
+      var h = '<div class="note" style="margin-bottom:8px">' + esc(x.voie.nom) + ' · rang ' + c.r + '</div>';
+      h += '<div style="margin-bottom:12px">' + esc(c.d) + '</div>';
+      if (peutConcentration) {
+        h += '<div class="chip' + (etat.concentration ? ' on' : '') + '" id="sort-concentration" style="display:inline-block;margin-bottom:12px;cursor:pointer">' +
+          'Concentration : devient une action limitée, coût −2 PM</div>';
+      }
+      h += '<div class="stats" style="margin-bottom:12px">' +
+        '<div class="stat"><div class="lbl">Coût</div><div class="v">' + cout + ' PM</div></div>' +
+        '<div class="stat"><div class="lbl">Action</div><div class="v" style="font-size:15px">' +
+          (peutConcentration && etat.concentration ? 'L' : (c.a || '—')) + '</div></div>' +
+        '<div class="stat"><div class="lbl">PM dispo.</div><div class="v" style="' +
+          (manque ? 'color:var(--sang-clair)' : '') + '">' + C.pm + ' / ' + K.pmMax(C) + '</div></div>' +
+        '</div>';
+      if (manque) h += '<div class="note" style="color:var(--sang-clair);margin-bottom:12px">' +
+        'Pas assez de mana : il manque ' + (cout - C.pm) + ' PM. La brûlure de mana sera proposée au lancement (' +
+        (cout - C.pm) + 'd' + K.drType(C) + ' PV sacrifiés).</div>';
+      h += '<button class="btn btn-plein btn-bloc" id="sort-go">Lancer le sort</button>';
+      return h;
+    }
+
+    function ouvrir() {
+      COF.UI.ouvrirModale(c.n, contenu(), function (root) {
+        var chip = COF.UI.$('#sort-concentration', root);
+        if (chip) chip.addEventListener('click', function () {
+          etat.concentration = !etat.concentration;
+          ouvrir();
+        });
+        COF.UI.$('#sort-go', root).addEventListener('click', function () {
+          confirmerEtLancer();
+        });
+      });
+    }
+
+    function confirmerEtLancer() {
+      var cout = coutActuel();
+      if (C.pm < cout) {
+        var manquant = cout - C.pm;
+        if (!confirm('Il manque ' + manquant + ' point(s) de mana.\nUtiliser la brûlure de mana ? (' +
+          manquant + 'd' + K.drType(C) + ' PV sacrifiés)')) return;
+        var perte = COF.Dice.dommages(manquant + 'd' + K.drType(C), K.ctx(C), {});
+        C.pv = Math.max(0, C.pv - perte.total);
+        C.pm = 0;
+        alert('Brûlure de mana : ' + perte.total + ' PV sacrifiés.');
+      } else {
+        C.pm -= cout;
+      }
+      sauver();
+
+      var estSoin = /soigne|récupère|rend|PV/.test(c.d) && /soin|guéri|récupération|rend/i.test(c.d);
+      var a = K.attaques(C);
+      COF.UI.jet({
+        titre: c.n,
+        sousTitre: x.voie.nom + ' · rang ' + c.r + ' · ' + cout + ' PM dépensés (reste ' + C.pm + ')' +
+          (peutConcentration && etat.concentration ? ' · concentration' : '') +
+          (c.d ? ' — ' + c.d.slice(0, 120) : ''),
+        mod: a.magique, difficulte: null,
+        dmg: c.dmg || null, dmgLabel: estSoin ? 'Soins' : 'Dommages',
+        ctx: K.ctx(C, x.rang), type: estSoin ? 'soins' : 'attaque'
+      });
+      rendre();
+    }
+
+    ouvrir();
   }
 
   function recupRapide() {
