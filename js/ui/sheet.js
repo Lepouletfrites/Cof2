@@ -28,6 +28,7 @@ COF.UI.Fiche = (function () {
       return;
     }
     if (C.pv === null) COF.Store.reinitialiser(C);
+    C.compagnons = C.compagnons || [];
 
     var pr = COF.PROFILS[C.profil];
     var K = COF.Calc;
@@ -40,6 +41,7 @@ COF.UI.Fiche = (function () {
     h += blocArmes();
     h += blocSorts();
     h += blocCapacites();
+    h += blocCompagnons();
     h += blocCompetences();
     h += blocEquipement(pr);
     h += blocAjustements();
@@ -227,6 +229,65 @@ COF.UI.Fiche = (function () {
             '<button class="btn btn-sm" data-act="cap-info" data-v="' + x.voieKey + '" data-r="' + c.r + '">?</button>' +
             '</div></div>';
         });
+      });
+    }
+    h += '</div></div>';
+    return h;
+  }
+
+  /* ---------------- Compagnons ---------------- */
+  function blocCompagnons() {
+    var CC = COF.CompagnonCalc;
+    var actifs = C.compagnons || [];
+    var dispo = CC.disponibles(C).filter(function (t) {
+      return !actifs.some(function (i) { return i.templateId === t.id; });
+    });
+
+    var h = '<div class="carte pliable ' + (actifs.length ? '' : 'ferme') + '">' +
+      '<h2>Compagnons' + (actifs.length ? ' (' + actifs.length + ')' : '') + '</h2><div class="carte-corps">';
+
+    if (!actifs.length && !dispo.length) {
+      h += '<div class="vide">Aucun compagnon. Certaines voies (rôdeur, druide, magicien, forgesort, sorcier, chevalier...) en offrent un.</div>';
+    }
+
+    actifs.forEach(function (inst) {
+      var tpl = COF.COMPAGNONS[inst.templateId];
+      if (!tpl) return;
+      var st = CC.stats(tpl, C);
+      var pvMax = st.pvMax;
+      var pv = (inst.pv === null || inst.pv === undefined) ? pvMax : Math.min(inst.pv, pvMax);
+      var pct = pvMax > 0 ? Math.max(0, Math.min(100, (pv / pvMax) * 100)) : 0;
+
+      h += '<div style="border:1px solid var(--line);border-radius:var(--r-s);padding:11px 12px;margin-bottom:10px">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<input type="text" data-act="comp-nom" data-id="' + inst.id + '" value="' + esc(inst.nom) + '" ' +
+        'style="flex:1;background:var(--bg-2);border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;font-size:14px;color:var(--text)">' +
+        '<button class="btn btn-sm" data-act="comp-suppr" data-id="' + inst.id + '">✕</button></div>';
+      h += '<div class="note" style="margin-bottom:8px">' + esc(tpl.origine) + '</div>';
+      h += '<div class="stats" style="margin-bottom:8px">' +
+        '<div class="stat"><div class="lbl">Défense</div><div class="v">' + st.def + '</div></div>' +
+        '<div class="stat"><div class="lbl">Initiative</div><div class="v">' + st.init + '</div></div>' +
+        '<div class="stat"><div class="lbl">Attaque</div><div class="v">' + (st.attaqueMod !== null ? sgn(st.attaqueMod) : '—') + '</div></div>' +
+        '</div>';
+      h += '<div class="jauge jauge-pv"><div class="jauge-tete"><span class="lbl">Points de vigueur</span>' +
+        '<span class="compteur"><button data-act="comp-pv-" data-id="' + inst.id + '">−</button>' +
+        '<span class="n">' + pv + ' / ' + pvMax + '</span>' +
+        '<button data-act="comp-pv+" data-id="' + inst.id + '">+</button></span></div>' +
+        '<div class="barre"><span style="width:' + pct + '%"></span></div></div>';
+      h += '<div style="display:flex;gap:8px;margin-top:10px">';
+      if (st.attaqueMod !== null) {
+        h += '<button class="btn btn-or" style="flex:1" data-act="comp-attaquer" data-id="' + inst.id + '">Attaquer</button>';
+      }
+      h += '<button class="btn" style="flex:1" data-act="comp-info" data-id="' + inst.id + '">Détails</button>';
+      h += '</div></div>';
+    });
+
+    if (dispo.length) {
+      h += '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--or);margin:6px 0">Disponibles</div>';
+      dispo.forEach(function (t) {
+        h += '<div class="ligne"><div class="info"><div class="t">' + esc(t.nom) + '</div>' +
+          '<div class="s">' + esc(t.origine) + '</div></div>' +
+          '<div class="actions"><button class="btn btn-or btn-sm" data-act="comp-ajouter" data-t="' + t.id + '">+ Ajouter</button></div></div>';
       });
     }
     h += '</div></div>';
@@ -444,7 +505,68 @@ COF.UI.Fiche = (function () {
         break;
       }
       case 'inv-suppr': C.inventaire.splice(+i, 1); sauver(); rendre(); break;
+
+      case 'comp-ajouter': {
+        var tid = node.getAttribute('data-t');
+        var tpl = COF.COMPAGNONS[tid];
+        if (!tpl) break;
+        C.compagnons.push({ id: COF.Store.uid(), templateId: tid, nom: tpl.nom, pv: null });
+        sauver(); rendre();
+        break;
+      }
+      case 'comp-suppr': {
+        if (confirm('Retirer ce compagnon ?')) {
+          C.compagnons = C.compagnons.filter(function (x) { return x.id !== node.getAttribute('data-id'); });
+          sauver(); rendre();
+        }
+        break;
+      }
+      case 'comp-pv+': majCompagnon(node.getAttribute('data-id'), 1); break;
+      case 'comp-pv-': majCompagnon(node.getAttribute('data-id'), -1); break;
+      case 'comp-attaquer': {
+        var inst = trouverCompagnon(node.getAttribute('data-id'));
+        if (!inst) break;
+        var tpl2 = COF.COMPAGNONS[inst.templateId];
+        var stats = COF.CompagnonCalc.stats(tpl2, C);
+        COF.UI.jet({
+          titre: inst.nom, sousTitre: tpl2.origine,
+          mod: stats.attaqueMod, difficulte: null,
+          dmg: stats.dmg, dmgLabel: 'Dommages', ctx: K.ctx(C), type: 'attaque'
+        });
+        break;
+      }
+      case 'comp-info': {
+        var inst2 = trouverCompagnon(node.getAttribute('data-id'));
+        if (!inst2) break;
+        var tpl3 = COF.COMPAGNONS[inst2.templateId];
+        var stats2 = COF.CompagnonCalc.stats(tpl3, C);
+        COF.UI.ouvrirModale(inst2.nom,
+          '<div class="note" style="margin-bottom:8px">' + esc(tpl3.origine) + '</div>' +
+          '<div style="margin-bottom:10px">' + esc(tpl3.desc) + '</div>' +
+          '<div class="note">' + esc(tpl3.carac) + '</div>' +
+          (tpl3.deplacement ? '<div class="note" style="margin-top:6px">Déplacement : ' + esc(tpl3.deplacement) + '</div>' : '') +
+          (tpl3.notes ? '<div class="note" style="margin-top:6px">' + esc(tpl3.notes) + '</div>' : '') +
+          '<div class="sep"></div>' +
+          '<div class="note">DEF ' + stats2.def + ' · Init. ' + stats2.init +
+          (stats2.attaqueMod !== null ? ' · Attaque ' + sgn(stats2.attaqueMod) : '') +
+          (stats2.dmg ? ' · DM ' + esc(stats2.dmg) : '') + '</div>');
+        break;
+      }
     }
+  }
+
+  function trouverCompagnon(id) {
+    return (C.compagnons || []).filter(function (x) { return x.id === id; })[0];
+  }
+
+  function majCompagnon(id, delta) {
+    var inst = trouverCompagnon(id);
+    if (!inst) return;
+    var tpl = COF.COMPAGNONS[inst.templateId];
+    var pvMax = COF.CompagnonCalc.stats(tpl, C).pvMax;
+    var cur = (inst.pv === null || inst.pv === undefined) ? pvMax : inst.pv;
+    inst.pv = Math.max(0, Math.min(pvMax, cur + delta));
+    sauver(); rendre();
   }
 
   /* changements via champs (délégation « change ») */
@@ -458,6 +580,10 @@ COF.UI.Fiche = (function () {
     else if (a === 'bourse') { C.bourse[t.getAttribute('data-m')] = +t.value; sauver(); }
     else if (a === 'desc') { C.description[t.getAttribute('data-k')] = t.value; sauver(); }
     else if (a === 'notes') { C.notes = t.value; sauver(); }
+    else if (a === 'comp-nom') {
+      var inst = trouverCompagnon(t.getAttribute('data-id'));
+      if (inst) { inst.nom = t.value || inst.nom; sauver(); }
+    }
     else if (a === 'ajust') {
       C.bonus[t.getAttribute('data-k')] = parseInt(t.value, 10) || 0;
       sauver();

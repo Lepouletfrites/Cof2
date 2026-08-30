@@ -67,6 +67,7 @@ COF.Store = (function () {
       etats: [],
       bourse: { po: 0, pa: 0, pc: 0 },
       inventaire: [],
+      compagnons: [],
       notes: '',
       description: { ideal: '', travers: '', histoire: '' },
       cree: Date.now()

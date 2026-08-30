@@ -32,6 +32,7 @@ Puis rendez-vous sur `http://localhost:8777`.
 | `prestige-combattant.js` | 12 voies de prestige de combattant |
 | `prestige-mage.js` | 12 voies de prestige de mage |
 | `prestige-mystique.js` | 12 voies de prestige de mystique |
+| `compagnons.js` | 14 gabarits de compagnons (loup, familiers, golem, zombie, montures, familier fantastique, vermine, être féérique...) |
 
 **14 profils × 5 voies × 5 rangs = 350 capacités**, plus 40 capacités de peuple et
 **53 voies de prestige × 5 rangs = 265 capacités** : **655 au total**.
@@ -58,6 +59,8 @@ Chaque capacité est structurée pour être exploitable par le moteur :
 - **`calc.js`** — toutes les valeurs dérivées : PV, PM, PC, DR, DEF (avec plafond d'AGI dû à
   l'armure), Initiative, valeurs d'attaque (plafonnées au niveau 10), dé évolutif, points de
   capacité, bonus de compétence.
+- **`compagnons.js`** — calcule DEF/PV/Init./attaque d'un compagnon pour le personnage courant ;
+  détecte l'éligibilité même via une voie de profil hybride ou une voie de prestige.
 - **`store.js`** — sauvegarde locale, personnages multiples, équipement de départ, journal de
   jets, export / import JSON.
 
@@ -72,6 +75,10 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   automatique des autres dès qu'une est choisie) et les **voies de tous les autres profils**
   pour construire un profil hybride sont accessibles dans des sections repliées. Acquisition
   rang par rang avec vérification du niveau requis et suivi des points de capacité.
+- **Compagnons** — carte dédiée sur la fiche : les compagnons accessibles par les voies déjà
+  acquises (rôdeur, druide, magicien, forgesort, sorcier, chevalier, ou certaines voies de
+  prestige) apparaissent en un clic ; chaque compagnon actif a son nom éditable, sa propre jauge
+  de PV, et un bouton Attaquer qui enchaîne test d'attaque puis dégâts comme pour une arme.
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 
@@ -91,8 +98,7 @@ Les exemples du livre de base sont reproduits à l'identique :
 1. **Bestiaire** — profils de créatures (humanoïdes, animaux), filtres par NC, jets intégrés.
 2. **Générateur JDR solo** — oracle oui/non, tables d'événements, PNJ, donjons, rencontres.
 3. **Objets magiques & trésors** — catalogue et tables aléatoires.
-4. **Compagnons** — loup, familier, golem, monture : fiches liées au personnage.
-5. **Mode MJ** — suivi d'initiative et de combat multi-créatures.
+4. **Mode MJ** — suivi d'initiative et de combat multi-créatures.
 
 ## Note
 
