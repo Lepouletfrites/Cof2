@@ -77,7 +77,7 @@ COF.PRESTIGE.changeforme = {
   note: "La capacité de druide Forme animale n'est pas requise, mais elle permet d'en tirer plus d'avantages.",
   caps: [
     { r: 4, n: 'Forme de voyage', a: 'A', s: true, d: "Forme d'un chat, chien, chevreuil, saumon ou corbeau (choisi définitivement) pendant PER minutes — PER heures avec la capacité Forme animale. Une forme supplémentaire par rang atteint." },
-    { r: 5, n: 'Transformation en animal', a: 'A', s: true, dmg: '3d4°', d: "Acquiert Forme animale pour une seule catégorie d'animaux. S'il la possédait déjà : durée en heures au lieu de minutes et récupération de 3d4° PV à la fin de la transformation." },
+    { r: 5, n: 'Transformation en animal', a: 'A', s: true, t: 'soin', dmg: '3d4°', d: "Acquiert Forme animale pour une seule catégorie d'animaux. S'il la possédait déjà : durée en heures au lieu de minutes et récupération de 3d4° PV à la fin de la transformation." },
     { r: 6, n: 'Transformation puissante', a: 'A', s: true, d: "Sous forme animale, il peut conserver sa propre DEF et utiliser sa valeur d'attaque magique si elles sont supérieures. Accède aux animaux géants ou préhistoriques (taille M maximum)." },
     { r: 7, n: 'Grande forme animale', a: 'A', s: true, d: "Forme d'un animal de taille grande (ours, tigre…), en conservant sa DEF et son attaque magique. Coût : [2 + NC] PM (ou NC PM avec la concentration)." },
     { r: 8, n: 'Forme animale énorme', a: 'A', s: true, d: "Forme d'un animal ou animal géant de taille énorme (éléphant…), mêmes règles que la capacité précédente." }
@@ -100,10 +100,10 @@ COF.PRESTIGE.guerisseur = {
   id: 'guerisseur', nom: 'Voie du guérisseur', fam: 'mystique',
   desc: "Pour ceux qui souhaitent prendre soin de la santé de leur prochain : prêtres, druides et même moines.",
   caps: [
-    { r: 4, n: 'Premiers soins', a: 'A', s: true, f: 'combat', dmg: '3d4°+CHA', d: "Utilisable seulement sur une créature vivante à 0 PV : elle récupère [3d4° + CHA] PV. Une fois par combat et par patient." },
-    { r: 5, n: 'Soins rapides', a: 'G', s: true, dmg: '2d4°+CHA', d: "D'un simple regard, soigne une cible (ou lui-même) à 20 m : [2d4° + CHA] PV immédiatement." },
+    { r: 4, n: 'Premiers soins', a: 'A', s: true, f: 'combat', t: 'soin', dmg: '3d4°+CHA', d: "Utilisable seulement sur une créature vivante à 0 PV : elle récupère [3d4° + CHA] PV. Une fois par combat et par patient." },
+    { r: 5, n: 'Soins rapides', a: 'G', s: true, t: 'soin', dmg: '2d4°+CHA', d: "D'un simple regard, soigne une cible (ou lui-même) à 20 m : [2d4° + CHA] PV immédiatement." },
     { r: 6, n: 'Rappel à la vie', a: 'L', s: true, f: 'jour', dmg: '1d4°', d: "1×/jour, rituel de 30 min sur un mort décédé depuis moins de [6 + CON] heures : il revient avec 1d4° PV et reste affaibli 24 h. Ne régénère pas les membres perdus." },
-    { r: 7, n: 'Zone de vie', a: 'A', s: true, dmg: '2d4°', d: "Zone immobile de 10 m de rayon pendant CHA rounds : toutes les créatures vivantes y récupèrent 2d4° PV par round ; les morts-vivants et démons subissent autant de DM." },
+    { r: 7, n: 'Zone de vie', a: 'A', s: true, t: 'soin', dmg: '2d4°', d: "Zone immobile de 10 m de rayon pendant CHA rounds : toutes les créatures vivantes y récupèrent 2d4° PV par round ; les morts-vivants et démons subissent autant de DM." },
     { r: 8, n: 'Résurrection', a: 'L', s: true, f: 'aventure', d: "1×/aventure, rituel de 7 h sur une relique d'un mort décédé depuis moins de [CHA] jours : il revient avec 1 PV, affaibli pendant 7 jours. Chaque résurrection au-delà de la première coûte 1 point de CON." }
   ]
 };
@@ -113,7 +113,7 @@ COF.PRESTIGE.maitrenature = {
   desc: "En communion avec la nature : les animaux se mettent à son service.",
   caps: [
     { r: 4, n: 'Amitié animale', a: 'A', s: true, d: "Test opposé d'attaque magique (10 m) : l'animal se met à son service pendant PER heures. La somme des NC contrôlés ne peut dépasser le rang. Animaux géants au rang 6, fantastiques au rang 8. Le sort prend fin en milieu urbain." },
-    { r: 5, n: 'Seigneur de la nature', dmg: '1d4°', d: "Choisir un milieu de prédilection (un second au rang 7) parmi forêt et jungle, déserts et plaines, montagnes et collines, marais et milieu aquatique, grottes et profondeurs. Dans ce milieu : dé bonus à tous ses tests et 1d4° PV à chaque récupération rapide." },
+    { r: 5, n: 'Seigneur de la nature', t: 'soin', dmg: '1d4°', d: "Choisir un milieu de prédilection (un second au rang 7) parmi forêt et jungle, déserts et plaines, montagnes et collines, marais et milieu aquatique, grottes et profondeurs. Dans ce milieu : dé bonus à tous ses tests et 1d4° PV à chaque récupération rapide." },
     { r: 6, n: 'Invisibilité aux animaux', d: "Dans un milieu de prédilection, totalement indétectable par les animaux et insectes, même géants (vue, odorat, ouïe). Une action offensive contre un animal met fin à l'effet jusqu'à la prochaine récupération rapide." },
     { r: 7, n: 'Monture géante', d: "Obtient une monture géante adaptée à un de ses milieux de prédilection (mammouth, dinosaure, aigle géant…), de NC ≤ [rang + PER]. En selle, elle attaque une fois par round sur son ordre (action gratuite pour le cavalier)." },
     { r: 8, n: 'Magie druidique innée', a: 'G', f: 'jour', d: "3×/jour dans un milieu de prédilection : lance n'importe quel sort de druide en action gratuite, sans dépense de mana. Une seule fois par round." }
@@ -152,7 +152,7 @@ COF.PRESTIGE.vermines = {
     { r: 4, n: 'Maître vermine', d: "Communique avec les vermines géantes (insectes, araignées, scorpions, mille-pattes) qui le considèrent comme un ami, sauf si elles sont sous contrôle magique ou druidique." },
     { r: 5, n: 'Nuées de criquets', a: 'A', s: true, d: "Test opposé d'attaque magique (20 m) : une nuée dévore la cible pendant [5 + CHA] rounds — 2 DM par tour et -3 à toutes ses actions. Les DM de zone détruisent la nuée." },
     { r: 6, n: 'Compagnon vermine', dmg: '1d4°+5', d: "Un scorpion ou une araignée géante : AGI +3*, CON +5, FOR +5, PER +2, CHA -4, INT -3, VOL +2. DEF [15 + rang], PV [niveau × 5], attaque = attaque magique, DM 1d4°+5 et poison +1d4°. Déplacement 20 m. Le scorpion attaque pinces + dard en action limitée ; l'araignée grimpe aux murs." },
-    { r: 7, n: 'Affinité au poison', a: 'L', f: 'combat', dmg: '1d4°', d: "1×/combat : enduit une arme tranchante ou perforante de poison, +1d4° DM de poison. Divise par deux les DM et la durée des poisons qu'il subit." },
+    { r: 7, n: 'Affinité au poison', a: 'L', f: 'combat', t: 'bonus', dmg: '1d4°', d: "1×/combat : enduit une arme tranchante ou perforante de poison, +1d4° DM de poison. Divise par deux les DM et la durée des poisons qu'il subit." },
     { r: 8, n: 'Vermine supérieure', d: "La vermine peut servir de monture et gagne une capacité : Étreinte du scorpion (sur un 15-20 au dé d'attaque, la cible de taille grande ou inférieure est immobilisée) ou Toile d'araignée (L) (portée 10 m, cible immobilisée 1d6 rounds ; test de FOR difficulté 15 pour se libérer)." }
   ]
 };

@@ -12,7 +12,7 @@ COF.PRESTIGE.armesdeuxmains = {
     { r: 4, n: 'Frappe massive', a: 'L', d: "Attaque au contact infligeant les DM maximaux (les dés bonus ne sont pas maximisés). La cible doit réussir un test opposé de FOR ou être renversée (+5 cumulatif à son test à chaque nouvelle tentative dans le combat ; dé bonus si elle est énorme ou colossale)." },
     { r: 5, n: 'Gros monstre, grosse arme', d: "Contre les créatures de taille grande et supérieure, les DM des armes à deux mains montent d'une catégorie : d12 et 2d6 → 2d8, 1d8 et 1d10 → 1d12, 2d8 → 2d10." },
     { r: 6, n: 'Tenir à distance', d: "+1 en DEF avec une arme à deux mains en main (+2 au rang 8)." },
-    { r: 7, n: 'Critique destructeur', dmg: '2d4°', d: "Seuil de critique abaissé de 1 point avec toutes les armes à deux mains. Sur un critique : +2d4° aux DM en plus des effets habituels." },
+    { r: 7, n: 'Critique destructeur', t: 'bonus', dmg: '2d4°', d: "Seuil de critique abaissé de 1 point avec toutes les armes à deux mains. Sur un critique : +2d4° aux DM en plus des effets habituels." },
     { r: 8, n: 'Décapitation', d: "Résultat maximal sur un dé de DM au contact à deux mains : une cible de NC ≤ 5 est décapitée. Résultat maximal sur les deux dés : décapite une cible de NC inférieur à son niveau. Les DM maximaux automatiques (Frappe massive) ne déclenchent pas cet effet." }
   ]
 };
@@ -25,7 +25,7 @@ COF.PRESTIGE.armeliee = {
     { r: 4, n: 'Fidèle', f: 'combat', d: "L'arme est magique et donne un dé bonus en attaque 1×/combat. En vue et à moins de 10 m, il la rappelle en action gratuite (test opposé de CHA contre la FOR de celui qui la tient). Hors de vue, il sait toujours dans quelle direction elle se trouve." },
     { r: 5, n: 'Alliée loyale', f: 'combat', d: "1×/combat, un résultat de 1 au test d'attaque avec l'arme liée peut être remplacé par 20." },
     { r: 6, n: 'Arme dansante', a: 'M', f: 'combat', d: "1×/combat : l'arme combat seule pendant [rang] rounds avec la valeur d'attaque magique du PJ et ses DM de base. S'il tombe inconscient, elle veille sur son corps jusqu'à la fin de la durée." },
-    { r: 7, n: 'Aura élémentaire', a: 'A', f: 'combat', dmg: '1d4°', d: "1×/combat pendant CON minutes : +1d4° DM de feu, acide, froid ou électricité (élément choisi une fois pour toutes). Non cumulable avec un autre bonus élémentaire magique." },
+    { r: 7, n: 'Aura élémentaire', a: 'A', f: 'combat', t: 'bonus', dmg: '1d4°', d: "1×/combat pendant CON minutes : +1d4° DM de feu, acide, froid ou électricité (élément choisi une fois pour toutes). Non cumulable avec un autre bonus élémentaire magique." },
     { r: 8, n: 'Mille lames', a: 'L', f: 'jour', dmg: '1d4°', d: "1×/jour, en sacrifiant 2d4° PV : pendant 5 rounds, tous les adversaires dans un rayon de 10 m sont frappés par des lames spectrales et subissent automatiquement 1d4° DM par round." }
   ]
 };
@@ -37,7 +37,7 @@ COF.PRESTIGE.chevalierdragon = {
   caps: [
     { r: 4, n: 'Ordre du chevalier dragon', comp: 'persuasion et intimidation (avec les insignes ou en selle)', bon: 5, d: "Rejoint l'ordre comme apprenti. Son drake obtient une RD 10 contre le feu." },
     { r: 5, n: 'Résistance au feu', d: "RD 5 contre tous les DM de feu (RD 10 à partir du rang 7)." },
-    { r: 6, n: 'Épée de feu', a: 'M', dmg: '1d4°', d: "Enflamme son épée pour [5 + CHA] rounds : +1d4° DM de feu." },
+    { r: 6, n: 'Épée de feu', a: 'M', t: 'bonus', dmg: '1d4°', d: "Enflamme son épée pour [5 + CHA] rounds : +1d4° DM de feu." },
     { r: 7, n: 'Monture puissante', dmg: '2d4°+6', d: "Le drake atteint sa maturité : AGI +0, CON +6*, FOR +6, PER +1, INT -2, CHA +0, VOL +2. DEF 22, PV [10 + niveau × 6], attaque = attaque magique, DM 2d4°+6." },
     { r: 8, n: 'Souffle enflammé', a: 'A', f: 'combat', dmg: '8d4°', d: "1×/combat : le drake crache du feu dans un cône de 10 m × 10 m, 8d4° DM (moitié sur un test d'AGI difficulté 12 réussi)." }
   ]
@@ -50,7 +50,7 @@ COF.PRESTIGE.tunnels = {
     { r: 4, n: 'Infravision', comp: 'survie et orientation en milieu souterrain', bon: 5, d: "Voit dans le noir jusqu'à 10 m (ou +10 m de portée s'il le pouvait déjà)." },
     { r: 5, n: 'Combat confiné', d: "Plus de dé malus en espace réduit avec une arme plus longue qu'une dague ; arme à deux mains utilisable avec un dé malus. +1 en DEF tant qu'il tient une arme (+2 au rang 7), même hors espace confiné." },
     { r: 6, n: 'Briseur de hordes', a: 'G', f: 'round', dmg: '1d4°', d: "1×/round : inflige automatiquement 1d4° DM à chaque adversaire à son contact dont le NC est inférieur ou égal à la moitié de son niveau." },
-    { r: 7, n: 'Tueur de nuées', dmg: '1d4°', d: "+1d4° DM contre les créatures de taille petite ou inférieure et contre les nuées." },
+    { r: 7, n: 'Tueur de nuées', t: 'bonus', dmg: '1d4°', d: "+1d4° DM contre les créatures de taille petite ou inférieure et contre les nuées." },
     { r: 8, n: 'Briseur de voûte', f: 'combat', dmg: '4d4°', d: "1×/combat dans une cavité de moins de 6 m : fait s'écrouler la voûte. Tous les adversaires dans une zone de 10 × 10 m subissent 4d4° DM. La zone devient un terrain difficile et les créatures à 0 PV sont ensevelies." }
   ]
 };
@@ -60,7 +60,7 @@ COF.PRESTIGE.combatdumal = {
   desc: "Pourfendeur de créatures maléfiques, chasseur de sorcières, inquisiteur.",
   caps: [
     { r: 4, n: 'Juste courroux', a: 'G', d: "Chaque fois qu'il est victime d'une Attaque sournoise ou d'une Attaque mortelle, il riposte par une attaque au contact gratuite." },
-    { r: 5, n: 'Épée de lumière', a: 'M', dmg: '1d4°', d: "Son arme brille comme une torche pour le reste du combat et inflige +1d4° DM aux morts-vivants, créatures démoniaques et animaux corrompus." },
+    { r: 5, n: 'Épée de lumière', a: 'M', t: 'bonus', dmg: '1d4°', d: "Son arme brille comme une torche pour le reste du combat et inflige +1d4° DM aux morts-vivants, créatures démoniaques et animaux corrompus." },
     { r: 6, n: 'Sentir la corruption', a: 'L', d: "Détecte la présence d'une source maléfique dans un rayon de 20 m (démons, morts-vivants, animaux corrompus, artefacts maléfiques, lieux maudits), sans localisation ni nature." },
     { r: 7, n: 'Frappe suppressive', a: 'L', d: "En plus des DM normaux, la cible fait un test opposé d'attaque magique. En cas d'échec, elle ne peut utiliser aucun pouvoir magique à son prochain tour." },
     { r: 8, n: 'Résister à la corruption', f: 'combat', d: "1×/combat : résiste totalement à un sort ou effet magique de son choix. Immunisé aux effets de corruption (drain, affaiblissement, pourriture, poison ou maladie des morts-vivants, démons et créatures corrompues)." }
@@ -76,7 +76,7 @@ COF.PRESTIGE.colosse = {
     { r: 5, n: 'Résistance colossale', d: "+5 PV supplémentaires, auxquels s'ajoute sa CON." },
     { r: 6, n: 'Force du titan', d: "+1 en FOR." },
     { r: 7, n: 'Poigne de fer', d: "Peut utiliser une arme à deux mains d'une seule main. À deux mains, il peut manier une arme de créature de grande taille infligeant 2d8 DM au lieu de 2d6." },
-    { r: 8, n: 'Attaque monumentale', a: 'L', f: 'combat', dmg: '1d4°', d: "1×/combat : +5 en attaque et +1d4° DM par round de combat écoulé contre cette créature (max 5). Une cible de NC inférieur est affaiblie 1 round par round comptabilisé." }
+    { r: 8, n: 'Attaque monumentale', a: 'L', f: 'combat', t: 'bonus', dmg: '1d4°', d: "1×/combat : +5 en attaque et +1d4° DM par round de combat écoulé contre cette créature (max 5). Une cible de NC inférieur est affaiblie 1 round par round comptabilisé." }
   ]
 };
 
@@ -89,7 +89,7 @@ COF.PRESTIGE.danseurguerre = {
     { r: 5, n: 'Pirouettes', comp: 'danse et acrobaties', bon: 5, d: "+1 en DEF (+2 au rang 8)." },
     { r: 6, n: 'Attaque en mouvement', a: 'G', d: "Chaque fois qu'il utilise une action limitée pour attaquer au contact, il peut aussi se déplacer de 10 m avant ou après." },
     { r: 7, n: 'Danse des lames', a: 'L', f: 'combat', d: "Entre en transe pour le reste du combat : une attaque gratuite supplémentaire par round, avec un dé malus. Il peut y mettre fin quand il veut, mais pas recommencer avant le prochain combat. Un critique subi stoppe la transe." },
-    { r: 8, n: 'Volte-face', dmg: '1d4°', d: "Chaque round où il attaque une cible différente du round précédent : dé bonus en attaque et +1d4° DM sur sa première attaque." }
+    { r: 8, n: 'Volte-face', t: 'bonus', dmg: '1d4°', d: "Chaque round où il attaque une cible différente du round précédent : dé bonus en attaque et +1d4° DM sur sa première attaque." }
   ]
 };
 
@@ -115,7 +115,7 @@ COF.PRESTIGE.guerriermage = {
     { r: 5, n: 'Rituel de combat', d: "Un sort infligeant des DM parmi ceux qu'il connaît coûte désormais 1 PM de moins." },
     { r: 6, n: 'Déflexion arcanique', a: 'G', d: "Dépense 1 PM pour +2 en DEF contre une attaque, même après en avoir vu le résultat. Un seul PM par attaque, mais plusieurs fois par round. Au rang 9 : 3 PM pour +5 en DEF." },
     { r: 7, n: 'Magie de combat', d: "En utilisant la Concentration (L) pour lancer un sort de rang 1 à 3, il peut faire une attaque au contact gratuite au lieu de réduire le coût." },
-    { r: 8, n: 'Frappe des arcanes', a: 'G', dmg: '1d4°', d: "Dépense 1 PM pour obtenir un dé bonus et +1d4° aux DM sur une attaque au contact." }
+    { r: 8, n: 'Frappe des arcanes', a: 'G', t: 'bonus', dmg: '1d4°', d: "Dépense 1 PM pour obtenir un dé bonus et +1d4° aux DM sur une attaque au contact." }
   ]
 };
 
@@ -151,6 +151,6 @@ COF.PRESTIGE.tueurgeants = {
     { r: 5, n: 'Ventre mou', d: "Ignore la RD des créatures lorsqu'elle est basée sur leur taille." },
     { r: 6, n: 'Réduire la distance', d: "+1 en DEF contre les créatures de taille grande, +2 contre les énormes, +3 contre les colossales." },
     { r: 7, n: "Pieds d'argile", a: 'L', f: 'combat', d: "Attaque aux jambes d'une créature de taille grande ou supérieure : ½ DM, mais la cible est ralentie au prochain round et invalide pour le reste du combat. Avec une marge de 10 points ou plus, elle est aussi renversée. Une fois par combat et par cible." },
-    { r: 8, n: 'Tueur de géants', dmg: '1d4°', d: "+1d6 DM contre les créatures de taille grande, +1d4° contre les énormes, +2d4° contre les colossales." }
+    { r: 8, n: 'Tueur de géants', t: 'bonus', dmg: '1d4°', d: "+1d6 DM contre les créatures de taille grande, +1d4° contre les énormes, +2d4° contre les colossales." }
   ]
 };

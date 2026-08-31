@@ -29,12 +29,12 @@ COF.PROFILS.druide = {
     { id: 'fauve', nom: 'Voie du fauve', caps: [
       { r: 1, n: 'Vitesse du félin', comp: 'course, escalade, saut', bon: '2+rang', d: "Ajoute rang + 2 à ces tests. +3 en Initiative et +1 en DEF (+2 au rang 3, +3 au rang 5)." },
       { r: 2, n: 'Panthère', dmg: '1d4+2', d: "Apprivoise une panthère : DEF [13 + rang], PV [niveau × 4], Init. du druide, attaque = attaque magique, DM 1d4+2. AGI +4*, CON +2, FOR +2, PER +2*, CHA -2, INT -3, VOL +2." },
-      { r: 3, n: 'Attaque bondissante', a: 'L', dmg: '1d4°', d: "Le druide ou son félin parcourt 5 à 10 m puis attaque avec un dé bonus et +1d4° DM. Impossible s'il est déjà au contact." },
+      { r: 3, n: 'Attaque bondissante', a: 'L', t: 'bonus', dmg: '1d4°', d: "Le druide ou son félin parcourt 5 à 10 m puis attaque avec un dé bonus et +1d4° DM. Impossible s'il est déjà au contact." },
       { r: 4, n: 'Grand félin', dmg: '1d4°+5', d: "Animal fabuleux : DEF [15 + rang], PV [niveau × 5], DM 1d4°+5, déplacement 20 m, peut servir de monture. Communication télépathique et soins à distance (1 PV du druide = 1 PV rendu)." },
       { r: 5, n: 'Les sept vies du chat', f: 'niveau', d: "Six fois au maximum dans sa carrière, jamais plus d'une fois par niveau : quand il tombe à 0 PV ou meurt, il peut ignorer la cause (MJ et joueur trouvent une explication)." }
     ]},
     { id: 'nature', nom: 'Voie de la nature', caps: [
-      { r: 1, n: 'Maître de la survie', comp: 'survie en milieu naturel (récupération incluse)', bon: '2+rang', dmg: '1d4°', d: "Ajoute rang + 2 à ces tests. En dormant en pleine nature, dépenser 1 DR rend 1d4° PV de plus." },
+      { r: 1, n: 'Maître de la survie', comp: 'survie en milieu naturel (récupération incluse)', bon: '2+rang', t: 'soin', dmg: '1d4°', d: "Ajoute rang + 2 à ces tests. En dormant en pleine nature, dépenser 1 DR rend 1d4° PV de plus." },
       { r: 2, n: 'Terrains difficiles', d: "Aucune pénalité de déplacement en terrain difficile. Dans ces conditions : +3 en Initiative, +1 en attaque et en DEF." },
       { r: 3, n: 'Bâton de druide', a: 'L', dmg: '1d4°+FOR', d: "Deux attaques de contact avec son bâton (FOR ou AGI au choix en attaque), [1d4° + FOR ou AGI] DM chacune, et +2 en DEF pendant 1 round." },
       { r: 4, n: 'Constitution héroïque', d: "+1 en CON et dé bonus aux tests de CON." },
@@ -43,7 +43,7 @@ COF.PROFILS.druide = {
     { id: 'protecteur', nom: 'Voie du protecteur', caps: [
       { r: 1, n: 'Baies magiques', a: 'L', s: true, comp: 'vigilance et discrétion en pleine nature', bon: '2+rang', dmg: '1d4°+rang', d: "Fait pousser PER fruits : chacun vaut un repas et rend [1d4° + rang] PV après 1 min. Une seule fois par jour et par personnage." },
       { r: 2, n: 'Forêt vivante', s: true, f: 'jour', d: "Rituel de 30 min : la forêt devient alliée dans un rayon de 1 km par rang, pendant 24 h. Les ennemis y divisent leur déplacement par deux et subissent un dé malus aux tests de survie, orientation, perception et discrétion." },
-      { r: 3, n: 'Régénération', s: true, f: 'jour', dmg: '3d4°+PER', d: "Rituel de 10 min au calme : la cible touchée récupère [3d4° + PER] PV. Au rang 5, fait aussi repousser les membres amputés. Une fois par jour et par cible." },
+      { r: 3, n: 'Régénération', s: true, f: 'jour', t: 'soin', dmg: '3d4°+PER', d: "Rituel de 10 min au calme : la cible touchée récupère [3d4° + PER] PV. Au rang 5, fait aussi repousser les membres amputés. Une fois par jour et par cible." },
       { r: 4, n: 'Perception héroïque', d: "+1 en PER, dé bonus aux tests de PER, et ajoute sa PER à son total de PM (en plus de la VOL)." },
       { r: 5, n: "Forme d'arbre", a: 'A', s: true, d: "Se transforme en arbre de 5 m pendant PER minutes (caractéristiques et PV de l'arbre animé, sauf INT/PER/VOL). Ne peut pas parler, mais peut lancer les sorts des voies du protecteur et des végétaux." }
     ]},
@@ -84,7 +84,7 @@ COF.PROFILS.moine = {
     ]},
     { id: 'meditation', nom: 'Voie de la méditation', caps: [
       { r: 1, n: 'Pacifisme', comp: "empathie, apaiser un auditoire", bon: '2+rang', d: "Tant qu'il n'a réalisé aucune action offensive dans le combat : +5 en DEF et DM subis divisés par deux." },
-      { r: 2, n: 'Transe de guérison', f: 'jour', dmg: '1d4°+VOL', d: "10 min de méditation : récupère [1d4° + VOL] PV (+1d4° par rang 4 atteint dans une voie de moine). Nécessite une récupération rapide entre deux usages, 3 fois par jour maximum." },
+      { r: 2, n: 'Transe de guérison', f: 'jour', t: 'soin', dmg: '1d4°+VOL', d: "10 min de méditation : récupère [1d4° + VOL] PV (+1d4° par rang 4 atteint dans une voie de moine). Nécessite une récupération rapide entre deux usages, 3 fois par jour maximum." },
       { r: 3, n: 'Maîtrise du ki', d: "Ajoute sa VOL à son Initiative et à ses PV. +2 en DEF (+3 au rang 5)." },
       { r: 4, n: 'Volonté héroïque', d: "+1 en VOL et dé bonus aux tests de VOL." },
       { r: 5, n: 'Projection mentale', a: 'L', f: 'jour', dmg: '1d4°+VOL', d: "1×/jour : projette son esprit hors de son corps pendant [1d4° + VOL] minutes (vol à 10 m par round, traverse les murs mais pas les êtres vivants ni les barrières magiques). Il ressent les DM infligés à son corps. +1 définitif à sa plus faible caractéristique." }
@@ -94,7 +94,7 @@ COF.PROFILS.moine = {
       { r: 2, n: 'Peau de fer', d: "+2 en DEF (+3 au rang 5) et divise par deux tous les DM temporaires subis." },
       { r: 3, n: 'Parade de projectiles', a: 'G', f: 'round', d: "1×/round : dévie un projectile (flèche, javelot…). Impossible contre un critique ou une arme à poudre." },
       { r: 4, n: 'Déluge de coups', a: 'L', d: "Deux attaques au contact sur des cibles au choix pendant son tour." },
-      { r: 5, n: 'Puissance du ki', dmg: '2d4°', d: "Dé malus volontaire sur une attaque au contact : +2d4° DM. Utilisable aussi avec Projection du ki." }
+      { r: 5, n: 'Puissance du ki', t: 'bonus', dmg: '2d4°', d: "Dé malus volontaire sur une attaque au contact : +2d4° DM. Utilisable aussi avec Projection du ki." }
     ]},
     { id: 'vent', nom: 'Voie du vent', caps: [
       { r: 1, n: 'Pas du vent', comp: 'saut, course, escalade', bon: '2+rang', d: "Peut se déplacer avant et après avoir attaqué (distance totale inchangée). +3 en Initiative." },
@@ -121,15 +121,15 @@ COF.PROFILS.pretre = {
   voies: [
     { id: 'foi', nom: 'Voie de la foi', caps: [
       { r: 1, n: 'Prédicateur', comp: 'convaincre ou convertir un auditoire', bon: '2+rang', f: 'jour', d: "Ajoute rang + 2 à ces tests. 1×/jour, récupère 1 PC en convertissant une créature ou en la convainquant de suivre ses préceptes." },
-      { r: 2, n: 'Miracle mineur', a: 'A', s: true, dmg: '1d4°', d: "Petit miracle : purifier eau ou aliments, apaiser une douleur, soigner une maladie bénigne. Permet aussi de rendre 1d4° PV à une créature à 0 PV." },
-      { r: 3, n: 'Arme de lumière', a: 'M', s: true, dmg: '1d4°', d: "Enchante son arme pendant CHA minutes : lumière dans 5 m, et contre les démons et morts-vivants un dé bonus en attaque et +1d4° DM (+2d4° au rang 5, ou lançable sur l'arme d'un allié en action limitée)." },
+      { r: 2, n: 'Miracle mineur', a: 'A', s: true, t: 'soin', dmg: '1d4°', d: "Petit miracle : purifier eau ou aliments, apaiser une douleur, soigner une maladie bénigne. Permet aussi de rendre 1d4° PV à une créature à 0 PV." },
+      { r: 3, n: 'Arme de lumière', a: 'M', s: true, t: 'bonus', dmg: '1d4°', d: "Enchante son arme pendant CHA minutes : lumière dans 5 m, et contre les démons et morts-vivants un dé bonus en attaque et +1d4° DM (+2d4° au rang 5, ou lançable sur l'arme d'un allié en action limitée)." },
       { r: 4, n: 'Ailes célestes', a: 'A', s: true, d: "Des ailes divines lui permettent de voler à sa vitesse normale pendant CHA minutes. Le vol stationnaire est une action de mouvement." },
       { r: 5, n: 'Foudres divines', a: 'A', s: true, dmg: '2d4°+CHA', d: "La foudre frappe toutes les créatures désignées dans un rayon de 10 m : [2d4° + CHA] DM, sans test d'attaque. Le coût augmente de +1 PM à chaque utilisation jusqu'à une récupération rapide." }
     ]},
     { id: 'guerresainte', nom: 'Voie de la guerre sainte', caps: [
       { r: 1, n: 'Arme bénie', a: 'A', s: true, d: "Rituel bénissant son arme pour 24 h : un résultat de 1 au dé de DM est relancé (le second résultat compte) et les DM sont considérés comme magiques. Sans effet si une autre créature l'utilise." },
       { r: 2, n: 'Bouclier de la foi', d: "+1 en DEF supplémentaire avec son bouclier orné du symbole de sa foi (+2 au rang 5). Sans effet pour quelqu'un d'autre." },
-      { r: 3, n: 'Châtiment divin', a: 'L', dmg: '1d4°', d: "Attaque de contact avec un dé bonus, ajoutant son CHA aux DM. Peut dépenser 1 PM pour +1d4° DM (2 PM pour +2d4° au rang 5)." },
+      { r: 3, n: 'Châtiment divin', a: 'L', t: 'bonus', dmg: '1d4°', d: "Attaque de contact avec un dé bonus, ajoutant son CHA aux DM. Peut dépenser 1 PM pour +1d4° DM (2 PM pour +2d4° au rang 5)." },
       { r: 4, n: 'Marteau de la foi', a: 'A', s: true, dmg: '2d4°+CHA', d: "Attaque magique contre la DEF (30 m) : projectile d'énergie infligeant [2d4° + CHA] DM. Bonus d'arme magique applicable. +1 aux DM par rang 4 atteint dans une autre voie de prêtre." },
       { r: 5, n: 'Mot de pouvoir', a: 'A', s: true, f: 'jour', d: "1×/jour : tous ses ennemis dans un rayon de 10 m sont étourdis pendant 1 round (aucune action et -5 en DEF)." }
     ]},
@@ -143,9 +143,9 @@ COF.PROFILS.pretre = {
     { id: 'soins', nom: 'Voie des soins', caps: [
       { r: 1, n: 'Récupération mineure', a: 'A', s: true, comp: 'médecine, premiers soins', bon: '2+rang', dmg: '1d4°+CHA', d: "Impose les mains sur un allié au contact (ou lui-même) : [1d4° + CHA] PV. Utilisable une fois par jour par rang atteint dans la voie, plus une par rang 3 atteint dans une autre voie de prêtre." },
       { r: 2, n: 'Vigueur divine', a: 'L', s: true, comp: 'résister aux maladies et poisons', bon: '2+rang', d: "Guérit un poison ou une maladie sur une cible au contact (test d'attaque magique possible si l'infection est surnaturelle)." },
-      { r: 3, n: 'Récupération majeure', a: 'L', s: true, dmg: '3d4°+CHA', d: "Soigne une cible à 20 m : [3d4° + CHA] PV immédiatement. +1d4° par rang 5 atteint dans une voie de prêtre." },
-      { r: 4, n: 'Phénix', f: 'jour', dmg: '2d4°+CHA', d: "1×/jour, en tombant à 0 PV : il se relève et rend [2d4° + CHA] PV à tous ses alliés dans un rayon de 20 m, et le double à lui-même." },
-      { r: 5, n: 'Rétablissement', s: true, f: 'jour', dmg: '3d4°+CHA', d: "1×/jour : soigne une créature par point de CHA, chacune bénéficiant des effets d'une Récupération majeure. Rituel de 10 min au repos dans un rayon de 5 m. Pas de concentration possible." }
+      { r: 3, n: 'Récupération majeure', a: 'L', s: true, t: 'soin', dmg: '3d4°+CHA', d: "Soigne une cible à 20 m : [3d4° + CHA] PV immédiatement. +1d4° par rang 5 atteint dans une voie de prêtre." },
+      { r: 4, n: 'Phénix', f: 'jour', t: 'soin', dmg: '2d4°+CHA', d: "1×/jour, en tombant à 0 PV : il se relève et rend [2d4° + CHA] PV à tous ses alliés dans un rayon de 20 m, et le double à lui-même." },
+      { r: 5, n: 'Rétablissement', s: true, f: 'jour', t: 'soin', dmg: '3d4°+CHA', d: "1×/jour : soigne une créature par point de CHA, chacune bénéficiant des effets d'une Récupération majeure. Rituel de 10 min au repos dans un rayon de 5 m. Pas de concentration possible." }
     ]},
     { id: 'spiritualite', nom: 'Voie de la spiritualité', caps: [
       { r: 1, n: 'Vêtements sacrés', d: "Sans armure (bouclier autorisé) : dé bonus pour résister au contrôle mental et +2 en DEF (+3 au rang 3, +4 au rang 5). Variante guerrière : maîtrise de la cotte de mailles avec toutes les capacités de prêtre." },

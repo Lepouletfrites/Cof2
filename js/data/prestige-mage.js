@@ -50,8 +50,8 @@ COF.PRESTIGE.elementaliste = {
     { r: 4, n: 'Élément de prédilection', choix: true, d: "Choisir feu, froid, électricité ou acide : +2 en attaque magique avec les sorts de cet élément et +2 à la difficulté des tests pour y résister." },
     { r: 5, n: 'Résistance élémentaire', d: "Ne subit que la moitié des DM de son élément de prédilection. Peut convertir un sort élémentaire vers son élément en action gratuite." },
     { r: 6, n: "Invocation d'élémentaire", a: 'L', s: true, f: 'combat', dmg: '2d4°+6', d: "1×/combat : élémentaire de son choix pendant INT minutes. AGI +2, CON +6*, FOR +6*, VOL +4. DEF 19, PV [niveau × 5], Init. 10, DM 2d4°+6. Feu : +1d4° DM. Eau : dé bonus en attaque. Air : vol 30 m. Terre : +5 DEF." },
-    { r: 7, n: 'Élément puissant', dmg: '1d4°', d: "+1d4° aux DM de tous ses sorts de son élément de prédilection (DM initiaux seulement pour les DM sur la durée)." },
-    { r: 8, n: 'Métamorphose élémentaire', a: 'A', s: true, dmg: '2d4°', d: "Forme élémentaire au choix pendant [5 + INT] minutes : RD 5 et immunité à l'élément. Feu : +2d4° DM de feu au contact et 1d4° aux attaquants naturels. Eau : 1d4° PV par round et passe par tout interstice. Terre : +3 en FOR et en DEF. Air : vol 20 m, DM physiques subis divisés par deux, RD 10." }
+    { r: 7, n: 'Élément puissant', t: 'bonus', dmg: '1d4°', d: "+1d4° aux DM de tous ses sorts de son élément de prédilection (DM initiaux seulement pour les DM sur la durée)." },
+    { r: 8, n: 'Métamorphose élémentaire', a: 'A', s: true, t: 'bonus', dmg: '2d4°', d: "Forme élémentaire au choix pendant [5 + INT] minutes : RD 5 et immunité à l'élément. Feu : +2d4° DM de feu au contact et 1d4° aux attaquants naturels. Eau : 1d4° PV par round et passe par tout interstice. Terre : +3 en FOR et en DEF. Air : vol 20 m, DM physiques subis divisés par deux, RD 10." }
   ]
 };
 

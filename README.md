@@ -33,6 +33,7 @@ Puis rendez-vous sur `http://localhost:8777`.
 | `prestige-mage.js` | 12 voies de prestige de mage |
 | `prestige-mystique.js` | 12 voies de prestige de mystique |
 | `compagnons.js` | 14 gabarits de compagnons (loup, familiers, golem, zombie, montures, familier fantastique, vermine, être féérique...) |
+| `bestiaire-1/2/3.js` | 84 créatures du livre de base : 10 humanoïdes, 24 animaux, 50 créatures fantastiques — avec 8 environnements et 3 catégories |
 
 **14 profils × 5 voies × 5 rangs = 350 capacités**, plus 40 capacités de peuple et
 **53 voies de prestige × 5 rangs = 265 capacités** : **655 au total**.
@@ -49,6 +50,8 @@ Chaque capacité est structurée pour être exploitable par le moteur :
 - `dmg` formule de dommages exploitée par le lanceur de dés
 - `comp` / `bon` bonus de compétence (affiché et calculé automatiquement)
 - `choix` la capacité ouvre le choix d'une autre capacité
+- `t` nature de la formule : `bonus` (s'ajoute aux DM d'une arme ou d'un sort),
+  `soin` (restaure des PV), absent (dommages directs)
 
 ### Moteur (`js/core/`)
 
@@ -61,6 +64,9 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   capacité, bonus de compétence.
 - **`compagnons.js`** — calcule DEF/PV/Init./attaque d'un compagnon pour le personnage courant ;
   détecte l'éligibilité même via une voie de profil hybride ou une voie de prestige.
+- **`rencontre.js`** — générateur de rencontres. Barème de points par NC calibré sur les
+  exemples de rencontres du bestiaire, budget indexé sur la taille et le niveau du groupe,
+  et quatre stratégies de composition (solitaire, bande hiérarchisée, meute, groupe hétéroclite).
 - **`store.js`** — sauvegarde locale, personnages multiples, équipement de départ, journal de
   jets, export / import JSON.
 
@@ -75,10 +81,21 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   automatique des autres dès qu'une est choisie) et les **voies de tous les autres profils**
   pour construire un profil hybride sont accessibles dans des sections repliées. Acquisition
   rang par rang avec vérification du niveau requis et suivi des points de capacité.
+- **Bestiaire** — les 84 créatures du livre, filtrables par **environnement** (les cinq milieux
+  naturels du livre plus villes, ruines et terres glacées), par **catégorie** et par **plage de
+  NC**, avec recherche plein texte sur le nom et la description. Chaque fiche donne le profil
+  complet (caractéristiques cliquables pour un test, DEF/PV/Init., RD, capacités) et un bouton
+  Attaquer par mode d'attaque, qui enchaîne test d'attaque puis dégâts. Le filtre est exposé via
+  `COF.UI.Bestiaire.filtrer()` pour le futur générateur de rencontres.
 - **Compagnons** — carte dédiée sur la fiche : les compagnons accessibles par les voies déjà
   acquises (rôdeur, druide, magicien, forgesort, sorcier, chevalier, ou certaines voies de
   prestige) apparaissent en un clic ; chaque compagnon actif a son nom éditable, sa propre jauge
   de PV, et un bouton Attaquer qui enchaîne test d'attaque puis dégâts comme pour une arme.
+- **Générateurs** — le générateur de rencontres : choisissez un environnement, la taille et le
+  niveau du groupe, une difficulté (facile → mortelle) et éventuellement un style de composition.
+  Il produit une rencontre cohérente — un chef entouré de sa piétaille du même peuple, une meute
+  homogène, un adversaire unique ou un groupe hétéroclite — avec le détail des profils, le budget
+  consommé et une feuille d'ordre d'initiative incluant le personnage actif.
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 
@@ -93,12 +110,17 @@ Les exemples du livre de base sont reproduits à l'identique :
 | DR | 4 d10 ✓ | 3 d6 ✓ |
 | PM | 0 ✓ | 5 ✓ |
 
+Le barème du générateur de rencontres est calibré sur les rencontres « ordinaires » citées dans
+le bestiaire : 6 worgs pour un groupe de niveau 8 tombent exactement sur le budget, le chef de
+meute et ses 6 loups à -9 %, le chef ogre et ses 5 ogres à -18 %.
+
 ## Roadmap
 
-1. **Bestiaire** — profils de créatures (humanoïdes, animaux), filtres par NC, jets intégrés.
-2. **Générateur JDR solo** — oracle oui/non, tables d'événements, PNJ, donjons, rencontres.
-3. **Objets magiques & trésors** — catalogue et tables aléatoires.
-4. **Mode MJ** — suivi d'initiative et de combat multi-créatures.
+1. **Oracle solo** — questions oui/non avec nuances, tables d'événements aléatoires.
+2. **Générateur de donjon** — salles, couloirs, pièges et trésors.
+3. **Générateur de PNJ** — nom, métier, trait de caractère, motivation.
+4. **Objets magiques & trésors** — catalogue et tables aléatoires adaptées au NC.
+5. **Mode MJ** — suivi de combat multi-créatures avec PV individuels.
 
 ## Note
 

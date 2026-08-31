@@ -200,6 +200,8 @@ COF.UI.Fiche = (function () {
   function pucesCap(c) {
     var h = '';
     if (c.s) h += '<span class="puce puce-sort">sort</span>';
+    if (c.t === 'bonus') h += '<span class="puce puce-rang">bonus aux DM</span>';
+    if (c.t === 'soin') h += '<span class="puce puce-g">soins</span>';
     if (c.a) h += '<span class="puce puce-' + c.a.toLowerCase() + '">' + c.a + '</span>';
     if (c.f) h += '<span class="puce">1×/' + c.f + '</span>';
     return h;
@@ -225,7 +227,8 @@ COF.UI.Fiche = (function () {
             '<div class="t">' + c.r + '. ' + esc(c.n) + ' ' + pucesCap(c) + '</div>' +
             '<div class="s">' + esc(c.d.length > 90 ? c.d.slice(0, 90) + '…' : c.d) + '</div></div>' +
             '<div class="actions">' +
-            (c.dmg ? '<button class="btn btn-or btn-sm" data-act="cap-attaquer" data-v="' + x.voieKey + '" data-r="' + c.r + '">Attaquer</button>' : '') +
+            (c.dmg ? '<button class="btn btn-or btn-sm" data-act="cap-attaquer" data-v="' + x.voieKey + '" data-r="' + c.r + '">' +
+              (c.t === 'soin' ? 'Soigner' : (c.t === 'bonus' ? '+ DM' : 'Attaquer')) + '</button>' : '') +
             '<button class="btn btn-sm" data-act="cap-info" data-v="' + x.voieKey + '" data-r="' + c.r + '">?</button>' +
             '</div></div>';
         });
@@ -668,17 +671,44 @@ COF.UI.Fiche = (function () {
       }
       sauver();
 
-      var estSoin = /soigne|récupère|rend|PV/.test(c.d) && /soin|guéri|récupération|rend/i.test(c.d);
       var a = K.attaques(C);
-      COF.UI.jet({
-        titre: c.n,
-        sousTitre: x.voie.nom + ' · rang ' + c.r + ' · ' + cout + ' PM dépensés (reste ' + C.pm + ')' +
-          (peutConcentration && etat.concentration ? ' · concentration' : '') +
-          (c.d ? ' — ' + c.d.slice(0, 120) : ''),
-        mod: a.magique, difficulte: null,
-        dmg: c.dmg || null, dmgLabel: estSoin ? 'Soins' : 'Dommages',
-        ctx: K.ctx(C, x.rang), type: estSoin ? 'soins' : 'attaque'
-      });
+      var sous = x.voie.nom + ' · rang ' + c.r + ' · ' + cout + ' PM dépensés (reste ' + C.pm + ')' +
+        (peutConcentration && etat.concentration ? ' · concentration' : '') +
+        (c.d ? ' — ' + c.d.slice(0, 120) : '');
+
+      if (c.t === 'soin') {
+        COF.UI.jet({
+          titre: c.n, sousTitre: sous,
+          dmg: c.dmg, dmgLabel: 'Soins', sansD20: true,
+          ctx: K.ctx(C, x.rang), type: 'soins'
+        });
+      } else if (c.t === 'bonus') {
+        /* le sort ajoute ses DM à ceux d'une arme (arme élémentaire, tempête de mana…) */
+        var choix = (C.armes || []).map(function (w) {
+          var mod = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
+          return { label: w.nom, dmg: COF.UI.dmgArme(C, w) + '+' + c.dmg, mod: mod, type: w.type };
+        });
+        choix.push({ label: 'Bonus seul', dmg: c.dmg, mod: a.magique });
+        COF.UI.jet({
+          titre: c.n, sousTitre: sous,
+          attaqueTypes: [
+            { id: 'contact', label: 'Contact', mod: a.contact },
+            { id: 'distance', label: 'Distance', mod: a.distance },
+            { id: 'magique', label: 'Magique', mod: a.magique }
+          ],
+          attaqueDefaut: choix[0].type === 'distance' ? 'distance' : 'contact',
+          armeChoix: choix, mod: choix[0].mod,
+          dmg: choix[0].dmg, dmgLabel: 'Dommages',
+          ctx: K.ctx(C, x.rang), type: 'attaque'
+        });
+      } else {
+        COF.UI.jet({
+          titre: c.n, sousTitre: sous,
+          mod: a.magique, difficulte: null,
+          dmg: c.dmg || null, dmgLabel: 'Dommages',
+          ctx: K.ctx(C, x.rang), type: 'attaque'
+        });
+      }
       rendre();
     }
 

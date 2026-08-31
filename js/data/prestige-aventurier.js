@@ -10,8 +10,8 @@ COF.PRESTIGE.archerarcanique = {
   caps: [
     { r: 4, n: 'Flèche magique', d: "Un résultat de 1 au dé de DM devient le maximum du dé (pas les dés bonus). Les DM des flèches sont considérés comme magiques." },
     { r: 5, n: 'Flèche intangible', a: 'L', d: "La flèche traverse obstacles et protections : la difficulté devient [10 + AGI de la cible] et toutes les pénalités de couverture sont ignorées. Peut tirer à travers un mur si la position est connue." },
-    { r: 6, n: 'Flèche chercheuse', a: 'L', f: 'jour', dmg: '2d4°', d: "1×/jour, contre une cible vue ou blessée depuis moins de 10 rounds : la flèche la trouve où qu'elle soit (même à travers les plans). Test d'attaque normal, +2d4° aux DM." },
-    { r: 7, n: 'Flèche élémentaire', a: 'L', f: 'combat', dmg: '1d4°', d: "1×/combat : choisit poison, feu, froid, foudre ou acide. +1d4° aux DM de chaque flèche pour tout le combat. Non cumulable avec un autre bonus élémentaire." },
+    { r: 6, n: 'Flèche chercheuse', a: 'L', f: 'jour', t: 'bonus', dmg: '2d4°', d: "1×/jour, contre une cible vue ou blessée depuis moins de 10 rounds : la flèche la trouve où qu'elle soit (même à travers les plans). Test d'attaque normal, +2d4° aux DM." },
+    { r: 7, n: 'Flèche élémentaire', a: 'L', f: 'combat', t: 'bonus', dmg: '1d4°', d: "1×/combat : choisit poison, feu, froid, foudre ou acide. +1d4° aux DM de chaque flèche pour tout le combat. Non cumulable avec un autre bonus élémentaire." },
     { r: 8, n: 'Flèche tueuse', a: 'L', d: "Une journée de travail et une relique de l'ennemi désigné : une seule flèche à la fois. Elle touche automatiquement ; la cible de niveau inférieur tombe à 0 PV, sinon test de CON difficulté [10 + rang] — en cas de réussite, critique automatique." }
   ]
 };
@@ -36,7 +36,7 @@ COF.PRESTIGE.cassecou = {
     { r: 5, n: 'Mouche du coche', d: "+1 en DEF (+1 de plus au rang 7). En sacrifiant une action de mouvement : +2 en DEF supplémentaires jusqu'à son prochain tour." },
     { r: 6, n: "L'amour du risque", d: "Dans un lieu dangereux (bord de précipice, lac de lave…) : dé bonus à tous ses tests. S'applique aussi en permanence aux tests contre la peur." },
     { r: 7, n: "Poussée d'adrénaline", f: 'round', dmg: '1d4', d: "1×/round, en dépensant 1d4 PV : une action de mouvement supplémentaire à son tour." },
-    { r: 8, n: 'Attaque kamikaze', a: 'L', dmg: '1d4°', d: "Saute sur une créature plus grande : test opposé d'AGI (échec = renversé). Perché : grande +2 Att/DEF, énorme +3, colossale +4, et +1d4° DM. La créature s'en débarrasse par une action d'attaque et un test opposé d'AGI." }
+    { r: 8, n: 'Attaque kamikaze', a: 'L', t: 'bonus', dmg: '1d4°', d: "Saute sur une créature plus grande : test opposé d'AGI (échec = renversé). Perché : grande +2 Att/DEF, énorme +3, colossale +4, et +1d4° DM. La créature s'en débarrasse par une action d'attaque et un test opposé d'AGI." }
   ]
 };
 
@@ -56,7 +56,7 @@ COF.PRESTIGE.chasseurprime = {
   id: 'chasseurprime', nom: 'Voie du chasseur de prime', fam: 'aventurier',
   desc: "Un traqueur implacable que rien n'arrête une fois sa cible choisie.",
   caps: [
-    { r: 4, n: 'Marque du chasseur', a: 'L', dmg: '1d4°', d: "Désigne une proie : +5 à tous les tests de compétence pour la retrouver et +1d4° aux DM contre elle. Une seule proie à la fois, changement après une récupération complète." },
+    { r: 4, n: 'Marque du chasseur', a: 'L', t: 'bonus', dmg: '1d4°', d: "Désigne une proie : +5 à tous les tests de compétence pour la retrouver et +1d4° aux DM contre elle. Une seule proie à la fois, changement après une récupération complète." },
     { r: 5, n: 'Assommer', a: 'L', f: 'combat', dmg: '1d4°', d: "Attaque au contact réussie à l'arme contondante (ou au pommeau) : une proie marquée de niveau inférieur est assommée 1d4° min, sinon étourdie 1 round. Une fois par combat et par cible." },
     { r: 6, n: 'Traqueur infatigable', d: "Tant qu'il traque une proie marquée : temps de récupération divisé par deux. Chaque jour de traque donne un bonus cumulatif de +1 en attaque et aux DM sur la première attaque, jusqu'à son rang." },
     { r: 7, n: 'Attaque invalidante', a: 'L', d: "Attaque réussie : en plus des DM, malus cumulatif de -1 à tous les tests et aux DM de la cible pour le reste du combat (jusqu'à -3)." },
@@ -69,10 +69,10 @@ COF.PRESTIGE.duelliste = {
   desc: "L'art du combat singulier : provoquer, se mesurer, l'emporter seul à seul.",
   caps: [
     { r: 4, n: 'Vive attaque', d: "Avec dague, épée courte, épée longue, rapière (main principale) ou vivelame à deux mains : ajoute son AGI en attaque OU aux DM (au choix, pas les deux) au lieu de sa FOR." },
-    { r: 5, n: 'Défi', a: 'L', f: 'combat', dmg: '1d6', d: "1×/combat : défie une cible humanoïde (20 m). +1d6 aux DM de chaque attaque au contact contre elle pour le reste du combat. Attaquer une autre cible met fin au défi." },
+    { r: 5, n: 'Défi', a: 'L', f: 'combat', t: 'bonus', dmg: '1d6', d: "1×/combat : défie une cible humanoïde (20 m). +1d6 aux DM de chaque attaque au contact contre elle pour le reste du combat. Attaquer une autre cible met fin au défi." },
     { r: 6, n: 'Juste toi et moi', d: "Chaque round où il attaque la cible défiée : +2 en DEF contre toutes les attaques des autres adversaires." },
     { r: 7, n: 'Duel mental', d: "Au début de son tour, test opposé d'INT contre l'adversaire défié. Victoire : dé bonus sur une attaque contre lui d'ici la fin du round. S'il perd de 10 points ou plus, c'est l'adversaire qui obtient le dé bonus." },
-    { r: 8, n: 'Botte mortelle', a: 'L', f: 'combat', dmg: '1d4°', d: "Chaque attaque réussie contre la cible défiée donne 1 point de préparation. En action limitée, la botte mortelle inflige +1d4° DM par point accumulé. Une seule tentative par combat, les points sont dépensés même en cas d'échec." }
+    { r: 8, n: 'Botte mortelle', a: 'L', f: 'combat', t: 'bonus', dmg: '1d4°', d: "Chaque attaque réussie contre la cible défiée donne 1 point de préparation. En action limitée, la botte mortelle inflige +1d4° DM par point accumulé. Une seule tentative par combat, les points sont dépensés même en cas d'échec." }
   ]
 };
 
@@ -82,9 +82,9 @@ COF.PRESTIGE.flibustier = {
   caps: [
     { r: 4, n: 'Pied marin', comp: 'natation et navigation', bon: '2+rang', d: "+5 à tous les tests d'AGI sur un bateau ou tout support mobile (chariots, cordages, ponts de corde). Ajoute son rang aux tests de natation et de navigation." },
     { r: 5, n: 'Coup de crosse', a: 'G', f: 'round', dmg: '1d4°+FOR', d: "1×/round : attaque au contact gratuite avec la crosse de sa pétoire, dé malus, [1d4° + FOR] DM. Acquiert la maîtrise des armes à poudre." },
-    { r: 6, n: "À l'abordage", dmg: '1d4°', d: "Première attaque au contact du combat : dé bonus et +1d4° DM. Même effet en se précipitant sur un adversaire depuis un contre-haut (balcon, lustre, table)." },
+    { r: 6, n: "À l'abordage", t: 'bonus', dmg: '1d4°', d: "Première attaque au contact du combat : dé bonus et +1d4° DM. Même effet en se précipitant sur un adversaire depuis un contre-haut (balcon, lustre, table)." },
     { r: 7, n: 'Sabre au poing', a: 'A', d: "En une action d'attaque : tire d'une main avec une arme à poudre (même à bout portant, sans malus) et porte une attaque de contact de l'autre, sans pénalité." },
-    { r: 8, n: 'Pas de quartier', a: 'G', dmg: '1d4°', d: "Attaque gratuite contre toute créature au contact qui tente de s'éloigner, avec dé bonus et +1d4° DM. Mêmes bonus à toutes ses attaques quand il lui reste moins de [niveau] PV." }
+    { r: 8, n: 'Pas de quartier', a: 'G', t: 'bonus', dmg: '1d4°', d: "Attaque gratuite contre toute créature au contact qui tente de s'éloigner, avec dé bonus et +1d4° DM. Mêmes bonus à toutes ses attaques quand il lui reste moins de [niveau] PV." }
   ]
 };
 
@@ -105,7 +105,7 @@ COF.PRESTIGE.maitrepoisons = {
   desc: "Le poison, arme efficace réservée à une élite d'individus intelligents et sans scrupules.",
   caps: [
     { r: 4, n: 'Connaissance du poison', d: "Test d'INT difficulté 10 pour reconnaître, identifier ou détecter un poison. Plus aucun test pour appliquer un poison sur une arme." },
-    { r: 5, n: 'Poison rapide', dmg: '3d4°', d: "Avant chaque combat, jusqu'à trois armes enduites. La première attaque réussie inflige +3d4° DM (moitié sur un test de CON difficulté [10 + INT] réussi)." },
+    { r: 5, n: 'Poison rapide', t: 'bonus', dmg: '3d4°', d: "Avant chaque combat, jusqu'à trois armes enduites. La première attaque réussie inflige +3d4° DM (moitié sur un test de CON difficulté [10 + INT] réussi)." },
     { r: 6, n: 'Poison affaiblissant', d: "Remplace le poison rapide : à la première attaque réussie, la victime est affaiblie pour le reste du combat si elle rate un test de CON difficulté 12." },
     { r: 7, n: 'Résistance au poison', d: "Empoisonné, il fait un test de CON difficulté 10 : réussite = aucun effet, échec = moitié des DM." },
     { r: 8, n: 'Poisons virulents', f: 'jour', d: "Fabrique des poisons « lent » et « mortel » : [1 + INT] doses par jour au total. Difficulté de résistance [12 + INT]." }
@@ -142,7 +142,7 @@ COF.PRESTIGE.tueurgages = {
   caps: [
     { r: 4, n: 'Faire taire', a: 'M', dmg: '1d4°', d: "Attaque au contact réussie au larynx : 1d4° DM et la cible est muette. Test de CON difficulté [10 + rang] à la fin de chacun de ses tours pour retrouver la parole. Un lanceur de sorts muet subit un dé malus en attaque magique." },
     { r: 5, n: 'Brise genou', a: 'M', dmg: '1d4°', d: "Attaque au contact réussie au genou : 1d4° DM et la cible humanoïde est invalide pour le reste du combat. Une cible de NC ≥ rang peut s'en libérer par un test de CON difficulté [10 + rang] à la fin de son tour." },
-    { r: 6, n: 'Ne me tourne pas le dos', a: 'G', f: 'round', dmg: '1d4°', d: "1×/round : attaque sournoise contre une créature qui quitte son contact. Sans cette capacité, +1d4° DM tout de même." },
+    { r: 6, n: 'Ne me tourne pas le dos', a: 'G', f: 'round', t: 'bonus', dmg: '1d4°', d: "1×/round : attaque sournoise contre une créature qui quitte son contact. Sans cette capacité, +1d4° DM tout de même." },
     { r: 7, n: 'Égorger', a: 'A', d: "Attaque réussie contre un humanoïde surpris de NC inférieur à 4 : mort immédiate. Avec l'Attaque sournoise, le NC limite augmente de +1 par dé d'attaque sournoise. Sinon, DM normaux." },
     { r: 8, n: 'Un simple regard', a: 'G', d: "Test opposé d'attaque magique contre une ou plusieurs cibles humanoïdes (10 m) : elles renoncent à l'attaquer (1 round seulement si leur NC dépasse son niveau). Puis dé bonus à ses tentatives d'intimidation ou de persuasion. Attaquer met fin à l'effet." }
   ]

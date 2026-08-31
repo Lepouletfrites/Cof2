@@ -29,7 +29,7 @@ COF.PRESTIGE.specialiste = {
     { r: 4, n: 'Expertise', d: "Au choix : +1 en attaque avec une capacité désignée, ou +5 sur une compétence acquise par une capacité." },
     { r: 5, n: 'Capacité fabuleuse', d: "Une capacité limitée connue devient utilisable en action d'attaque. S'il s'agit d'un sort (A), il bénéficie de la concentration (−2 PM) sans passer en action limitée." },
     { r: 6, n: 'Caractéristique fabuleuse', d: "+1 à la plus haute caractéristique. Sur un résultat de 1 à un test de cette caractéristique, relance possible (le nouveau résultat compte)." },
-    { r: 7, n: 'Capacité supérieure', dmg: '1d4°', d: "Une capacité connue au choix : +1d4° aux DM une fois par round (sur une seule attaque si elle en permet plusieurs)." },
+    { r: 7, n: 'Capacité supérieure', t: 'bonus', dmg: '1d4°', d: "Une capacité connue au choix : +1d4° aux DM une fois par round (sur une seule attaque si elle en permet plusieurs)." },
     { r: 8, n: 'Capacité signature', f: 'combat', d: "Une capacité (A), (M) ou (L) connue : 1×/combat, utilisable en plus des actions normales du tour, sans dépasser ses limitations propres. Coût en PM normal s'il s'agit d'un sort." }
   ]
 };
@@ -42,7 +42,7 @@ COF.PRESTIGE.lycanthrope = {
   caps: [
     { r: 4, n: 'Forme hybride', a: 'L', f: 'combat', dmg: '1d4°+FOR', d: "Forme mi-homme mi-loup pendant 1 min (récupération rapide entre deux usages). Ni sort ni arme à distance, mais une morsure gratuite par round : [1d4° + FOR] DM. Retour à la normale à 0 PV." },
     { r: 5, n: 'Transformation en loup', a: 'L', dmg: '1d4+3', d: "Forme de loup 1 h par rang et par jour : FOR +3, AGI +1, DEF [12 + rang], Init. 15, DM 1d4+3, +5 aux tests de PER, de poursuite et de pistage. Réduit de 5 les DM des armes non argentées." },
-    { r: 6, n: 'Éventration', dmg: '1d4°', d: "Sur un résultat de 15-20 à l'attaque de morsure : +1d4° aux DM (forme de loup ou hybride)." },
+    { r: 6, n: 'Éventration', t: 'bonus', dmg: '1d4°', d: "Sur un résultat de 15-20 à l'attaque de morsure : +1d4° aux DM (forme de loup ou hybride)." },
     { r: 7, n: 'Résistance surnaturelle', d: "Sous forme hybride, réduit de 5 les DM des armes non argentées. Non cumulable avec une autre RD." },
     { r: 8, n: 'Forme puissante', d: "+2 en FOR sous forme de loup ou d'hybride (donc +2 en attaque au contact et aux DM)." }
   ]

@@ -30,7 +30,7 @@ COF.UI = COF.UI || {};
   COF.UI.$ = $; COF.UI.$$ = $$; COF.UI.el = el; COF.UI.sgn = sgn; COF.UI.esc = esc;
 
   /* ---------- Navigation par onglets ---------- */
-  var VUES = ['persos', 'fiche', 'voies', 'des', 'plus'];
+  var VUES = ['persos', 'fiche', 'voies', 'bestiaire', 'generateurs', 'des', 'plus'];
 
   function aller(vue) {
     VUES.forEach(function (v) {
@@ -42,6 +42,8 @@ COF.UI = COF.UI || {};
     if (vue === 'fiche') COF.UI.Fiche.rendre();
     if (vue === 'voies') COF.UI.Voies.rendre();
     if (vue === 'persos') COF.UI.Persos.rendre();
+    if (vue === 'bestiaire') COF.UI.Bestiaire.rendre();
+    if (vue === 'generateurs') COF.UI.Generateurs.rendre();
     if (vue === 'des') COF.UI.rendreJournal();
     majTitre();
   }
@@ -102,6 +104,15 @@ COF.UI = COF.UI || {};
               esc(t.label) + ' ' + sgn(t.mod) + '</span>';
           }).join('') + '</div>';
       }
+      if (cfg.armeChoix) {
+        html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-mute);margin-bottom:5px">' +
+          'Arme utilisée — les DM de la capacité s\'y ajoutent</div>';
+        html += '<div class="chips" style="margin-bottom:10px">' +
+          cfg.armeChoix.map(function (a, i) {
+            return '<span class="chip' + (i === 0 ? ' on' : '') + '" data-arme="' + i + '">' +
+              esc(a.label) + '</span>';
+          }).join('') + '</div>';
+      }
       html += '<div class="options">' +
         '<div class="opt" data-o="bonus">🎲 Dé bonus</div>' +
         '<div class="opt" data-o="malus">💀 Dé malus</div>' +
@@ -146,6 +157,23 @@ COF.UI = COF.UI || {};
         });
       });
 
+      /* choix de l'arme : met à jour la formule de DM combinée et le modificateur */
+      $$('[data-arme]', root).forEach(function (ch) {
+        ch.addEventListener('click', function () {
+          $$('[data-arme]', root).forEach(function (x) { x.classList.remove('on'); });
+          ch.classList.add('on');
+          var a = cfg.armeChoix[+ch.getAttribute('data-arme')];
+          cfg.dmg = a.dmg;
+          if (typeof a.mod === 'number') $('#j-mod', root).value = a.mod;
+          var skip = $('#j-dmg-skip', root);
+          if (skip) skip.textContent = 'Dégâts seuls — ' + a.dmg;
+          var dm = $('#j-dmg', root);
+          if (dm && dm.textContent.indexOf('CRITIQUE') < 0) {
+            dm.textContent = (cfg.dmgLabel || 'Dommages') + ' — ' + a.dmg;
+          }
+        });
+      });
+
       $$('[data-carac]', root).forEach(function (ch) {
         ch.addEventListener('click', function () {
           var on = ch.classList.contains('on');
@@ -177,21 +205,79 @@ COF.UI = COF.UI || {};
   }
   COF.UI.jet = jet;
 
+  /* Formule de DM d'une arme du personnage, bonus permanents inclus */
+  function dmgArme(C, w) {
+    var d = w.dm;
+    if (w.type === 'contact' && !w.noFor) d += '+FOR';
+    if (w.type === 'contact' && C.bonus && C.bonus.dmC) d += '+' + C.bonus.dmC;
+    if (w.type === 'distance' && C.bonus && C.bonus.dmD) d += '+' + C.bonus.dmD;
+    return d;
+  }
+  COF.UI.dmgArme = dmgArme;
+
   /* Ouvre un jet d'attaque générique (contact/distance/magique) pour une
      capacité de combat (voie de profil, prestige ou hybride). Ne gère
-     aucun coût en PM : réservé aux capacités qui ne sont pas des sorts. */
+     aucun coût en PM : réservé aux capacités qui ne sont pas des sorts.
+
+     Trois natures de formule (champ « t » de la capacité) :
+       'bonus' → les DM s'ajoutent à ceux d'une arme : on propose les armes
+                 du personnage et on lance la somme
+       'soin'  → restauration de PV, sans test d'attaque
+       absent  → dommages directs, la formule se suffit à elle-même        */
   function jetCapacite(cap, voieNom, rangCourant) {
     var C = COF.Store.actif();
     var K = COF.Calc;
     var a = K.attaques(C);
+    var sous = voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : '');
+
+    if (cap.t === 'soin') {
+      jet({
+        titre: cap.n, sousTitre: sous,
+        dmg: cap.dmg, dmgLabel: 'Soins', sansD20: true,
+        ctx: K.ctx(C, rangCourant), type: 'soins'
+      });
+      return;
+    }
+
     var types = [
       { id: 'contact', label: 'Contact', mod: a.contact },
       { id: 'distance', label: 'Distance', mod: a.distance },
       { id: 'magique', label: 'Magique', mod: a.magique }
     ];
+
+    if (cap.t === 'bonus') {
+      /* la capacité ajoute ses DM à ceux d'une arme : proposer les armes */
+      var choix = (C.armes || []).map(function (w) {
+        var base = dmgArme(C, w);
+        var mod = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
+        return { label: w.nom, dmg: base + '+' + cap.dmg, mod: mod, type: w.type };
+      });
+      choix.push({ label: 'Bonus seul', dmg: cap.dmg, mod: null });
+
+      /* arme par défaut : à distance si la capacité le mentionne, sinon la première */
+      var versDistance = /distance|arc |arbalète|tir\b|flèche|poudre|jet\b/i.test(cap.n + ' ' + (cap.d || ''));
+      var def = 0;
+      if (versDistance) {
+        for (var i = 0; i < choix.length; i++) {
+          if (choix[i].type === 'distance') { def = i; break; }
+        }
+      }
+      if (def > 0) { var tmp = choix[0]; choix[0] = choix[def]; choix[def] = tmp; }
+
+      jet({
+        titre: cap.n, sousTitre: sous,
+        attaqueTypes: types,
+        attaqueDefaut: choix[0].type === 'distance' ? 'distance' : (cap.s ? 'magique' : 'contact'),
+        armeChoix: choix,
+        mod: choix[0].mod,
+        dmg: choix[0].dmg, dmgLabel: 'Dommages',
+        ctx: K.ctx(C, rangCourant), type: 'attaque'
+      });
+      return;
+    }
+
     jet({
-      titre: cap.n,
-      sousTitre: voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : ''),
+      titre: cap.n, sousTitre: sous,
       attaqueTypes: types, attaqueDefaut: cap.s ? 'magique' : 'contact',
       dmg: cap.dmg || null, dmgLabel: 'Dommages',
       ctx: K.ctx(C, rangCourant), type: 'attaque'
@@ -298,6 +384,8 @@ COF.UI = COF.UI || {};
     COF.UI.Persos.init();
     COF.UI.Fiche.init();
     COF.UI.Voies.init();
+    COF.UI.Bestiaire.init();
+    COF.UI.Generateurs.init();
     COF.UI.Des.init();
     COF.UI.Plus.init();
 

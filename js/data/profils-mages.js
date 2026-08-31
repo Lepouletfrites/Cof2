@@ -77,9 +77,9 @@ COF.PROFILS.forgesort = {
       { r: 5, n: 'Artefact étrange', a: 'L', f: 'jour', d: "Crée un artefact personnel permettant d'utiliser 1×/jour chacune : Téléportation, Interruption du temps, Forme éthérée, Prescience. À chaque usage, lancez 1d6 : sur 1-2 l'artefact tombe en panne jusqu'à réparation (récupération rapide)." }
     ]},
     { id: 'elixirs', nom: 'Voie des élixirs', caps: [
-      { r: 1, n: 'Fortifiant', a: 'L', dmg: '1d4°', comp: "alchimie, chimie, identifier une potion", bon: '2+rang', d: "Breuvage qui rend 1d4° PV et donne un dé bonus aux 3 prochains tests dans les 30 min." },
+      { r: 1, n: 'Fortifiant', a: 'L', t: 'soin', dmg: '1d4°', comp: "alchimie, chimie, identifier une potion", bon: '2+rang', d: "Breuvage qui rend 1d4° PV et donne un dé bonus aux 3 prochains tests dans les 30 min." },
       { r: 2, n: 'Feu grégeois', a: 'L', dmg: '2d4°', d: "Fiole lancée à 10 m (réussite automatique) : explose dans 3 m pour 2d4° DM (3d4° au rang 4, 4d4° au rang 5). Test d'AGI difficulté [10 + INT] pour moitié DM." },
-      { r: 3, n: 'Élixir de guérison', a: 'L', dmg: '2d4°+INT', d: "Élixir soignant [2d4° + INT] PV au bout d'une minute, ou guérissant instantanément un empoisonnement." },
+      { r: 3, n: 'Élixir de guérison', a: 'L', t: 'soin', dmg: '2d4°+INT', d: "Élixir soignant [2d4° + INT] PV au bout d'une minute, ou guérissant instantanément un empoisonnement." },
       { r: 4, n: 'Élixirs mineurs', a: 'L', choix: true, d: "Prépare des élixirs parmi Forme gazeuse, Maîtrise des éléments, Chute ralentie (magicien) et Masque mortuaire (sorcier) : un nombre égal à son INT (max 4)." },
       { r: 5, n: 'Élixirs majeurs', a: 'L', choix: true, d: "Prépare des élixirs parmi Invisibilité, Vol, Accélération (magicien) et Masque du prédateur (druide) : un nombre égal à son INT (max 4). Ces préparations comptent double." }
     ]},
@@ -137,7 +137,7 @@ COF.PROFILS.magicien = {
     { id: 'elementaire', nom: 'Voie de la magie élémentaire', caps: [
       { r: 1, n: 'Asphyxie', a: 'A', s: true, dmg: '1d4°', d: "Test opposé d'attaque magique (20 m) : la cible étouffe et subit 1d4° DM par round pendant INT rounds. Les créatures qui ne respirent pas sont immunisées ; les RD ne s'appliquent pas." },
       { r: 2, n: 'Maîtrise des éléments', a: 'M', s: true, d: "Retranche rang + 2 à tous les DM de feu, froid, électricité ou acide subis pendant INT minutes. Peut échanger un élément contre un autre dans ses sorts." },
-      { r: 3, n: 'Arme élémentaire', a: 'A', s: true, dmg: '1d4°', d: "Enchante une arme pour INT minutes : +1d4° DM de feu, froid, électricité ou acide. (A) pour sa propre arme, (L) pour celle d'autrui. Tant qu'il la tient, les sorts de cet élément coûtent 1 PM de moins." },
+      { r: 3, n: 'Arme élémentaire', a: 'A', s: true, t: 'bonus', dmg: '1d4°', d: "Enchante une arme pour INT minutes : +1d4° DM de feu, froid, électricité ou acide. (A) pour sa propre arme, (L) pour celle d'autrui. Tant qu'il la tient, les sorts de cet élément coûtent 1 PM de moins." },
       { r: 4, n: 'Respiration aquatique', a: 'A', s: true, d: "Respire sous l'eau pendant 10 minutes. Extensible à un compagnon par point d'INT." },
       { r: 5, n: 'Armure de pierre', a: 'A', s: true, d: "Pendant INT minutes, retranche 5 points à tous les DM subis. Le sort s'achève après avoir absorbé [niveau × 3] DM. Cumulable avec Maîtrise des éléments, incompatible avec Déphasage." }
     ]},
@@ -204,7 +204,7 @@ COF.PROFILS.sorcier = {
       { r: 2, n: 'Reptation', a: 'M', s: true, d: "Pendant INT minutes, rampe de 5 m par action de mouvement sur les murs et les plafonds. Peut lancer ses sorts dans cette posture." },
       { r: 3, n: 'Strangulation', a: 'A', s: true, dmg: '1d4°+INT', d: "Test opposé d'attaque magique (20 m) : la victime subit un dé malus à tous ses tests et [1d4° + INT] DM par round tant qu'il maintient sa concentration (action de mouvement + 1 PM par round)." },
       { r: 4, n: "Manteau d'ombre", a: 'L', s: true, dmg: '1d4°', d: "Pendant INT minutes : dé bonus en discrétion, dé malus aux attaques à distance qui le visent. À 0 PV, il peut disparaître dans son ombre et réapparaître à 1d6 km avec 1d4° PV, 1d6 min plus tard (une fois par jour)." },
-      { r: 5, n: 'Pacte ténébreux', dmg: '2d4°', d: "+1 en CON, dé bonus aux tests de CON, vision dans le noir comme en pénombre. En lançant un sort, peut sacrifier 1d4° PV pour +2d4° aux DM (chaque round pour les DM sur la durée)." }
+      { r: 5, n: 'Pacte ténébreux', t: 'bonus', dmg: '2d4°', d: "+1 en CON, dé bonus aux tests de CON, vision dans le noir comme en pénombre. En lançant un sort, peut sacrifier 1d4° PV pour +2d4° aux DM (chaque round pour les DM sur la durée)." }
     ]}
   ]
 };
