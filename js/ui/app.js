@@ -393,4 +393,13 @@ COF.UI = COF.UI || {};
   }
 
   document.addEventListener('DOMContentLoaded', init);
+
+  /* ---------- PWA : service worker ---------- */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {
+        /* échec silencieux : file:// ou hébergement sans HTTPS, l'app reste utilisable en ligne */
+      });
+    });
+  }
 })();

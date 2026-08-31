@@ -1,0 +1,16 @@
+{
+  "name": "COF2 Compagnon",
+  "short_name": "COF2",
+  "description": "Fiche de personnage, bestiaire et générateurs pour Chroniques Oubliées Fantasy 2.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#14110e",
+  "theme_color": "#14110e",
+  "lang": "fr",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

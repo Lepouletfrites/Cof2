@@ -1,7 +1,8 @@
 # COF2 Compagnon
 
 Application web (HTML / CSS / JS, sans dépendance) pour **Chroniques Oubliées Fantasy 2e édition**.
-Pensée mobile en mode portrait, 100 % hors ligne, données stockées dans le navigateur.
+Pensée mobile en mode portrait, **installable comme application (PWA)**, 100 % hors ligne après
+le premier chargement, données stockées dans le navigateur.
 
 ## Lancer l'application
 
@@ -34,6 +35,7 @@ Puis rendez-vous sur `http://localhost:8777`.
 | `prestige-mystique.js` | 12 voies de prestige de mystique |
 | `compagnons.js` | 14 gabarits de compagnons (loup, familiers, golem, zombie, montures, familier fantastique, vermine, être féérique...) |
 | `bestiaire-1/2/3.js` | 84 créatures du livre de base : 10 humanoïdes, 24 animaux, 50 créatures fantastiques — avec 8 environnements et 3 catégories |
+| `pnj.js` | Générateur de PNJ : syllabaires procéduraux par peuple, âges, apparence, ~65 métiers, idéal/travers officiels, manies, motivations, secrets, accroches, panthéon d'Osgild (31 divinités) |
 
 **14 profils × 5 voies × 5 rangs = 350 capacités**, plus 40 capacités de peuple et
 **53 voies de prestige × 5 rangs = 265 capacités** : **655 au total**.
@@ -67,6 +69,9 @@ Chaque capacité est structurée pour être exploitable par le moteur :
 - **`rencontre.js`** — générateur de rencontres. Barème de points par NC calibré sur les
   exemples de rencontres du bestiaire, budget indexé sur la taille et le niveau du groupe,
   et quatre stratégies de composition (solitaire, bande hiérarchisée, meute, groupe hétéroclite).
+- **`pnj.js`** (core) — moteur procédural : 19 champs générés dans l'ordre de leurs dépendances
+  (peuple → genre → nom → âge, puis apparence, vie sociale, personnalité, accroches), chacun
+  regénérable individuellement en conservant le reste.
 - **`store.js`** — sauvegarde locale, personnages multiples, équipement de départ, journal de
   jets, export / import JSON.
 
@@ -91,11 +96,20 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   acquises (rôdeur, druide, magicien, forgesort, sorcier, chevalier, ou certaines voies de
   prestige) apparaissent en un clic ; chaque compagnon actif a son nom éditable, sa propre jauge
   de PV, et un bouton Attaquer qui enchaîne test d'attaque puis dégâts comme pour une arme.
-- **Générateurs** — le générateur de rencontres : choisissez un environnement, la taille et le
-  niveau du groupe, une difficulté (facile → mortelle) et éventuellement un style de composition.
-  Il produit une rencontre cohérente — un chef entouré de sa piétaille du même peuple, une meute
-  homogène, un adversaire unique ou un groupe hétéroclite — avec le détail des profils, le budget
-  consommé et une feuille d'ordre d'initiative incluant le personnage actif.
+- **Générateurs** — deux outils sous deux sous-onglets.
+  - *Rencontre* : choisissez un environnement, la taille et le niveau du groupe, une difficulté
+    (facile → mortelle) et éventuellement un style de composition. Il produit une rencontre
+    cohérente — un chef entouré de sa piétaille du même peuple, une meute homogène, un adversaire
+    unique ou un groupe hétéroclite — avec le détail des profils, le budget consommé et une
+    feuille d'ordre d'initiative incluant le personnage actif.
+  - *PNJ* : génère un personnage non joueur complet et cohérent — peuple, genre, nom procédural
+    (syllabaire propre à chaque peuple, avec nom de famille ou épithète), tranche d'âge, apparence
+    (taille, corpulence, cheveux, yeux, teint, signe distinctif), métier (~65 possibilités, dont
+    plusieurs reliés à une fiche du bestiaire humanoïde), idéal héroïque et travers (tables
+    officielles du livre), manie, divinité patronne (panthéon complet d'Osgild), motivation,
+    secret et accroche scénaristique. Chaque champ se relance individuellement ou se **verrouille**
+    (🔒) avant un tirage complet, pour composer le PNJ qu'on veut sans tout recommencer. Une fiche
+    imprimable résume l'ensemble.
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 
@@ -118,9 +132,20 @@ meute et ses 6 loups à -9 %, le chef ogre et ses 5 ogres à -18 %.
 
 1. **Oracle solo** — questions oui/non avec nuances, tables d'événements aléatoires.
 2. **Générateur de donjon** — salles, couloirs, pièges et trésors.
-3. **Générateur de PNJ** — nom, métier, trait de caractère, motivation.
-4. **Objets magiques & trésors** — catalogue et tables aléatoires adaptées au NC.
-5. **Mode MJ** — suivi de combat multi-créatures avec PV individuels.
+3. **Objets magiques & trésors** — catalogue et tables aléatoires adaptées au NC.
+4. **Mode MJ** — suivi de combat multi-créatures avec PV individuels.
+
+## Installation en application (PWA)
+
+Ouvrez l'application dans le navigateur puis utilisez « Ajouter à l'écran d'accueil »
+(Android/Chrome) ou « Partager → Sur l'écran d'accueil » (iOS/Safari). Un service worker
+(`sw.js`) met en cache tous les fichiers au premier chargement : l'application s'ouvre et
+fonctionne ensuite sans connexion. Le service worker exige un contexte sécurisé (HTTPS, ou
+`localhost` en développement) ; il échoue silencieusement sur un simple `file://` ou un
+hébergement HTTP, mais l'application reste utilisable normalement, juste sans mode hors ligne.
+
+Si vous modifiez un fichier listé dans `sw.js`, incrémentez `CACHE_VERSION` en tête de ce
+fichier pour que les joueurs déjà installés reçoivent la mise à jour.
 
 ## Note
 

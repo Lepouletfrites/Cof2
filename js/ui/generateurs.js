@@ -10,6 +10,7 @@ COF.UI.Generateurs = (function () {
 
   var P = { env: 'foret', nbPJ: 4, niveau: 1, difficulte: 'ordinaire', style: 'auto' };
   var resultat = null;
+  var SOUS = 'rencontre';
 
   function init() {
     document.addEventListener('click', function (e) {
@@ -20,11 +21,24 @@ COF.UI.Generateurs = (function () {
     /* pré-remplissage depuis le personnage actif */
     var p = COF.Store.actif();
     if (p) P.niveau = p.niveau || 1;
+    COF.UI.Pnj.init();
   }
 
   /* ---------- Rendu ---------- */
   function rendre() {
     var n = $('#vue-generateurs');
+    var h = '<div class="carte"><div class="carte-corps" style="padding-bottom:2px"><div class="chips">' +
+      '<span class="chip ' + (SOUS === 'rencontre' ? 'on' : '') + '" data-gact="sous" data-v="rencontre">⚔️ Rencontre</span>' +
+      '<span class="chip ' + (SOUS === 'pnj' ? 'on' : '') + '" data-gact="sous" data-v="pnj">👤 PNJ</span>' +
+      '</div></div></div>';
+    h += '<div id="gen-corps"></div>';
+    n.innerHTML = h;
+
+    if (SOUS === 'pnj') { COF.UI.Pnj.rendre($('#gen-corps')); return; }
+    rendreRencontre($('#gen-corps'));
+  }
+
+  function rendreRencontre(cible) {
     var b = COF.Rencontre.budget(P.nbPJ, P.niveau, P.difficulte);
     var dispo = COF.Rencontre.candidats(P.env).length;
 
@@ -89,13 +103,11 @@ COF.UI.Generateurs = (function () {
       '<div class="s">Questions oui/non avec nuances, événements aléatoires</div></div></div>' +
       '<div class="ligne"><div class="info"><div class="t">🗺️ Générateur de donjon</div>' +
       '<div class="s">Salles, couloirs, pièges et trésors</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">👤 Générateur de PNJ</div>' +
-      '<div class="s">Nom, métier, trait de caractère, motivation</div></div></div>' +
       '<div class="ligne"><div class="info"><div class="t">💰 Trésors</div>' +
       '<div class="s">Butin adapté au NC de la rencontre</div></div></div>' +
       '</div></div>';
 
-    n.innerHTML = h;
+    cible.innerHTML = h;
   }
 
   /* ---------- Affichage d'une rencontre ---------- */
@@ -179,6 +191,7 @@ COF.UI.Generateurs = (function () {
   /* ---------- Actions ---------- */
   function actions(act, node) {
     switch (act) {
+      case 'sous': SOUS = node.getAttribute('data-v'); rendre(); break;
       case 'env': P.env = node.getAttribute('data-v'); resultat = null; rendre(); break;
       case 'diff': P.difficulte = node.getAttribute('data-v'); rendre(); break;
       case 'style': P.style = node.getAttribute('data-v'); rendre(); break;
