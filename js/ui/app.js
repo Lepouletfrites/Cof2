@@ -30,17 +30,33 @@ COF.UI = COF.UI || {};
   COF.UI.$ = $; COF.UI.$$ = $$; COF.UI.el = el; COF.UI.sgn = sgn; COF.UI.esc = esc;
 
   /* ---------- Navigation par onglets ---------- */
-  var VUES = ['persos', 'fiche', 'voies', 'bestiaire', 'generateurs', 'des', 'plus'];
+  var VUES = ['persos', 'fiche', 'arene', 'bestiaire', 'generateurs', 'des', 'plus'];
+
+  /* Voies est un sous-onglet de Fiche, pas une vue de premier niveau */
+  var sousFiche = 'fiche'; // 'fiche' | 'voies'
+
+  function rendreFicheOnglets() {
+    var chipFiche = $('#fonglet-fiche'), chipVoies = $('#fonglet-voies');
+    if (chipFiche) chipFiche.classList.toggle('on', sousFiche === 'fiche');
+    if (chipVoies) chipVoies.classList.toggle('on', sousFiche === 'voies');
+    var corps = $('#vue-fiche-corps'), voies = $('#vue-voies');
+    if (corps) corps.style.display = sousFiche === 'fiche' ? '' : 'none';
+    if (voies) voies.style.display = sousFiche === 'voies' ? '' : 'none';
+    if (sousFiche === 'voies') COF.UI.Voies.rendre(); else COF.UI.Fiche.rendre();
+  }
+  COF.UI.rendreFicheOnglets = rendreFicheOnglets;
 
   function aller(vue) {
+    if (vue === 'voies') { sousFiche = 'voies'; vue = 'fiche'; }
+    else if (vue === 'fiche') { sousFiche = 'fiche'; }
     VUES.forEach(function (v) {
       var n = $('#vue-' + v); if (n) n.classList.toggle('actif', v === vue);
       var b = $('#nav-' + v); if (b) b.classList.toggle('actif', v === vue);
     });
     window.scrollTo(0, 0);
     COF.UI.vueActive = vue;
-    if (vue === 'fiche') COF.UI.Fiche.rendre();
-    if (vue === 'voies') COF.UI.Voies.rendre();
+    if (vue === 'fiche') rendreFicheOnglets();
+    if (vue === 'arene') COF.UI.Arene.rendre($('#vue-arene'));
     if (vue === 'persos') COF.UI.Persos.rendre();
     if (vue === 'bestiaire') COF.UI.Bestiaire.rendre();
     if (vue === 'generateurs') COF.UI.Generateurs.rendre();
@@ -194,12 +210,12 @@ COF.UI = COF.UI || {};
 
       var bd = $('#j-dmg-direct', root);
       if (bd) bd.addEventListener('click', function () {
-        afficherDmg(cfg, false, root, true);
+        afficherDmg(cfg, false, root, true, true);
       });
 
       var skip = $('#j-dmg-skip', root);
       if (skip) skip.addEventListener('click', function () {
-        afficherDmg(cfg, false, root, true);
+        afficherDmg(cfg, false, root, true, true);
       });
     });
   }
@@ -224,11 +240,12 @@ COF.UI = COF.UI || {};
                  du personnage et on lance la somme
        'soin'  → restauration de PV, sans test d'attaque
        absent  → dommages directs, la formule se suffit à elle-même        */
-  function jetCapacite(cap, voieNom, rangCourant) {
-    var C = COF.Store.actif();
+  function jetCapacite(cap, voieNom, rangCourant, persoOverride, cibleInfo) {
+    var C = persoOverride || COF.Store.actif();
     var K = COF.Calc;
     var a = K.attaques(C);
-    var sous = voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : '');
+    var sous = voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : '') +
+      (cibleInfo ? ' · 🎯 ' + cibleInfo.nom + ' (DEF ' + cibleInfo.def + ')' : '');
 
     if (cap.t === 'soin') {
       jet({
@@ -271,6 +288,7 @@ COF.UI = COF.UI || {};
         armeChoix: choix,
         mod: choix[0].mod,
         dmg: choix[0].dmg, dmgLabel: 'Dommages',
+        difficulte: cibleInfo ? cibleInfo.def : null, cible: cibleInfo,
         ctx: K.ctx(C, rangCourant), type: 'attaque'
       });
       return;
@@ -280,6 +298,7 @@ COF.UI = COF.UI || {};
       titre: cap.n, sousTitre: sous,
       attaqueTypes: types, attaqueDefaut: cap.s ? 'magique' : 'contact',
       dmg: cap.dmg || null, dmgLabel: 'Dommages',
+      difficulte: cibleInfo ? cibleInfo.def : null, cible: cibleInfo,
       ctx: K.ctx(C, rangCourant), type: 'attaque'
     });
   }
@@ -328,11 +347,13 @@ COF.UI = COF.UI || {};
     });
 
     var bd = $('#j-dmg', root);
-    if (bd) bd.addEventListener('click', function () { afficherDmg(cfg, r.crit, root, false); });
+    if (bd) bd.addEventListener('click', function () { afficherDmg(cfg, r.crit, root, false, r.reussite); });
     $('#j-relancer', root).addEventListener('click', function () { lancerTest(cfg, etat, root); });
   }
 
-  function afficherDmg(cfg, crit, root, direct) {
+  /* hit : true/undefined = le jet est considéré réussi (ou aucun test n'a eu lieu, ex.
+     « Dégâts seuls ») → applique les dégâts à cfg.cible si fourni ; false = attaque ratée. */
+  function afficherDmg(cfg, crit, root, direct, hit) {
     vibre(12);
     var r = COF.Dice.dommages(cfg.dmg, cfg.ctx || {}, { crit: crit });
     var det = r.detail.map(function (d) {
@@ -340,17 +361,28 @@ COF.UI = COF.UI || {};
     }).join(' · ');
     var h = '<div class="resultat"><div class="grand">' + r.total + '</div>' +
       '<div class="detail">' + esc(det) + (crit ? ' → ×2 (critique)' : '') + '</div>' +
-      '<div class="verdict">' + (cfg.type === 'soins' ? 'points récupérés' : 'dommages') + '</div></div>' +
-      '<button class="btn btn-bloc" id="j-dmg-relance">↻ Relancer les dommages</button>';
-    var cible = $(direct ? '#j-res' : '#j-dmg-res', root);
-    cible.innerHTML = h;
+      '<div class="verdict">' + (cfg.type === 'soins' ? 'points récupérés' : 'dommages') + '</div></div>';
+
+    if (cfg.cible && cfg.type !== 'soins') {
+      if (hit === false) {
+        h += '<div class="note" style="margin-top:8px">✖ Attaque manquée — ' + esc(cfg.cible.nom) + ' n\'est pas touché(e).</div>';
+      } else {
+        var etatCible = cfg.cible.appliquer(r.total);
+        h += '<div class="note" style="margin-top:8px">🎯 ' + r.total + ' dégâts appliqués à <b>' +
+          esc(cfg.cible.nom) + '</b>' + (etatCible ? ' (' + esc(etatCible) + ')' : '') + '.</div>';
+      }
+    }
+
+    h += '<button class="btn btn-bloc" id="j-dmg-relance" style="margin-top:8px">↻ Relancer les dommages</button>';
+    var zoneRes = $(direct ? '#j-res' : '#j-dmg-res', root);
+    zoneRes.innerHTML = h;
 
     COF.Store.logJet({
       t: Date.now(), titre: (cfg.type === 'soins' ? 'Soins — ' : 'DM — ') + cfg.titre,
       sous: cfg.dmg + (crit ? ' ×2' : ''), total: r.total, dm: true
     });
 
-    $('#j-dmg-relance', root).addEventListener('click', function () { afficherDmg(cfg, crit, root, direct); });
+    $('#j-dmg-relance', root).addEventListener('click', function () { afficherDmg(cfg, crit, root, direct, hit); });
   }
 
   /* ---------- Journal ---------- */
@@ -380,10 +412,17 @@ COF.UI = COF.UI || {};
     $('#modale').addEventListener('click', function (e) {
       if (e.target.id === 'modale') fermerModale();
     });
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-fonglet]') : null;
+      if (!t) return;
+      sousFiche = t.getAttribute('data-fonglet');
+      rendreFicheOnglets();
+    });
 
     COF.UI.Persos.init();
     COF.UI.Fiche.init();
     COF.UI.Voies.init();
+    COF.UI.Arene.init();
     COF.UI.Bestiaire.init();
     COF.UI.Generateurs.init();
     COF.UI.Des.init();

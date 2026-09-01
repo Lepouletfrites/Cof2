@@ -33,11 +33,18 @@
   <button class="btn btn-plein btn-bloc" id="btn-nouveau">+ Créer un personnage</button>
 </section>
 
-<!-- ============ FICHE ============ -->
-<section class="view" id="vue-fiche"></section>
+<!-- ============ FICHE (avec sous-onglet Voies) ============ -->
+<section class="view" id="vue-fiche">
+  <div class="carte"><div class="carte-corps" style="padding-bottom:2px"><div class="chips">
+    <span class="chip" id="fonglet-fiche" data-fonglet="fiche">🛡️ Fiche</span>
+    <span class="chip" id="fonglet-voies" data-fonglet="voies">📜 Voies</span>
+  </div></div></div>
+  <div id="vue-fiche-corps"></div>
+  <div id="vue-voies"></div>
+</section>
 
-<!-- ============ VOIES ============ -->
-<section class="view" id="vue-voies"></section>
+<!-- ============ ARÈNE ============ -->
+<section class="view" id="vue-arene"></section>
 
 <!-- ============ BESTIAIRE ============ -->
 <section class="view" id="vue-bestiaire"></section>
@@ -99,7 +106,7 @@
 <!-- ============ NAVIGATION ============ -->
 <nav class="nav">
   <button id="nav-fiche"><span class="ic">🛡️</span><span class="tx">Fiche</span></button>
-  <button id="nav-voies"><span class="ic">📜</span><span class="tx">Voies</span></button>
+  <button id="nav-arene"><span class="ic">⚔️</span><span class="tx">Arène</span></button>
   <button id="nav-des"><span class="ic">🎲</span><span class="tx">Dés</span></button>
   <button id="nav-bestiaire"><span class="ic">🐉</span><span class="tx">Bestiaire</span></button>
   <button id="nav-generateurs"><span class="ic">⚗️</span><span class="tx">Généra.</span></button>
@@ -135,12 +142,17 @@
 <script src="js/data/bestiaire-2.js"></script>
 <script src="js/data/bestiaire-3.js"></script>
 <script src="js/data/pnj.js"></script>
+<script src="js/data/recompenses.js"></script>
+<script src="js/data/oracle.js"></script>
 <!-- Moteur -->
 <script src="js/core/dice.js"></script>
 <script src="js/core/calc.js"></script>
 <script src="js/core/compagnons.js"></script>
 <script src="js/core/rencontre.js"></script>
 <script src="js/core/pnj.js"></script>
+<script src="js/core/recompense.js"></script>
+<script src="js/core/arene.js"></script>
+<script src="js/core/oracle.js"></script>
 <script src="js/core/store.js"></script>
 <!-- Interface -->
 <script src="js/ui/app.js"></script>
@@ -149,6 +161,9 @@
 <script src="js/ui/voies.js"></script>
 <script src="js/ui/bestiaire.js"></script>
 <script src="js/ui/pnj.js"></script>
+<script src="js/ui/arene.js"></script>
+<script src="js/ui/butin.js"></script>
+<script src="js/ui/oracle.js"></script>
 <script src="js/ui/generateurs.js"></script>
 <script src="js/ui/des.js"></script>
 </body>

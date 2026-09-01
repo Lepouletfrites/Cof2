@@ -106,17 +106,6 @@ COF.UI.Plus = (function () {
       '<div class="note">Niveau 1-5 : d4 · 6-8 : d6 · 9-11 : d8 · 12-14 : d10 · 15+ : d12.<br>' +
       'L\'application applique automatiquement la bonne valeur selon le niveau du personnage.</div></div></div>';
 
-    h += '<div class="carte"><h2>À venir</h2><div class="carte-corps">' +
-      '<div class="ligne"><div class="info"><div class="t">🐉 Bestiaire</div>' +
-      '<div class="s">Profils de créatures, filtres par NC, jets d\'attaque intégrés</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">🎲 Générateur JDR solo</div>' +
-      '<div class="s">Oracle oui/non, tables d\'événements, générateur de donjons et de PNJ</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">🗺️ Objets magiques & trésors</div>' +
-      '<div class="s">Tables de trésor et catalogue d\'objets</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">🐺 Compagnons</div>' +
-      '<div class="s">Loup, familier, golem, monture : fiches liées au personnage</div></div></div>' +
-      '</div></div>';
-
     $('#plus-contenu').innerHTML = h;
     COF.UI.$$('#plus-contenu .pliable > h2').forEach(function (t) {
       t.addEventListener('click', function () { t.parentNode.classList.toggle('ferme'); });

@@ -21,7 +21,7 @@ COF.UI.Fiche = (function () {
 
   function rendre() {
     C = COF.Store.actif();
-    var n = $('#vue-fiche');
+    var n = $('#vue-fiche-corps');
     if (!C) {
       n.innerHTML = '<div class="vide">Aucun personnage sélectionné.<br><br>' +
         '<button class="btn btn-plein" onclick="COF.UI.aller(\'persos\')">Choisir un personnage</button></div>';
@@ -342,7 +342,8 @@ COF.UI.Fiche = (function () {
     if (!C.inventaire.length) h += '<div class="note">Sac vide. ' + esc(COF.SAC_DEPART) + '</div>';
     C.inventaire.forEach(function (o, i) {
       h += '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) +
-        (o.qte > 1 ? ' ×' + o.qte : '') + '</div></div>' +
+        (o.qte > 1 ? ' ×' + o.qte : '') + '</div>' +
+        (o.note ? '<div class="s">' + esc(o.note) + '</div>' : '') + '</div>' +
         '<div class="actions"><button class="btn btn-sm" data-act="inv-suppr" data-i="' + i + '">✕</button></div></div>';
     });
     h += '</div></div>';
@@ -590,9 +591,9 @@ COF.UI.Fiche = (function () {
     else if (a === 'ajust') {
       C.bonus[t.getAttribute('data-k')] = parseInt(t.value, 10) || 0;
       sauver();
-      var ouv = COF.UI.$$('#vue-fiche .pliable').map(function (n) { return n.classList.contains('ferme'); });
+      var ouv = COF.UI.$$('#vue-fiche-corps .pliable').map(function (n) { return n.classList.contains('ferme'); });
       rendre();
-      COF.UI.$$('#vue-fiche .pliable').forEach(function (n, i) { n.classList.toggle('ferme', !!ouv[i]); });
+      COF.UI.$$('#vue-fiche-corps .pliable').forEach(function (n, i) { n.classList.toggle('ferme', !!ouv[i]); });
     }
   });
 

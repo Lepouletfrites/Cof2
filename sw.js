@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v3';
+var CACHE_VERSION = 'cof2-v10';
 
 var FICHIERS = [
   './',
@@ -30,12 +30,17 @@ var FICHIERS = [
   'js/data/bestiaire-2.js',
   'js/data/bestiaire-3.js',
   'js/data/pnj.js',
+  'js/data/recompenses.js',
+  'js/data/oracle.js',
 
   'js/core/dice.js',
   'js/core/calc.js',
   'js/core/compagnons.js',
   'js/core/rencontre.js',
   'js/core/pnj.js',
+  'js/core/recompense.js',
+  'js/core/arene.js',
+  'js/core/oracle.js',
   'js/core/store.js',
 
   'js/ui/app.js',
@@ -45,6 +50,9 @@ var FICHIERS = [
   'js/ui/bestiaire.js',
   'js/ui/generateurs.js',
   'js/ui/pnj.js',
+  'js/ui/arene.js',
+  'js/ui/butin.js',
+  'js/ui/oracle.js',
   'js/ui/des.js'
 ];
 

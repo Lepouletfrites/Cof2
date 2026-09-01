@@ -22,19 +22,28 @@ COF.UI.Generateurs = (function () {
     var p = COF.Store.actif();
     if (p) P.niveau = p.niveau || 1;
     COF.UI.Pnj.init();
+    COF.UI.Butin.init();
+    COF.UI.Oracle.init();
   }
+
+  /* Dernière rencontre générée, exposée pour l'import direct dans l'Arène et le butin */
+  function dernierResultat() { return resultat; }
 
   /* ---------- Rendu ---------- */
   function rendre() {
     var n = $('#vue-generateurs');
     var h = '<div class="carte"><div class="carte-corps" style="padding-bottom:2px"><div class="chips">' +
       '<span class="chip ' + (SOUS === 'rencontre' ? 'on' : '') + '" data-gact="sous" data-v="rencontre">⚔️ Rencontre</span>' +
+      '<span class="chip ' + (SOUS === 'butin' ? 'on' : '') + '" data-gact="sous" data-v="butin">💰 Butin</span>' +
       '<span class="chip ' + (SOUS === 'pnj' ? 'on' : '') + '" data-gact="sous" data-v="pnj">👤 PNJ</span>' +
+      '<span class="chip ' + (SOUS === 'oracle' ? 'on' : '') + '" data-gact="sous" data-v="oracle">🔮 Oracle</span>' +
       '</div></div></div>';
     h += '<div id="gen-corps"></div>';
     n.innerHTML = h;
 
     if (SOUS === 'pnj') { COF.UI.Pnj.rendre($('#gen-corps')); return; }
+    if (SOUS === 'butin') { COF.UI.Butin.rendre($('#gen-corps')); return; }
+    if (SOUS === 'oracle') { COF.UI.Oracle.rendre($('#gen-corps')); return; }
     rendreRencontre($('#gen-corps'));
   }
 
@@ -98,15 +107,6 @@ COF.UI.Generateurs = (function () {
 
     h += '<div id="gen-resultat">' + (resultat ? htmlResultat(resultat) : '') + '</div>';
 
-    h += '<div class="carte"><h2>À venir</h2><div class="carte-corps">' +
-      '<div class="ligne"><div class="info"><div class="t">🔮 Oracle solo</div>' +
-      '<div class="s">Questions oui/non avec nuances, événements aléatoires</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">🗺️ Générateur de donjon</div>' +
-      '<div class="s">Salles, couloirs, pièges et trésors</div></div></div>' +
-      '<div class="ligne"><div class="info"><div class="t">💰 Trésors</div>' +
-      '<div class="s">Butin adapté au NC de la rencontre</div></div></div>' +
-      '</div></div>';
-
     cible.innerHTML = h;
   }
 
@@ -157,6 +157,7 @@ COF.UI.Generateurs = (function () {
       '<button class="btn" style="flex:1" data-gact="generer">↻ Relancer</button>' +
       '<button class="btn btn-or" style="flex:1" data-gact="init">Ordre d\'initiative</button>' +
       '</div>';
+    h += '<button class="btn btn-plein btn-bloc" style="margin-top:8px" data-gact="butin">💰 Générer le butin de cette rencontre</button>';
 
     h += '</div></div>';
     return h;
@@ -221,8 +222,15 @@ COF.UI.Generateurs = (function () {
         break;
       }
       case 'init': if (resultat) ordreInitiative(resultat); break;
+      case 'butin': {
+        if (!resultat) break;
+        SOUS = 'butin';
+        COF.UI.Butin.depuisRencontre();
+        rendre();
+        break;
+      }
     }
   }
 
-  return { init: init, rendre: rendre };
+  return { init: init, rendre: rendre, dernierResultat: dernierResultat };
 })();
