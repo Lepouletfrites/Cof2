@@ -112,6 +112,57 @@ COF.OM_ORIGINE_PEUPLE = [
   'Orcs ou gobelins', 'Ange, démon ou divinité', 'Dragons', 'Seigneur élémentaire', 'Autre créature ancienne'
 ];
 
+/* ---------- Nom procédural (partagé avec l'objet prestigieux) ----------
+   Trois patrons : nom composé (préfixe+suffixe, à la « Sombrelame »),
+   « [Type] de/du/des [Épithète] », ou « [Type] [Adjectif] ». */
+COF.OM_NOM_PREFIXES = [
+  'Fang', 'Sombre', 'Aube', 'Glace', 'Brume', 'Flamme', 'Nuit', 'Sang', 'Lune',
+  'Fer', 'Cendre', 'Astre', 'Ombre', 'Givre', 'Orage', 'Ronce', 'Ciel', 'Vent',
+  'Aigle', 'Loup', 'Dragon', 'Étoile', 'Poussière', 'Larme', 'Onde', 'Braise'
+];
+COF.OM_NOM_SUFFIXES = [
+  'dent', 'lame', 'cœur', 'griffe', 'ombre', 'étoile', 'ronce', 'ciel', 'brise',
+  'flamme', 'écaille', 'épine', 'garde', 'chant', 'souffle', 'aile', 'larme', 'crin'
+];
+COF.OM_EPITHETES = [
+  "l'Aube", 'la Nuit Éternelle', "l'Orage", 'la Vengeance', "l'Oubli",
+  'la Dernière Larme', "l'Étoile Filante", 'la Morsure du Serpent', 'le Sang-Froid',
+  'la Colère des Anciens', "l'Écho du Passé", 'la Flamme Éternelle', 'le Silence',
+  'les Âmes Perdues', 'le Crépuscule', 'la Promesse Brisée', 'le Dernier Soupir',
+  'la Foi Trahie', "l'Aurore Noire", 'le Roi Oublié',
+  "l'Hiver Sans Fin", 'la Meute', 'les Sept Sceaux', "l'Ultime Recours",
+  'la Veuve', 'le Pacte Rompu', "l'Œil Vigilant", 'la Chute'
+];
+COF.OM_ADJ_M = [
+  'Maudit', 'Sacré', 'Ancien', 'Oublié', 'Brisé', 'Éternel', 'Silencieux', 'Vengeur',
+  'Immaculé', 'Déchu', 'Errant', 'Insatiable', 'Impie', 'Radieux', 'Funeste'
+];
+COF.OM_ADJ_F = [
+  'Maudite', 'Sacrée', 'Ancienne', 'Oubliée', 'Brisée', 'Éternelle', 'Silencieuse',
+  'Vengeresse', 'Immaculée', 'Déchue', 'Errante', 'Insatiable', 'Impie', 'Radieuse', 'Funeste'
+];
+
+/* Formes possibles d'un objet de pouvoir, pour varier son nom plutôt que
+   de toujours l'appeler « Objet ». */
+COF.OM_FORME_POUVOIR = ['Anneau', 'Amulette', 'Cape', 'Couronne', 'Grimoire', 'Orbe', 'Talisman', 'Diadème', 'Broche', 'Médaillon'];
+
+/* Malédictions (chance faible sur une arme/armure magique) : l'objet a
+   aussi un revers, sur le modèle des objets maudits du livre de base. */
+COF.OM_MALEDICTIONS = [
+  "Chuchote la nuit, empêchant tout repos réparateur à son porteur.",
+  "Refuse d'être lâché une fois empoigné, sauf rituel de dissolution.",
+  "Attire immanquablement l'attention des créatures maléfiques proches.",
+  "Rend son porteur incapable de mentir tant qu'il le porte.",
+  "Draine 1 PV chaque jour tant que son porteur le garde sur lui.",
+  "Provoque des cauchemars récurrents liés à son ancien propriétaire.",
+  "Rend son porteur irritable et prompt à la colère.",
+  "Impossible de s'en séparer volontairement sans une cérémonie spécifique.",
+  "Chuchote le nom de son ancien propriétaire dans les moments de silence.",
+  "Rend son porteur méfiant envers ses propres alliés, sans raison apparente.",
+  "S'assombrit visiblement en présence d'une trahison imminente, glaçant son porteur.",
+  "Exige d'être utilisé au combat au moins une fois par jour, sous peine de malaise croissant."
+];
+
 /* Effet secondaire d'une potion bue en excès (2d6, table officielle). */
 COF.OM_EFFET_SECONDAIRE_POTION = [
   { min: 2, max: 2, texte: "La potion ne fait pas effet et le personnage perd 1 PV sur son maximum (permanent)." },

@@ -22,7 +22,7 @@ Puis rendez-vous sur `http://localhost:8777`.
 | Fichier | Contenu |
 |---|---|
 | `rules.js` | Caractéristiques, familles de profils, séries de création, difficultés, états préjudiciables, dés évolutifs, niveaux requis par rang, aide-mémoire |
-| `peuples.js` | 8 peuples (modificateurs, profils typiques) + leurs 7 voies de peuple + la voie du mage |
+| `peuples.js` | 14 peuples (modificateurs, profils typiques) + leurs 13 voies de peuple + la voie du mage — dont 6 issus du supplément *Couronne, guide de la cité franche* (automaton, demi-ogre, fée, gobelin, kobold, lutin) |
 | `equipement.js` | 22 armes de contact, 15 armes à distance, 8 armures, boucliers, matériel, montures |
 | `profils-aventuriers.js` | Arquebusier, Barde, Rôdeur, Voleur |
 | `profils-combattants.js` | Barbare, Chevalier, Guerrier |
@@ -127,9 +127,9 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     déroulant, un vrai changement d'emplacement, avec le detail affiché dans la carte Équipement
     de la Fiche (bouton **Changer** listant le catalogue et les objets trouvés). Chaque arme ou
     objet a un bouton **⇄** pour le transférer instantanément vers un autre personnage enregistré.
-    Une arme trouvée (butin ou générateur de Trésors) rejoint directement cette liste avec sa
+    Une arme trouvée (butin ou générateur d'Objets magiques) rejoint directement cette liste avec sa
     vraie formule de dégâts (bonus de FOR inclus, comme n'importe quelle arme équipée
-    manuellement) — et le bonus magique ou les dégâts élémentaires d'un pouvoir de Trésors s'y
+    manuellement) — et le bonus magique ou les dégâts élémentaires d'une propriété d'arme magique s'y
     ajoutent aussi, au jet d'attaque comme aux dégâts. Les capacités
     dont l'effet grandit avec le nombre de voies d'un même profil poussées à un rang donné (ex.
     *Attaque sournoise* : +1d4° par rang 4 atteint dans une voie de voleur, jusqu'à 7d4°) recalculent
@@ -259,24 +259,6 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     de ce qu'il prétend), objectif, cible concrète, lieu (relié aux environnements du générateur de
     Rencontre), obstacle principal, complication et récompense — puis les assemble en un paragraphe
     de synthèse prêt à lire ou à adapter tel quel pour démarrer une session sans préparation.
-  - *Trésors* : génère un objet magique unique et nommé (au-delà du système +N générique du
-    Butin) — type, palier (mineur/majeur/légendaire, avec 1 ou 2 pouvoirs selon le palier), nom
-    procédural (mot composé façon « Sombrelame », ou « [Type] de/du [Épithète] », ou « [Type]
-    [Adjectif] » correctement accordé), une origine/légende, un coût estimé et, dans 20 % des cas,
-    une malédiction. Les pouvoirs sont tirés d'une table propre à chaque palier (sur le modèle des
-    objets +1/+2/+3 déjà utilisés dans le générateur de Butin) : un objet mineur reste modeste, un
-    légendaire nettement plus fort — plus de pouvoir surpuissant sur un objet mineur ni l'inverse.
-    Sur une arme, un pouvoir qui améliore l'attaque/les dégâts ou ajoute des dégâts élémentaires
-    est mécanique : il s'applique vraiment au jet d'attaque et à la formule de dégâts une fois
-    l'objet équipé (les autres pouvoirs — soins, immunités, utilitaires... — restent descriptifs).
-    Une arme générée porte ses dégâts (formule adaptée au type : épée/hache/arc 1d8, masse/lance
-    1d6, dague/bâton 1d4), une armure ou un bouclier son bonus de DEF. Un bouton
-    **📥 Ajouter à [personnage]** transfère l'objet — une arme rejoint directement l'onglet Armes
-    (dégâts corrects, bonus de FOR inclus) tandis que sa fiche complète (nom, description, coût)
-    reste dans Objets ; une armure/un bouclier atterrit dans Objets, prêt à être équipé. Une
-    dizaine de types possibles au total (armes courantes, bâton, gants, bottes, orbe...), avec
-    accord grammatical correct même pour les noms au pluriel (« Gants Maudits », pas « Gants
-    Maudit »).
   - *Voyage* : un événement de trajet non lié au combat — environnement, météo, puis un tirage
     catégorisé (rencontre de voyageurs, incident de parcours, point d'intérêt, découverte, présage,
     ou tout simplement un trajet sans histoire) avec son détail — pour ponctuer une route sans
@@ -297,24 +279,51 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     test). Partout où la règle demande un sort ou une capacité (potion, parchemin, baguette, objet
     de pouvoir), un vrai sort/capacité de la base de voies est pioché — pas une liste figée — pour
     un nombre de combinaisons bien plus grand que les tables du livre. Le coût est calculé avec les
-    formules officielles de valeur. Un bouton **Utiliser** lance directement le sort/la capacité
-    piochée (via le même moteur que les compétences de voie) ; **Ajouter au personnage** range
-    l'objet dans Objets, avec les mêmes mécanismes que le générateur de Trésors pour les armes
-    (dégâts et bonus magique inclus), les armures (emplacement équipable) et, en plus, les objets
-    de puissance (bonus de caractéristique équipable/déséquipable, comme un anneau de force).
+    formules officielles de valeur. Chaque objet reçoit aussi un nom procédural (mot composé façon
+    « Sombrelame », ou « [Type] de/du [Épithète] », ou « [Type] [Adjectif] » correctement accordé)
+    et une origine/légende rapide ; une arme ou une armure magique a en plus, dans 15 % des cas,
+    une malédiction (revers décrit dans sa fiche). Un bouton **Utiliser** lance directement le
+    sort/la capacité piochée (via le même moteur que les compétences de voie) ; **Ajouter au
+    personnage** range l'objet dans Objets — une arme rejoint directement l'onglet Armes (dégâts
+    corrects, bonus de FOR et bonus magique/dégâts élémentaires inclus), une armure/un bouclier
+    atterrit dans Objets prêt à être équipé, et un objet de puissance confère un bonus de
+    caractéristique équipable/déséquipable, comme un anneau de force.
   - *Objet prestigieux* : génère un objet doté de sa propre voie à 5 rangs et lié à un profil
-    réel, sur le modèle de l'exemple « La Lame des Échos » du livre de base — le rang 1 donne un
-    bonus mineur (+1 attaque/dégâts ou +1 DEF), les rangs 2 à 5 lient chacun une vraie capacité de
-    ce profil (piochée dans la base de voies) à l'objet, avec sa propre condition de déblocage
-    procédurale. Le rang 1 s'applique automatiquement à l'ajout ; les rangs suivants restent
-    consultatifs, à débloquer en jeu selon leur condition (au meneur de trancher, comme l'indique
-    le livre).
+    réel (par défaut celui du personnage actif), sur le modèle de l'exemple « La Lame des Échos »
+    du livre de base — le rang 1 donne un bonus mineur (+1 attaque/dégâts ou +1 DEF). Les rangs 2
+    à 5 ne débloquent pas de nouvelle capacité : ils **renforcent** une capacité que le profil
+    possède déjà dans ses propres voies (piochée dans la base de voies, n'importe quel rang) —
+    +Xd4° DM, portée/durée doublée, coût en PM réduit, usage supplémentaire, zone étendue, effet
+    doublé au critique... — exactement comme la Lame des Échos double la portée d'Attaque sonore
+    ou sert de point de focalisation à Zone de silence, deux capacités que le barde possède déjà.
+    Chaque rang a sa propre condition de déblocage procédurale. Le rang 1 s'applique
+    automatiquement à l'ajout ; les rangs suivants restent consultatifs, à débloquer en jeu selon
+    leur condition (au meneur de trancher, comme l'indique le livre).
+  - *Intrigue* : deux outils pensés pour jouer sans meneur, chacun combinatoire (au lieu d'une
+    table à plat) pour maximiser les résultats possibles. **Rebondissement** relance une scène qui
+    stagne : nature du retournement (trahison, fausse piste, révélation...) × ce qu'il touche
+    (le commanditaire, un allié, une ressource...) × comment le personnage l'apprend. **Tour de
+    faction** simule ce qui se passe hors champ : une faction (guilde, culte, garnison, rivaux...)
+    × son objectif × son action de ce tour-ci × si et quand le personnage en a connaissance —
+    remplace les décisions qu'un meneur prendrait normalement à la volée pour faire vivre le monde
+    entre deux scènes du personnage.
+  - *Vie & temps* : trois outils pour meubler le quotidien d'une partie solo. **Rumeur** compose
+    une rumeur entendue (sujet × contenu × fiabilité, de fondée à totalement fausse) exploitable en
+    accroche ou en fausse piste. **Passage du temps** fait avancer l'horloge (durée écoulée, météo,
+    et un petit événement éventuel qui renvoie vers Rencontre, Voyage, Rumeur ou Tour de faction)
+    pour ponctuer un déplacement ou une attente sans forcément déclencher une scène complète.
+    **Marchand** simule une négociation avec un objet réel des tables d'équipement/trésors :
+    l'attitude tirée (hostile à complice) fixe les prix d'achat et de vente pratiqués par rapport
+    au tarif catalogue, plus une complication de marchandage.
 
-  Les sept nouveaux générateurs partagent le même petit moteur réutilisable
+  Les huit nouveaux générateurs partagent le même petit moteur réutilisable
   (`COF.creerGenerateurChamps` côté données, `COF.UI.creerVueChamps` côté interface) que le
   générateur de PNJ : verrou 🔒/🔓 par champ, relance individuelle ↻, tirage complet qui respecte
   les verrous. Toutes les tables des cinq premiers ont été étendues (+40 à +80 % d'entrées selon
-  les catégories) pour réduire les répétitions sur une session longue.
+  les catégories) pour réduire les répétitions sur une session longue. Le nom procédural, sa
+  logique d'accord grammatical (y compris pour les types au pluriel, « Gants Maudits » et non
+  « Gants Maudit ») et les tables de malédiction sont mutualisés entre Objets magiques et Objet
+  prestigieux plutôt que dupliqués (`COF.ObjetsMagiquesCalc.nomMagique`).
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 

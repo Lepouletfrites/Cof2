@@ -90,9 +90,11 @@ COF.UI.Persos = (function () {
         var pr = COF.PROFILS[$('#c-profil', root).value];
         var pe = COF.PEUPLES[$('#c-peuple', root).value];
         var f = COF.RULES.familles[pr.famille];
-        var mods = pe.modsTexte || pe.mods.map(function (m) {
+        var mods = pe.modsTexte || (pe.modsFixes ? pe.modsFixes.map(function (m) {
+          return sgn(m.v) + ' ' + m.c;
+        }).join(', ') : pe.mods.map(function (m) {
           return '+1 ' + m.plus.join(' ou ') + (m.moins.length ? ', -1 ' + m.moins.join(' ou ') : '');
-        }).join(' ');
+        }).join(' '));
         $('#c-apercu', root).innerHTML =
           '<b style="color:var(--or-clair)">' + esc(pr.nom) + '</b> — ' + esc(pr.resume) + '<br>' +
           'Caractéristiques clés : <b>' + pr.caracs.join(', ') + '</b><br>' +
@@ -134,7 +136,9 @@ COF.UI.Persos = (function () {
 
     /* modificateur de peuple : première option proposée par défaut */
     var pe = COF.PEUPLES[p.peuple];
-    if (pe && pe.mods && pe.mods[0] && pe.mods[0].plus[0] !== '*faibles') {
+    if (pe && pe.modsFixes) {
+      pe.modsFixes.forEach(function (m) { p.carac[m.c] += m.v; });
+    } else if (pe && pe.mods && pe.mods[0] && pe.mods[0].plus[0] !== '*faibles') {
       var m = pe.mods[0];
       var plus = m.plus.filter(function (c) { return pr.caracs.indexOf(c) >= 0; })[0] || m.plus[0];
       p.carac[plus] += 1;

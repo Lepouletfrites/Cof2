@@ -26,11 +26,12 @@ COF.UI.Generateurs = (function () {
     COF.UI.Oracle.init();
     COF.UI.Lieux.init();
     COF.UI.Quetes.init();
-    COF.UI.Tresors.init();
     COF.UI.Voyage.init();
     COF.UI.Donjon.init();
     COF.UI.ObjetsMagiques.init();
     COF.UI.ObjetPrestigieux.init();
+    COF.UI.Intrigue.init();
+    COF.UI.Solo.init();
   }
 
   /* Dernière rencontre générée, exposée pour l'import direct dans l'Arène et le butin */
@@ -46,11 +47,12 @@ COF.UI.Generateurs = (function () {
       '<span class="chip ' + (SOUS === 'oracle' ? 'on' : '') + '" data-gact="sous" data-v="oracle">🔮 Oracle</span>' +
       '<span class="chip ' + (SOUS === 'lieux' ? 'on' : '') + '" data-gact="sous" data-v="lieux">🏘️ Lieux</span>' +
       '<span class="chip ' + (SOUS === 'quetes' ? 'on' : '') + '" data-gact="sous" data-v="quetes">📜 Quêtes</span>' +
-      '<span class="chip ' + (SOUS === 'tresors' ? 'on' : '') + '" data-gact="sous" data-v="tresors">✨ Trésors</span>' +
       '<span class="chip ' + (SOUS === 'voyage' ? 'on' : '') + '" data-gact="sous" data-v="voyage">🧭 Voyage</span>' +
       '<span class="chip ' + (SOUS === 'donjon' ? 'on' : '') + '" data-gact="sous" data-v="donjon">🗝️ Donjon</span>' +
       '<span class="chip ' + (SOUS === 'objmagie' ? 'on' : '') + '" data-gact="sous" data-v="objmagie">🪄 Objets magiques</span>' +
       '<span class="chip ' + (SOUS === 'objprestige' ? 'on' : '') + '" data-gact="sous" data-v="objprestige">👑 Objet prestigieux</span>' +
+      '<span class="chip ' + (SOUS === 'intrigue' ? 'on' : '') + '" data-gact="sous" data-v="intrigue">🎭 Intrigue</span>' +
+      '<span class="chip ' + (SOUS === 'solo' ? 'on' : '') + '" data-gact="sous" data-v="solo">🕰️ Vie & temps</span>' +
       '</div></div></div>';
     h += '<div id="gen-corps"></div>';
     n.innerHTML = h;
@@ -60,11 +62,12 @@ COF.UI.Generateurs = (function () {
     if (SOUS === 'oracle') { COF.UI.Oracle.rendre($('#gen-corps')); return; }
     if (SOUS === 'lieux') { COF.UI.Lieux.rendre($('#gen-corps')); return; }
     if (SOUS === 'quetes') { COF.UI.Quetes.rendre($('#gen-corps')); return; }
-    if (SOUS === 'tresors') { COF.UI.Tresors.rendre($('#gen-corps')); return; }
     if (SOUS === 'voyage') { COF.UI.Voyage.rendre($('#gen-corps')); return; }
     if (SOUS === 'donjon') { COF.UI.Donjon.rendre($('#gen-corps')); return; }
     if (SOUS === 'objmagie') { COF.UI.ObjetsMagiques.rendre($('#gen-corps')); return; }
     if (SOUS === 'objprestige') { COF.UI.ObjetPrestigieux.rendre($('#gen-corps')); return; }
+    if (SOUS === 'intrigue') { COF.UI.Intrigue.rendre($('#gen-corps')); return; }
+    if (SOUS === 'solo') { COF.UI.Solo.rendre($('#gen-corps')); return; }
     rendreRencontre($('#gen-corps'));
   }
 

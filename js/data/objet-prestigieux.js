@@ -12,6 +12,22 @@ COF.OP_FORMES_FAMILLE = {
   mystique: ['Symbole sacré', 'Amulette', 'Bâton', 'Anneau', 'Talisman']
 };
 
+/* Boosts appliqués à une capacité que le personnage possède déjà (ou pourra
+   posséder) dans son propre profil — l'objet prestigieux AMÉLIORE une
+   capacité existante plutôt que d'en débloquer une nouvelle, exactement
+   comme la Lame des Échos double la portée d'Attaque sonore ou sert de
+   point de focalisation à Zone de silence, deux capacités du barde. */
+COF.OP_BOOSTS = [
+  { id: 'degats', texte: "+{d}d4° DM supplémentaires lors de son utilisation." },
+  { id: 'porteeduree', texte: "Double sa portée ou sa durée (au choix du joueur, à chaque utilisation)." },
+  { id: 'cout', texte: "Réduit d'un point son coût en PM, si elle en a un (minimum 0)." },
+  { id: 'test', texte: "+{r} au test associé à cette capacité, si elle en nécessite un." },
+  { id: 'usage', texte: "Peut être utilisée une fois de plus par jour ou par combat, selon sa fréquence habituelle." },
+  { id: 'zone', texte: "Étend sa zone d'effet de 5 m supplémentaires." },
+  { id: 'critique', texte: "Sur un résultat critique, ses effets sont automatiquement doublés." },
+  { id: 'gratuite', texte: "Peut exceptionnellement être utilisée en action gratuite une fois par combat." }
+];
+
 /* Conditions à remplir pour débloquer un rang (sur le modèle de la Lame
    des Échos : découvrir, prouver, accomplir). */
 COF.OP_PREREQUIS = [

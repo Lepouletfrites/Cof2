@@ -37,17 +37,29 @@ COF.ObjetsMagiquesCalc = (function () {
     return { profil: profilId, profilNom: pr.nom, voie: pick.voie.id, voieNom: pick.voie.nom, cap: pick.cap };
   }
 
-  /* Petit nom procédural réutilisant les mêmes briques que le générateur
-     de Trésors nommés (préfixes/suffixes/épithètes/adjectifs partagés). */
-  function nomProcedural(nomType, feminin) {
-    var style = piocher(['compose', 'epithete', 'adjectif']);
-    if (style === 'compose') return piocher(COF.TRESOR_NOM_PREFIXES) + piocher(COF.TRESOR_NOM_SUFFIXES);
+  /* Petit nom procédural partagé avec l'objet prestigieux (COF.ObjetPrestigieuxCalc) :
+     nom composé, « [Type] de/du/des [Épithète] », ou « [Type] [Adjectif] ». Le patron
+     adjectif est exclu pour un type au nom pluriel (Gants, Bottes...) : les tables
+     d'adjectifs ne s'accordent pas au pluriel, et « Gants Maudit » serait fautif. */
+  function nomMagique(nomType, feminin, pluriel) {
+    var style = piocher(pluriel ? ['compose', 'epithete'] : ['compose', 'epithete', 'adjectif']);
+    if (style === 'compose') return piocher(COF.OM_NOM_PREFIXES) + piocher(COF.OM_NOM_SUFFIXES);
     if (style === 'epithete') {
-      var ep = piocher(COF.TRESOR_EPITHETES);
+      var ep = piocher(COF.OM_EPITHETES);
       var lien = /^le /i.test(ep) ? 'du ' + ep.slice(3) : (/^les /i.test(ep) ? 'des ' + ep.slice(4) : 'de ' + ep);
       return nomType + ' ' + lien;
     }
-    return nomType + ' ' + piocher(feminin ? COF.TRESOR_ADJ_F : COF.TRESOR_ADJ_M);
+    return nomType + ' ' + piocher(feminin ? COF.OM_ADJ_F : COF.OM_ADJ_M);
+  }
+  /* Formes de type nom pluriel invariable en français, utilisées par les objets de
+     puissance/compétence (Gantelets, Gants, Bottes) — seules exceptions du jeu de tables. */
+  var FORMES_PLURIELLES = ['Gants', 'Bottes', 'Gantelets'];
+  function estPluriel(nomType) { return FORMES_PLURIELLES.indexOf(nomType) > -1; }
+
+  /* Malédiction facultative (~15 %) sur une arme ou une armure magique :
+     l'objet a aussi un revers, sur le modèle des objets maudits du livre. */
+  function tirerMaledictionEventuelle() {
+    return Math.random() < 0.15 ? piocher(COF.OM_MALEDICTIONS) : null;
   }
 
   var PALIERS_ARME = [
@@ -91,7 +103,7 @@ COF.ObjetsMagiquesCalc = (function () {
         return piocherSort(COF.OM_PROFILS_SORTS, r, r);
       } },
     { id: 'charges', label: 'Charges', gen: function () { return (1 + alea(20)) + (1 + alea(20)); } },
-    { id: 'nom', label: 'Nom', gen: function () { return nomProcedural('Baguette', true); } },
+    { id: 'nom', label: 'Nom', gen: function () { return nomMagique('Baguette', true); } },
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
 
@@ -135,7 +147,8 @@ COF.ObjetsMagiquesCalc = (function () {
         }
         return props;
       } },
-    { id: 'nom', label: 'Nom', gen: function (ctx) { return nomProcedural((ctx.base || {}).nom || 'Arme', false); } },
+    { id: 'nom', label: 'Nom', gen: function (ctx) { return nomMagique((ctx.base || {}).nom || 'Arme', false); } },
+    { id: 'maudit', label: 'Malédiction', gen: function () { return tirerMaledictionEventuelle(); } },
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
 
@@ -159,7 +172,8 @@ COF.ObjetsMagiquesCalc = (function () {
         }
         return props;
       } },
-    { id: 'nom', label: 'Nom', gen: function (ctx) { return nomProcedural((ctx.base || {}).nom || 'Armure', true); } },
+    { id: 'nom', label: 'Nom', gen: function (ctx) { return nomMagique((ctx.base || {}).nom || 'Armure', true); } },
+    { id: 'maudit', label: 'Malédiction', gen: function () { return tirerMaledictionEventuelle(); } },
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
 
@@ -171,7 +185,7 @@ COF.ObjetsMagiquesCalc = (function () {
         var profilId = piockerPoids(COF.OM_POUVOIR_PROFILS);
         return piocherCapacite(profilId, ctx.rang || 1);
       } },
-    { id: 'nom', label: 'Nom', gen: function () { return nomProcedural('Objet', false); } },
+    { id: 'nom', label: 'Nom', gen: function () { return nomMagique(piocher(COF.OM_FORME_POUVOIR), false); } },
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
 
@@ -192,7 +206,7 @@ COF.ObjetsMagiquesCalc = (function () {
       } },
     { id: 'nom', label: 'Nom', gen: function (ctx) {
         var forme = COF.OM_FORME_PUISSANCE[(ctx.carac || COF.OM_CARACS_PUISSANCE[0]).id] || 'Amulette';
-        return nomProcedural(forme, false);
+        return nomMagique(forme, false, estPluriel(forme));
       } },
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
@@ -200,7 +214,7 @@ COF.ObjetsMagiquesCalc = (function () {
   /* ---------- Objet de compétence ---------- */
   var CHAMPS_COMPETENCE = [
     { id: 'competence', label: 'Compétence', gen: function () { return piocher(COF.OM_COMPETENCES); } },
-    { id: 'nom', label: 'Nom', gen: function () { return nomProcedural(piocher(COF.OM_FORME_COMPETENCE), false); } },
+    { id: 'nom', label: 'Nom', gen: function () { var forme = piocher(COF.OM_FORME_COMPETENCE); return nomMagique(forme, false, estPluriel(forme)); } },
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
 
@@ -242,6 +256,7 @@ COF.ObjetsMagiquesCalc = (function () {
   return {
     GENS: GENS, PALIERS_ARME: PALIERS_ARME, PALIERS_PARCHEMIN: PALIERS_PARCHEMIN, POTION_PALIERS: POTION_PALIERS,
     valeurPotionParchemin: valeurPotionParchemin, valeurGenerique: valeurGenerique,
-    niveauMagieArme: niveauMagieArme, niveauMagieArmure: niveauMagieArmure
+    niveauMagieArme: niveauMagieArme, niveauMagieArmure: niveauMagieArmure,
+    nomMagique: nomMagique
   };
 })();

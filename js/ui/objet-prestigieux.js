@@ -3,8 +3,11 @@
    de Générateurs) : un objet unique doté de sa propre voie à 5
    rangs, liée à un profil réel — sur le modèle de « La Lame des
    Échos » du livre de base. Le rang 1 (bonus mineur) s'applique
-   automatiquement une fois l'objet ajouté ; les rangs 2 à 5 sont
-   consultatifs, à débloquer en jeu selon leurs conditions.
+   automatiquement une fois l'objet ajouté ; les rangs 2 à 5
+   RENFORCENT chacun une capacité que le profil possède déjà dans
+   ses propres voies (dégâts, portée, coût, usages...) — l'objet
+   n'ouvre pas l'accès à une capacité nouvelle, il en améliore une
+   existante, à débloquer en jeu selon sa condition.
    ============================================================ */
 window.COF = window.COF || {};
 COF.UI = COF.UI || {};
@@ -57,7 +60,7 @@ COF.UI.ObjetPrestigieux = (function () {
     var h = '<div class="carte"><h2>Objet prestigieux<span class="h2-action" data-opact="tout">↻ Nouvel objet</span></h2>';
     h += '<div class="carte-corps">';
     h += '<div class="note" style="margin-bottom:10px">🔓 pour verrouiller un champ avant de relancer le reste, ↻ pour ne changer que cette ligne. ' +
-      "Un tel objet suit un personnage toute sa carrière : le rang 1 s'applique dès l'ajout, les rangs suivants se débloquent en jeu selon leurs conditions (au MJ de trancher).</div>";
+      "Un tel objet suit un personnage toute sa carrière : le rang 1 s'applique dès l'ajout ; les rangs suivants renforcent une capacité que le profil possède déjà (et non une nouvelle capacité), à débloquer en jeu selon leur condition (au MJ de trancher).</div>";
 
     h += '<div style="font-size:22px;font-family:Georgia,serif;color:var(--or-clair);margin-bottom:2px">' + esc(o.nom) + '</div>';
     h += '<div class="note" style="margin-bottom:10px">' + esc((COF.PROFILS[o.profil] || {}).nom || o.profil) +

@@ -79,11 +79,12 @@ COF.UI.ObjetsMagiques = (function () {
     },
     arme: {
       titre: 'Arme magique', bouton: '↻ Nouvelle arme',
-      champs: [['palier', 'Palier'], ['base', 'Arme'], ['proprietes', 'Propriétés'], ['origine', 'Origine']],
+      champs: [['palier', 'Palier'], ['base', 'Arme'], ['proprietes', 'Propriétés'], ['maudit', 'Malédiction'], ['origine', 'Origine']],
       texte: function (id, v) {
         if (id === 'palier') return v.nom + ' (+' + v.bonus + ')';
         if (id === 'base') return v.nom + (v.sceptre ? ' (peut servir d\'arme si sa forme le permet)' : '') + ' — DM ' + v.dm;
         if (id === 'proprietes') return texteProprietes(v);
+        if (id === 'maudit') return v ? v : 'Aucune — objet sain';
         if (id === 'origine') return texteOrigine(v);
         return v;
       },
@@ -93,11 +94,12 @@ COF.UI.ObjetsMagiques = (function () {
     },
     armure: {
       titre: 'Armure / bouclier magique', bouton: '↻ Nouvelle armure',
-      champs: [['palier', 'Palier'], ['base', 'Type'], ['proprietes', 'Propriétés'], ['origine', 'Origine']],
+      champs: [['palier', 'Palier'], ['base', 'Type'], ['proprietes', 'Propriétés'], ['maudit', 'Malédiction'], ['origine', 'Origine']],
       texte: function (id, v) {
         if (id === 'palier') return v.nom + ' (+' + v.bonus + ')';
         if (id === 'base') return v.nom + ' — ' + sgnLocal(v.def) + ' DEF de base (' + (v.slot === 'bouclier' ? 'bouclier' : 'armure') + ')';
         if (id === 'proprietes') return texteProprietes(v);
+        if (id === 'maudit') return v ? v : 'Aucune — objet sain';
         if (id === 'origine') return texteOrigine(v);
         return v;
       },
@@ -187,10 +189,12 @@ COF.UI.ObjetsMagiques = (function () {
       item.elementaires = (o.proprietes || []).filter(function (p) { return p.elem; }).map(function (p) { return p.elem; });
       if ((o.proprietes || []).some(function (p) { return p.id === 'affutee' || (p.nom && p.nom.indexOf('affûtée') > -1); })) item.crit = 19;
       descParts.push(texteProprietes(o.proprietes));
+      if (o.maudit) descParts.push('Malédiction : ' + o.maudit);
     } else if (mode === 'armure') {
       item.def = (o.base ? o.base.def : 0) + (o.palier || Calc.PALIERS_ARME[0]).bonus;
       item.slot = o.base ? o.base.slot : 'armure';
       descParts.push(texteProprietes(o.proprietes));
+      if (o.maudit) descParts.push('Malédiction : ' + o.maudit);
     } else if (mode === 'pouvoir') {
       descParts.push(o.capacite ? o.capacite.cap.d : '');
     } else if (mode === 'puissance') {

@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v24';
+var CACHE_VERSION = 'cof2-v28';
 
 var FICHIERS = [
   './',
@@ -40,11 +40,12 @@ var FICHIERS = [
   'js/data/oracle.js',
   'js/data/lieux.js',
   'js/data/quetes.js',
-  'js/data/tresors-nommes.js',
   'js/data/voyage.js',
   'js/data/donjon.js',
   'js/data/objets-magiques.js',
   'js/data/objet-prestigieux.js',
+  'js/data/intrigue.js',
+  'js/data/solo.js',
 
   'js/core/procedural.js',
   'js/core/dice.js',
@@ -57,11 +58,12 @@ var FICHIERS = [
   'js/core/oracle.js',
   'js/core/lieux.js',
   'js/core/quetes.js',
-  'js/core/tresors-nommes.js',
   'js/core/voyage.js',
   'js/core/donjon.js',
   'js/core/objets-magiques.js',
   'js/core/objet-prestigieux.js',
+  'js/core/intrigue.js',
+  'js/core/solo.js',
   'js/core/store.js',
 
   'js/ui/app.js',
@@ -78,11 +80,12 @@ var FICHIERS = [
   'js/ui/oracle.js',
   'js/ui/lieux.js',
   'js/ui/quetes.js',
-  'js/ui/tresors.js',
   'js/ui/voyage.js',
   'js/ui/donjon.js',
   'js/ui/objets-magiques.js',
   'js/ui/objet-prestigieux.js',
+  'js/ui/intrigue.js',
+  'js/ui/solo.js',
   'js/ui/des.js'
 ];
 
