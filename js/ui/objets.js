@@ -44,7 +44,7 @@ COF.UI.Objets = (function () {
       h += '<div class="vide">Aucune arme équipée. Ajoutez-en une depuis l\'onglet Fiche.</div>';
     } else {
       C.armes.forEach(function (w, i) {
-        var att = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
+        var att = COF.UI.modArme(C, w, a);
         var dm = COF.UI.dmgArme(C, w);
         h += '<div class="ligne"><div class="info"><div class="t">' + esc(w.nom) +
           (w.crit && w.crit < 20 ? ' <span class="puce puce-rang">crit ' + w.crit + '-20</span>' : '') + '</div>' +
@@ -63,16 +63,17 @@ COF.UI.Objets = (function () {
       h += '<div class="vide">Sac vide. ' + esc(COF.SAC_DEPART) + '</div>';
     } else {
       C.inventaire.forEach(function (o, i) {
+        var equipe = !!(o.slot && o.equipe);
         h += '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) +
           (o.qte > 1 ? ' ×' + o.qte : '') +
           (o.prix ? ' <span class="puce">' + o.prix + ' po</span>' : '') +
           (o.dmg ? ' <span class="puce puce-rang">' + esc(o.dmg) + ' DM</span>' : '') +
-          (o.def ? ' <span class="puce puce-rang">+' + o.def + ' DEF' + (o.equipe ? ' · équipé' : '') + '</span>' : '') + '</div>' +
+          (o.def ? ' <span class="puce puce-rang">+' + o.def + ' DEF' + (equipe ? ' · équipé' : '') + '</span>' : '') + '</div>' +
           ((o.note || o.desc) ? '<div class="s">' + esc(o.note || o.desc) + '</div>' : '') + '</div>' +
           '<div class="actions">' +
           (o.dmg ? '<button class="btn btn-or btn-sm" data-oact="obj-attaquer" data-i="' + i + '">Attaquer</button>' : '') +
-          (o.def ? '<button class="btn btn-sm' + (o.equipe ? '' : ' btn-or') + '" data-oact="obj-equiper" data-i="' + i + '">' +
-            (o.equipe ? 'Déséquiper' : 'Équiper') + '</button>' : '') +
+          (o.def && o.slot ? '<button class="btn btn-sm' + (equipe ? '' : ' btn-or') + '" data-oact="obj-equiper" data-i="' + i + '">' +
+            (equipe ? 'Déséquiper' : 'Équiper') + '</button>' : '') +
           '<button class="btn btn-sm" data-oact="obj-transfert" data-i="' + i + '" title="Transférer">⇄</button>' +
           '<button class="btn btn-sm" data-oact="obj-suppr" data-i="' + i + '">✕</button></div></div>';
       });
@@ -123,11 +124,7 @@ COF.UI.Objets = (function () {
     var target = COF.Store.get(targetId);
     if (!target) return;
     var o = C.inventaire.splice(i, 1)[0];
-    if (o.equipe && o.def) {
-      C.bonus = C.bonus || {};
-      C.bonus.def = (C.bonus.def || 0) - o.def;
-      o.equipe = false;
-    }
+    o.equipe = false;
     target.inventaire = target.inventaire || [];
     target.inventaire.push(o);
     sauver(); COF.Store.sauver(target);
@@ -142,7 +139,7 @@ COF.UI.Objets = (function () {
     switch (act) {
       case 'arme-jet': {
         var w = C.armes[+i], aa = K.attaques(C);
-        var att = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
+        var att = COF.UI.modArme(C, w, aa);
         var dm = COF.UI.dmgArme(C, w);
         COF.UI.jet({
           titre: w.nom, sousTitre: (w.type === 'distance' ? 'Attaque à distance' : 'Attaque au contact') +
@@ -159,23 +156,15 @@ COF.UI.Objets = (function () {
         if (nom) { C.inventaire.push({ nom: nom, qte: 1 }); sauver(); rendre(); }
         break;
       }
-      case 'obj-suppr': {
-        var oSuppr = C.inventaire[+i];
-        if (oSuppr && oSuppr.equipe && oSuppr.def) {
-          C.bonus = C.bonus || {};
-          C.bonus.def = (C.bonus.def || 0) - oSuppr.def;
-        }
-        C.inventaire.splice(+i, 1); sauver(); rendre();
-        break;
-      }
+      case 'obj-suppr': C.inventaire.splice(+i, 1); sauver(); rendre(); break;
       case 'obj-transfert': ouvrirTransfert('objet', +i); break;
 
       case 'obj-attaquer': {
         var oi = C.inventaire[+i];
         if (!oi || !oi.dmg) break;
         var aa2 = K.attaques(C);
-        var wTmp = { type: oi.armeType || 'contact', dm: oi.dmg, noFor: oi.noFor };
-        var att2 = wTmp.type === 'distance' ? aa2.distance : (wTmp.type === 'magique' ? aa2.magique : aa2.contact);
+        var wTmp = { type: oi.armeType || 'contact', dm: oi.dmg, noFor: oi.noFor, bonus: oi.bonus, elementaires: oi.elementaires };
+        var att2 = COF.UI.modArme(C, wTmp, aa2);
         var dmReel = COF.UI.dmgArme(C, wTmp);
         COF.UI.jet({
           titre: oi.nom, sousTitre: (wTmp.type === 'distance' ? 'Attaque à distance' : 'Attaque au contact') +
@@ -186,10 +175,13 @@ COF.UI.Objets = (function () {
 
       case 'obj-equiper': {
         var oe = C.inventaire[+i];
-        if (!oe || !oe.def) break;
-        C.bonus = C.bonus || {};
-        oe.equipe = !oe.equipe;
-        C.bonus.def = (C.bonus.def || 0) + (oe.equipe ? oe.def : -oe.def);
+        if (!oe || !oe.def || !oe.slot) break;
+        if (oe.equipe) {
+          oe.equipe = false;
+        } else {
+          C.inventaire.forEach(function (o) { if (o.slot === oe.slot) o.equipe = false; });
+          oe.equipe = true;
+        }
         sauver(); rendre();
         break;
       }

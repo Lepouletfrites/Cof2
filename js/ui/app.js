@@ -248,15 +248,27 @@ COF.UI = COF.UI || {};
   }
   COF.UI.jet = jet;
 
-  /* Formule de DM d'une arme du personnage, bonus permanents inclus */
+  /* Formule de DM d'une arme du personnage, bonus permanents inclus —
+     y compris le bonus magique et les dégâts élémentaires d'un objet
+     trouvé (générateur de Trésors, Butin). */
   function dmgArme(C, w) {
     var d = w.dm;
     if (w.type === 'contact' && !w.noFor) d += '+FOR';
     if (w.type === 'contact' && C.bonus && C.bonus.dmC) d += '+' + C.bonus.dmC;
     if (w.type === 'distance' && C.bonus && C.bonus.dmD) d += '+' + C.bonus.dmD;
+    if (w.bonus) d += '+' + w.bonus;
+    (w.elementaires || []).forEach(function (e) { d += '+' + e.formule; });
     return d;
   }
   COF.UI.dmgArme = dmgArme;
+
+  /* Modificateur d'attaque d'une arme, bonus magique inclus. */
+  function modArme(C, w, aa) {
+    aa = aa || COF.Calc.attaques(C);
+    var base = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
+    return base + (w.bonus || 0);
+  }
+  COF.UI.modArme = modArme;
 
   /* Certaines capacités indiquent dans leur texte un bonus qui augmente avec
      un seuil de rang atteint dans d'autres voies d'un même profil (ex.
@@ -321,8 +333,7 @@ COF.UI = COF.UI || {};
       /* la capacité ajoute ses DM à ceux d'une arme : proposer les armes */
       var choix = (C.armes || []).map(function (w) {
         var base = dmgArme(C, w);
-        var mod = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
-        return { label: w.nom, dmg: base + '+' + capDmg, mod: mod, type: w.type };
+        return { label: w.nom, dmg: base + '+' + capDmg, mod: modArme(C, w, a), type: w.type };
       });
       choix.push({ label: 'Bonus seul', dmg: capDmg, mod: null });
 

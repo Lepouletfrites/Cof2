@@ -121,13 +121,16 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     laquelle est utilisée.
   - *Objets* : la liste complète des armes et objets du personnage, avec leur description
     entière (pas un résumé) et leur coût s'il est connu — pas seulement les armes équipées, aussi
-    les armures, boucliers et objets divers ramassés en jeu. Une armure ou un bouclier se
-    **équipe**/**déséquipe** depuis cet onglet, ce qui applique ou retire son bonus de DEF (retiré
-    automatiquement si l'objet est supprimé en étant équipé). Chaque arme ou objet a un bouton
-    **⇄** pour le transférer instantanément vers un autre personnage enregistré (retiré de l'un,
-    ajouté à l'autre, bonus de DEF réajusté si besoin). Une arme trouvée (butin ou générateur de
-    Trésors) rejoint directement cette liste avec sa vraie formule de dégâts (bonus de FOR inclus,
-    comme n'importe quelle arme équipée manuellement). Les capacités
+    les armures, boucliers et objets divers ramassés en jeu. L'armure et le bouclier sont chacun
+    un **emplacement unique** : équiper une armure trouvée (bouton **Équiper**) remplace
+    l'armure du catalogue en cours (et inversement) au lieu de s'y additionner — plus de menu
+    déroulant, un vrai changement d'emplacement, avec le detail affiché dans la carte Équipement
+    de la Fiche (bouton **Changer** listant le catalogue et les objets trouvés). Chaque arme ou
+    objet a un bouton **⇄** pour le transférer instantanément vers un autre personnage enregistré.
+    Une arme trouvée (butin ou générateur de Trésors) rejoint directement cette liste avec sa
+    vraie formule de dégâts (bonus de FOR inclus, comme n'importe quelle arme équipée
+    manuellement) — et le bonus magique ou les dégâts élémentaires d'un pouvoir de Trésors s'y
+    ajoutent aussi, au jet d'attaque comme aux dégâts. Les capacités
     dont l'effet grandit avec le nombre de voies d'un même profil poussées à un rang donné (ex.
     *Attaque sournoise* : +1d4° par rang 4 atteint dans une voie de voleur, jusqu'à 7d4°) recalculent
     désormais leur formule de dégâts en fonction des voies réellement acquises, au lieu de rester
@@ -254,19 +257,35 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     Butin) — type, palier (mineur/majeur/légendaire, avec 1 ou 2 pouvoirs selon le palier), nom
     procédural (mot composé façon « Sombrelame », ou « [Type] de/du [Épithète] », ou « [Type]
     [Adjectif] » correctement accordé), une origine/légende, un coût estimé et, dans 20 % des cas,
-    une malédiction. Une arme générée porte ses dégâts (formule adaptée au type : épée/hache/arc
-    1d8, masse/lance 1d6, dague 1d4), une armure ou un bouclier son bonus de DEF. Un bouton
+    une malédiction. Les pouvoirs sont tirés d'une table propre à chaque palier (sur le modèle des
+    objets +1/+2/+3 déjà utilisés dans le générateur de Butin) : un objet mineur reste modeste, un
+    légendaire nettement plus fort — plus de pouvoir surpuissant sur un objet mineur ni l'inverse.
+    Sur une arme, un pouvoir qui améliore l'attaque/les dégâts ou ajoute des dégâts élémentaires
+    est mécanique : il s'applique vraiment au jet d'attaque et à la formule de dégâts une fois
+    l'objet équipé (les autres pouvoirs — soins, immunités, utilitaires... — restent descriptifs).
+    Une arme générée porte ses dégâts (formule adaptée au type : épée/hache/arc 1d8, masse/lance
+    1d6, dague/bâton 1d4), une armure ou un bouclier son bonus de DEF. Un bouton
     **📥 Ajouter à [personnage]** transfère l'objet — une arme rejoint directement l'onglet Armes
     (dégâts corrects, bonus de FOR inclus) tandis que sa fiche complète (nom, description, coût)
-    reste dans Objets ; une armure/un bouclier atterrit dans Objets, prêt à être équipé.
+    reste dans Objets ; une armure/un bouclier atterrit dans Objets, prêt à être équipé. Une
+    dizaine de types possibles au total (armes courantes, bâton, gants, bottes, orbe...), avec
+    accord grammatical correct même pour les noms au pluriel (« Gants Maudits », pas « Gants
+    Maudit »).
   - *Voyage* : un événement de trajet non lié au combat — environnement, météo, puis un tirage
-    catégorisé (rencontre de voyageurs, incident de parcours, point d'intérêt, découverte ou
-    présage) avec son détail — pour ponctuer une route sans forcément déclencher une rencontre.
+    catégorisé (rencontre de voyageurs, incident de parcours, point d'intérêt, découverte, présage,
+    ou tout simplement un trajet sans histoire) avec son détail — pour ponctuer une route sans
+    forcément déclencher une rencontre.
+  - *Donjon* : décrit une salle ou un lieu d'exploration à la volée — architecture, état des
+    lieux, occupant(s) (pas forcément hostiles), piège (le plus souvent absent), particularité
+    notable et sortie(s) — à combiner avec Rencontre si l'occupant s'avère combatif et avec Butin
+    pour le contenu d'un trésor repéré. Comble le manque entre Rencontre (le combat), Butin (le
+    loot) et Voyage (le trajet) : ce que contient concrètement la pièce qu'on vient d'ouvrir.
 
-  Les quatre nouveaux générateurs partagent le même petit moteur réutilisable
+  Les cinq nouveaux générateurs partagent le même petit moteur réutilisable
   (`COF.creerGenerateurChamps` côté données, `COF.UI.creerVueChamps` côté interface) que le
   générateur de PNJ : verrou 🔒/🔓 par champ, relance individuelle ↻, tirage complet qui respecte
-  les verrous.
+  les verrous. Toutes leurs tables ont été étendues (+40 à +80 % d'entrées selon les catégories)
+  pour réduire les répétitions sur une session longue.
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 

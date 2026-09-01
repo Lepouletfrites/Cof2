@@ -25,7 +25,15 @@ COF.QUETES_COMMANDITAIRES = [
   "Un enfant de noble, agissant dans le dos de sa famille",
   "Un vétéran d'un ancien conflit, hanté par son passé",
   "Un étranger de passage, dont l'accent trahit une origine lointaine",
-  "Une autorité religieuse en délicatesse avec sa propre hiérarchie"
+  "Une autorité religieuse en délicatesse avec sa propre hiérarchie",
+  "Un capitaine de la garde, agissant en dehors de sa juridiction",
+  "Un enfant prodige, trop jeune pour qu'on le prenne au sérieux",
+  "Une veuve récente, déterminée à découvrir la vérité sur un décès",
+  "Un ancien compagnon d'aventure, reconverti en notable respectable",
+  "Un devin ou une voyante, dont les prédictions inquiètent son entourage",
+  "Un tavernier bien informé, qui préfère rester en retrait de l'affaire",
+  "Un ambassadeur étranger, contraint à la plus grande discrétion",
+  "Une fratrie en conflit, chacun cherchant à recruter les PJ séparément"
 ];
 
 COF.QUETES_MOTIVATIONS = [
@@ -40,7 +48,12 @@ COF.QUETES_MOTIVATIONS = [
   "sous la contrainte de quelqu'un d'autre, resté dans l'ombre",
   "par ambition, y voyant un tremplin vers autre chose",
   "par loyauté envers une cause ou une personne",
-  "par obligation religieuse ou un vœu personnel"
+  "par obligation religieuse ou un vœu personnel",
+  "par jalousie, envers quelqu'un qui a réussi là où il a échoué",
+  "par calcul politique, pour affaiblir un rival sans se salir les mains",
+  "par épuisement, à bout de solutions après avoir tout essayé",
+  "par fierté mal placée, refusant d'admettre qu'il a besoin d'aide",
+  "par superstition, convaincu qu'un signe l'a désigné pour agir"
 ];
 
 COF.QUETES_OBJECTIFS = [
@@ -57,7 +70,14 @@ COF.QUETES_OBJECTIFS = [
   "Briser une malédiction ou annuler un sortilège",
   "Saboter discrètement les plans d'un rival",
   "Servir de médiateur dans un conflit qui s'envenime",
-  "Récupérer une dette ou faire respecter un contrat"
+  "Récupérer une dette ou faire respecter un contrat",
+  "Escorter une caravane ou un convoi jusqu'à destination",
+  "Démasquer un imposteur qui a pris la place de quelqu'un",
+  "Empêcher un mariage, un pacte ou un contrat forcé",
+  "Récupérer un corps ou organiser des funérailles dignes",
+  "Traduire ou déchiffrer un document dans une langue oubliée",
+  "Convaincre quelqu'un de renoncer à un projet dangereux",
+  "Infiltrer une organisation pour en apprendre les secrets"
 ];
 
 COF.QUETES_CIBLES = [
@@ -69,7 +89,11 @@ COF.QUETES_CIBLES = [
   "une relique sacrée disparue", "un trésor englouti ou enfoui",
   "une preuve d'un complot en cours", "un remède ou ingrédient rare",
   "une lignée ou un héritage oublié", "un espion infiltré parmi les proches du commanditaire",
-  "une bande de brigands qui écume la région", "un ancien allié devenu menace"
+  "une bande de brigands qui écume la région", "un ancien allié devenu menace",
+  "un testament contesté", "une créature échappée d'une ménagerie privée",
+  "un objet maudit qu'on cherche à se débarrasser", "une expédition scientifique disparue",
+  "une prophétie qui semble se réaliser", "un traître au sein d'un groupe uni",
+  "une dette de sang entre deux familles", "un secret de famille sur le point d'éclater"
 ];
 
 COF.QUETES_OBSTACLES = [
@@ -84,7 +108,12 @@ COF.QUETES_OBSTACLES = [
   "Le commanditaire dissimule une partie essentielle de la vérité",
   "Les autorités locales s'opposent à toute intervention extérieure",
   "Il faut agir sans éveiller les soupçons de quiconque",
-  "Les conditions naturelles (météo, terrain) rendent la tâche périlleuse"
+  "Les conditions naturelles (météo, terrain) rendent la tâche périlleuse",
+  "Une faction rivale surveille les mêmes personnes que les PJ",
+  "Le seul témoin fiable refuse obstinément de parler",
+  "Un serment ou un code d'honneur limite les moyens d'action possibles",
+  "L'endroit est sacré ou protégé, toute violence y serait mal vue",
+  "Il n'existe qu'une fenêtre d'opportunité très brève pour agir"
 ];
 
 COF.QUETES_COMPLICATIONS = [
@@ -97,7 +126,12 @@ COF.QUETES_COMPLICATIONS = [
   "Il faut choisir entre deux issues, toutes deux imparfaites",
   "Une personne innocente se retrouve prise entre deux feux",
   "Un détail change radicalement la nature morale de la mission",
-  "Le temps imparti se réduit brutalement suite à un imprévu"
+  "Le temps imparti se réduit brutalement suite à un imprévu",
+  "Un objet ou une information clé s'avère être un faux",
+  "Le commanditaire change d'avis ou annule sa demande en cours de route",
+  "Une tierce partie propose une solution radicalement différente",
+  "Les PJ doivent choisir entre honorer leur parole et faire ce qui est juste",
+  "Un secret personnel de l'un des PJ se retrouve mêlé à l'affaire"
 ];
 
 COF.QUETES_RECOMPENSES = [
@@ -110,5 +144,10 @@ COF.QUETES_RECOMPENSES = [
   "Un titre ou une position, temporaire ou durable",
   "Rien d'officiel : seulement la satisfaction du devoir accompli",
   "Une réduction de dette ou un avantage commercial durable",
-  "La protection ou l'appui d'une faction influente"
+  "La protection ou l'appui d'une faction influente",
+  "Un objet magique mineur, tiré des affaires du commanditaire",
+  "L'accès permanent et gratuit à un service (auberge, soins, formation...)",
+  "Une carte ou une information menant à une opportunité future",
+  "Le silence du commanditaire sur une affaire compromettante pour les PJ",
+  "Une introduction officielle auprès d'une personnalité influente"
 ];

@@ -19,7 +19,7 @@ COF.UI.Tresors = (function () {
   function texte(id, v) {
     if (id === 'type') return v.nom;
     if (id === 'tier') return v.nom + ' (' + v.niveau + ')';
-    if (id === 'pouvoirs') return v.join(' · ');
+    if (id === 'pouvoirs') return v.map(function (p) { return p.texte; }).join(' · ');
     if (id === 'maudit') return v ? v : 'Aucune — objet sain';
     if (id === 'prix') return v + ' po';
     return v;
@@ -54,9 +54,12 @@ COF.UI.Tresors = (function () {
     h += '<div class="carte-corps">';
     h += '<div class="note" style="margin-bottom:10px">🔓 pour verrouiller un champ avant de relancer le reste, ↻ pour ne changer que cette ligne.</div>';
 
+    var effetAffiche = o.type.arme ? COF.TresorCalc.effetArme(o.pouvoirs) : null;
     h += '<div style="font-size:22px;font-family:Georgia,serif;color:var(--or-clair);margin-bottom:2px">' + esc(o.nom) + '</div>';
     h += '<div class="note" style="margin-bottom:10px">' + esc(o.type.nom) + ' · palier ' + esc(o.tier.nom.toLowerCase()) +
       (o.type.arme ? ' · DM ' + esc(o.type.dmg) : '') + (o.type.armure ? ' · +' + o.type.def + ' DEF' : '') +
+      (effetAffiche && effetAffiche.bonus ? ' · +' + effetAffiche.bonus + ' att./DM' : '') +
+      (effetAffiche && effetAffiche.elementaires.length ? effetAffiche.elementaires.map(function (e) { return ' · +' + e.formule + ' ' + e.label; }).join('') : '') +
       (o.maudit ? ' · <span style="color:var(--sang-clair)">maudit</span>' : '') + '</div>';
 
     h += vue.ligne('nom', 'Nom');
@@ -73,11 +76,15 @@ COF.UI.Tresors = (function () {
       var o = vue.etatCourant();
       var perso = COF.Store.actif();
       if (o && perso && !o.ajoute) {
+        var effet = o.type.arme ? COF.TresorCalc.effetArme(o.pouvoirs) : null;
         COF.Store.ajouterObjet(perso, {
           nom: o.nom, qte: 1, prix: o.prix, note: COF.TresorCalc.texteComplet(o),
           dm: o.type.arme ? o.type.dmg : undefined,
           armeType: o.type.arme ? o.type.armeType : undefined,
-          def: o.type.armure ? o.type.def : undefined
+          def: o.type.armure ? o.type.def : undefined,
+          slot: o.type.armure ? (o.type.id === 'bouclier' ? 'bouclier' : 'armure') : undefined,
+          bonus: effet ? effet.bonus : undefined,
+          elementaires: effet ? effet.elementaires : undefined
         });
         o.ajoute = true;
         COF.Store.sauver(perso);

@@ -103,22 +103,28 @@ COF.Store = (function () {
   }
 
   /* Transfère un objet trouvé (butin, trésor nommé...) vers un personnage.
-     o : { nom, qte, prix, note ou desc, dm, armeType, noFor, def }
+     o : { nom, qte, prix, note ou desc, dm, armeType, noFor, def, slot,
+           bonus, elementaires }
      Une arme (dm présent) devient une vraie entrée dans C.armes — utilisable
-     aussitôt avec le bon bonus de FOR, comme n'importe quelle arme équipée —
-     tandis qu'une trace complète (prix, description) reste dans l'inventaire.
-     Une armure/un bouclier (def présent) reste dans l'inventaire, à équiper
-     depuis la fiche (bonus de DEF appliqué/retiré à l'équipement). */
+     aussitôt avec le bon bonus de FOR (et le bonus magique/élémentaire d'un
+     pouvoir, le cas échéant), comme n'importe quelle arme équipée — tandis
+     qu'une trace complète (prix, description) reste dans l'inventaire.
+     Une armure/un bouclier (def + slot présents) reste dans l'inventaire,
+     à équiper depuis la fiche : l'équiper remplace l'armure/le bouclier du
+     catalogue en cours plutôt que de s'y additionner. */
   function ajouterObjet(p, o) {
     if (o.dm) {
-      p.armes.push({ nom: o.nom, type: o.armeType || 'contact', dm: o.dm, portee: null, crit: 20, noFor: !!o.noFor, note: null });
+      p.armes.push({
+        nom: o.nom, type: o.armeType || 'contact', dm: o.dm, portee: null, crit: 20,
+        noFor: !!o.noFor, note: null, bonus: o.bonus || 0, elementaires: o.elementaires || []
+      });
     }
     var item = { nom: o.nom, qte: o.qte || 1 };
     if (o.prix) item.prix = o.prix;
     var desc = o.desc || o.note || null;
     if (o.dm) desc = (desc ? desc + ' ' : '') + "Équipée automatiquement dans l'onglet Armes.";
     if (desc) item.desc = desc;
-    if (o.def) item.def = o.def;
+    if (o.def) { item.def = o.def; item.slot = o.slot; }
     p.inventaire.push(item);
     return item;
   }

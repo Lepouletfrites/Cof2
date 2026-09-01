@@ -191,7 +191,8 @@ COF.UI.Butin = (function () {
     var m = l[cle];
     if (!m || m.ajoute) return;
     COF.Store.ajouterObjet(perso, {
-      nom: '✨ ' + m.nom, qte: 1, note: m.desc, dm: m.dm, armeType: m.armeType, def: m.def
+      nom: '✨ ' + m.nom, qte: 1, note: m.desc, dm: m.dm, armeType: m.armeType,
+      def: m.def, slot: m.def ? 'armure' : undefined
     });
     m.ajoute = true;
   }

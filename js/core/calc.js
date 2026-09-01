@@ -13,11 +13,24 @@ COF.Calc = (function () {
 
   function carac(p, id) { return (p.carac && typeof p.carac[id] === 'number') ? p.carac[id] : 0; }
 
+  /* Une armure/un bouclier trouvé en jeu (voir Objets) occupe le même
+     emplacement qu'une armure/un bouclier du catalogue plutôt que de s'y
+     additionner : un seul est actif à la fois. L'objet équipé est marqué
+     directement sur lui (o.equipe) plutôt que référencé ailleurs sur le
+     personnage, pour rester valide après une sérialisation JSON (sauvegarde
+     locale, où deux objets distincts ne sont jamais réellement le même). */
+  function objetEquipe(p, slot) {
+    return (p.inventaire || []).filter(function (o) { return o.slot === slot && o.equipe; })[0] || null;
+  }
   function armure(p) {
+    var eq = objetEquipe(p, 'armure');
+    if (eq) return { id: '_objet', nom: eq.nom, def: eq.def, agiMax: 99, prix: 0, rang: 0 };
     var a = COF.ARMURES.filter(function (x) { return x.id === p.armure; })[0];
     return a || COF.ARMURES[0];
   }
   function bouclier(p) {
+    var eq = objetEquipe(p, 'bouclier');
+    if (eq) return { id: '_objet', nom: eq.nom, def: eq.def, prix: 0 };
     var b = COF.BOUCLIERS.filter(function (x) { return x.id === p.bouclier; })[0];
     return b || COF.BOUCLIERS[0];
   }
@@ -221,7 +234,7 @@ COF.Calc = (function () {
 
   return {
     profil: profil, famille: famille, carac: carac,
-    armure: armure, bouclier: bouclier, agiEffective: agiEffective,
+    armure: armure, bouclier: bouclier, objetEquipe: objetEquipe, agiEffective: agiEffective,
     pvMax: pvMax, pmMax: pmMax, pcMax: pcMax, drMax: drMax, drType: drType,
     def: def, init: init, attaques: attaques, deEvo: deEvo, ctx: ctx,
     capacites: capacites, sorts: sorts, voieDef: voieDef,

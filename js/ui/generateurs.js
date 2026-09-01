@@ -28,6 +28,7 @@ COF.UI.Generateurs = (function () {
     COF.UI.Quetes.init();
     COF.UI.Tresors.init();
     COF.UI.Voyage.init();
+    COF.UI.Donjon.init();
   }
 
   /* Dernière rencontre générée, exposée pour l'import direct dans l'Arène et le butin */
@@ -45,6 +46,7 @@ COF.UI.Generateurs = (function () {
       '<span class="chip ' + (SOUS === 'quetes' ? 'on' : '') + '" data-gact="sous" data-v="quetes">📜 Quêtes</span>' +
       '<span class="chip ' + (SOUS === 'tresors' ? 'on' : '') + '" data-gact="sous" data-v="tresors">✨ Trésors</span>' +
       '<span class="chip ' + (SOUS === 'voyage' ? 'on' : '') + '" data-gact="sous" data-v="voyage">🧭 Voyage</span>' +
+      '<span class="chip ' + (SOUS === 'donjon' ? 'on' : '') + '" data-gact="sous" data-v="donjon">🗝️ Donjon</span>' +
       '</div></div></div>';
     h += '<div id="gen-corps"></div>';
     n.innerHTML = h;
@@ -56,6 +58,7 @@ COF.UI.Generateurs = (function () {
     if (SOUS === 'quetes') { COF.UI.Quetes.rendre($('#gen-corps')); return; }
     if (SOUS === 'tresors') { COF.UI.Tresors.rendre($('#gen-corps')); return; }
     if (SOUS === 'voyage') { COF.UI.Voyage.rendre($('#gen-corps')); return; }
+    if (SOUS === 'donjon') { COF.UI.Donjon.rendre($('#gen-corps')); return; }
     rendreRencontre($('#gen-corps'));
   }
 

@@ -10,7 +10,7 @@ COF.VoyageCalc = (function () {
 
   var TABLES = {
     pnj: COF.VOYAGE_PNJ, incident: COF.VOYAGE_INCIDENTS, interet: COF.VOYAGE_INTERETS,
-    decouverte: COF.VOYAGE_DECOUVERTES, presage: COF.VOYAGE_PRESAGES
+    decouverte: COF.VOYAGE_DECOUVERTES, presage: COF.VOYAGE_PRESAGES, calme: COF.VOYAGE_CALME
   };
 
   var CHAMPS = [

@@ -170,8 +170,8 @@ COF.UI.Fiche = (function () {
       h += '<div class="vide">Aucune arme équipée.</div>';
     } else {
       C.armes.forEach(function (w, i) {
-        var att = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
-        var dm = w.dm + (w.type === 'contact' && !w.noFor ? '+FOR' : '');
+        var att = COF.UI.modArme(C, w, a);
+        var dm = COF.UI.dmgArme(C, w);
         h += '<div class="ligne">' +
           '<div class="info"><div class="t">' + esc(w.nom) +
             (w.crit && w.crit < 20 ? ' <span class="puce puce-rang">crit ' + w.crit + '-20</span>' : '') + '</div>' +
@@ -326,19 +326,66 @@ COF.UI.Fiche = (function () {
   }
 
   /* ---------------- Équipement ---------------- */
+  /* Une armure/un bouclier trouvé en jeu (voir Objets) occupe le même
+     emplacement qu'une armure/un bouclier du catalogue — un seul actif à
+     la fois, plutôt qu'un menu déroulant dont le choix s'additionnerait à
+     un objet déjà équipé. */
+  function slotEquipHTML(type) {
+    var K = COF.Calc;
+    var actif = type === 'armure' ? K.armure(C) : K.bouclier(C);
+    var label = type === 'armure' ? 'Armure' : 'Bouclier';
+    return '<div class="champ"><label>' + label + '</label>' +
+      '<div class="ligne" style="padding:6px 0"><div class="info"><div class="t">' + esc(actif.nom) + '</div>' +
+      '<div class="s">' + sgn(actif.def) + ' DEF' + (actif.id === '_objet' ? ' · objet équipé' : '') + '</div></div>' +
+      '<div class="actions"><button class="btn btn-sm" data-act="' + type + '-changer">Changer</button></div></div></div>';
+  }
+
+  /* Retire la marque « équipé » de tout objet occupant ce même emplacement,
+     pour qu'un choix dans le catalogue redevienne effectif. */
+  function demonterSlot(type) {
+    (C.inventaire || []).forEach(function (o) { if (o.slot === type) o.equipe = false; });
+  }
+
+  function ouvrirChoixEquip(type) {
+    var catalogue = type === 'armure' ? COF.ARMURES : COF.BOUCLIERS;
+    var items = (C.inventaire || []).filter(function (o) { return o.def && o.slot === type; });
+    var html = catalogue.map(function (a) {
+      return '<div class="ligne"><div class="info"><div class="t">' + esc(a.nom) + '</div>' +
+        '<div class="s">' + sgn(a.def) + ' DEF</div></div>' +
+        '<div class="actions"><button class="btn btn-sm" data-catalogue="' + a.id + '">Équiper</button></div></div>';
+    }).join('');
+    if (items.length) {
+      html += '<div class="sep"></div><div class="note" style="margin:6px 0">Objets trouvés</div>';
+      html += items.map(function (o, idx) {
+        return '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) + (o.equipe ? ' (équipé)' : '') + '</div>' +
+          '<div class="s">+' + o.def + ' DEF</div></div>' +
+          '<div class="actions"><button class="btn btn-or btn-sm" data-objet="' + idx + '">Équiper</button></div></div>';
+      }).join('');
+    }
+    COF.UI.ouvrirModale('Changer ' + (type === 'armure' ? "d'armure" : 'de bouclier'), html, function (root) {
+      $$('[data-catalogue]', root).forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (type === 'armure') C.armure = b.getAttribute('data-catalogue'); else C.bouclier = b.getAttribute('data-catalogue');
+          demonterSlot(type);
+          sauver(); rendre(); COF.UI.fermerModale();
+        });
+      });
+      $$('[data-objet]', root).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var o = items[+b.getAttribute('data-objet')];
+          demonterSlot(type);
+          o.equipe = true;
+          sauver(); rendre(); COF.UI.fermerModale();
+        });
+      });
+    });
+  }
+
   function blocEquipement(pr) {
     var h = '<div class="carte pliable ferme"><h2>Équipement & bourse</h2><div class="carte-corps">';
     h += '<div class="grille2">';
-    h += '<div class="champ"><label>Armure</label><select data-act="set-armure">' +
-      COF.ARMURES.map(function (a) {
-        return '<option value="' + a.id + '"' + (a.id === C.armure ? ' selected' : '') + '>' +
-          esc(a.nom) + ' (' + sgn(a.def) + ')</option>';
-      }).join('') + '</select></div>';
-    h += '<div class="champ"><label>Bouclier</label><select data-act="set-bouclier">' +
-      COF.BOUCLIERS.map(function (b) {
-        return '<option value="' + b.id + '"' + (b.id === C.bouclier ? ' selected' : '') + '>' +
-          esc(b.nom) + ' (' + sgn(b.def) + ')</option>';
-      }).join('') + '</select></div>';
+    h += slotEquipHTML('armure');
+    h += slotEquipHTML('bouclier');
     h += '</div>';
     h += '<div class="note" style="margin-bottom:10px">Limite du profil : ' + esc(pr.armuresTexte) + '</div>';
 
@@ -430,7 +477,7 @@ COF.UI.Fiche = (function () {
 
       case 'arme-jet': {
         var w = C.armes[+i], aa = K.attaques(C);
-        var att = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
+        var att = COF.UI.modArme(C, w, aa);
         var dm = COF.UI.dmgArme(C, w);
         var cfg = {
           titre: w.nom, sousTitre: (w.type === 'distance' ? 'Attaque à distance' : 'Attaque au contact') +
@@ -514,6 +561,9 @@ COF.UI.Fiche = (function () {
       }
       case 'niveau-': if (C.niveau > 1) { C.niveau--; sauver(); rendre(); } break;
 
+      case 'armure-changer': ouvrirChoixEquip('armure'); break;
+      case 'bouclier-changer': ouvrirChoixEquip('bouclier'); break;
+
       case 'comp-ajouter': {
         var tid = node.getAttribute('data-t');
         var tpl = COF.COMPAGNONS[tid];
@@ -583,9 +633,7 @@ COF.UI.Fiche = (function () {
     if (!t.hasAttribute || !t.hasAttribute('data-act')) return;
     if (!t.closest('#vue-fiche')) return;
     var a = t.getAttribute('data-act');
-    if (a === 'set-armure') { C.armure = t.value; sauver(); rendre(); }
-    else if (a === 'set-bouclier') { C.bouclier = t.value; sauver(); rendre(); }
-    else if (a === 'bourse') { C.bourse[t.getAttribute('data-m')] = +t.value; sauver(); }
+    if (a === 'bourse') { C.bourse[t.getAttribute('data-m')] = +t.value; sauver(); }
     else if (a === 'desc') { C.description[t.getAttribute('data-k')] = t.value; sauver(); }
     else if (a === 'notes') { C.notes = t.value; sauver(); }
     else if (a === 'comp-nom') {
@@ -703,8 +751,7 @@ COF.UI.Fiche = (function () {
       } else if (c.t === 'bonus') {
         /* le sort ajoute ses DM à ceux d'une arme (arme élémentaire, tempête de mana…) */
         var choix = (C.armes || []).map(function (w) {
-          var mod = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
-          return { label: w.nom, dmg: COF.UI.dmgArme(C, w) + '+' + capDmg, mod: mod, type: w.type };
+          return { label: w.nom, dmg: COF.UI.dmgArme(C, w) + '+' + capDmg, mod: COF.UI.modArme(C, w, a), type: w.type };
         });
         choix.push({ label: 'Bonus seul', dmg: capDmg, mod: a.magique });
         COF.UI.jet({
