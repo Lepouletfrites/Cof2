@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v17';
+var CACHE_VERSION = 'cof2-v20';
 
 var FICHIERS = [
   './',
@@ -63,6 +63,7 @@ var FICHIERS = [
   'js/ui/persos.js',
   'js/ui/sheet.js',
   'js/ui/voies.js',
+  'js/ui/objets.js',
   'js/ui/bestiaire.js',
   'js/ui/generateurs.js',
   'js/ui/pnj.js',

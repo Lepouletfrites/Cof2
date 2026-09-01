@@ -109,18 +109,41 @@ Chaque capacité est structurée pour être exploitable par le moteur :
 
 ### Interface (`js/ui/`)
 
-- **Fiche** — deux sous-onglets.
+- **Fiche** — trois sous-onglets.
   - *Fiche* : caractéristiques cliquables (test d20), combat, jauges PV/PM/PC/DR avec
     récupération rapide et complète, états préjudiciables, armes (attaque + dommages en deux
     taps), sorts (dépense automatique des PM, brûlure de mana si besoin), capacités, bonus de
-    compétence, équipement, ajustements permanents, notes. Avant tout jet de dommages, un champ
-    libre permet d'ajouter un bonus circonstanciel (`+1`, `+1d4`...) sans toucher à la formule de
-    base. Les sorts/capacités utilisables avec deux types d'action différents (ex. Rétrécissement,
-    Agrandissement, Ventriloquie) affichent un bouton pour choisir laquelle est utilisée. Une
-    section **Objets** dédiée liste l'inventaire avec sa description complète (pas un résumé),
-    son coût s'il est connu, et un bouton **Attaquer** pour tout objet qui porte des dégâts (armes
-    trouvées en butin ou objets nommés du générateur de Trésors) — au lieu de l'ancienne liste
-    minimaliste, nom + note, auparavant reléguée dans la carte Équipement.
+    compétence, équipement, ajustements permanents, notes. Monter d'un niveau augmente les PV
+    actuels du même montant que les PV maximum, pas seulement le maximum. Avant tout jet de
+    dommages, un champ libre permet d'ajouter un bonus circonstanciel (`+1`, `+1d4`...) sans
+    toucher à la formule de base. Les sorts/capacités utilisables avec deux types d'action
+    différents (ex. Rétrécissement, Agrandissement, Ventriloquie) affichent un bouton pour choisir
+    laquelle est utilisée.
+  - *Objets* : la liste complète des armes et objets du personnage, avec leur description
+    entière (pas un résumé) et leur coût s'il est connu — pas seulement les armes équipées, aussi
+    les armures, boucliers et objets divers ramassés en jeu. Une armure ou un bouclier se
+    **équipe**/**déséquipe** depuis cet onglet, ce qui applique ou retire son bonus de DEF (retiré
+    automatiquement si l'objet est supprimé en étant équipé). Chaque arme ou objet a un bouton
+    **⇄** pour le transférer instantanément vers un autre personnage enregistré (retiré de l'un,
+    ajouté à l'autre, bonus de DEF réajusté si besoin). Une arme trouvée (butin ou générateur de
+    Trésors) rejoint directement cette liste avec sa vraie formule de dégâts (bonus de FOR inclus,
+    comme n'importe quelle arme équipée manuellement). Les capacités
+    dont l'effet grandit avec le nombre de voies d'un même profil poussées à un rang donné (ex.
+    *Attaque sournoise* : +1d4° par rang 4 atteint dans une voie de voleur, jusqu'à 7d4°) recalculent
+    désormais leur formule de dégâts en fonction des voies réellement acquises, au lieu de rester
+    figées à leur valeur de base. Sont couvertes : Attaque sournoise, Blessure majeure, Transe de
+    guérison, Récupération majeure (dés supplémentaires), Marteau de la foi et Projectile de mana
+    (bonus fixe croissant, plafonné par l'INT pour ce dernier). Les capacités où le rang débloque
+    autre chose qu'un dé de dégâts (charges d'un objet, nombre d'usages par jour, choix
+    supplémentaires, bonus appliqué à une arme extérieure à la capacité...) restent décrites en
+    texte libre : c'est un mécanisme différent, plus proche des bonus passifs déjà mis de côté.
+    Les voies de prestige (rang 4-8) sont désormais incluses dans le vivier des capacités/sorts
+    proposés par les pickers de choix de voie qui ne sont pas restreints à une liste de profils
+    précise, ce qui permet par exemple à *Pouvoir puissant* de vraiment piocher jusqu'au rang 8
+    comme l'indique son texte. Changer une option (niveau, armure, voie acquise/retirée...) ne
+    referme plus les sections dépliées ni ne fait sauter la page en haut : la position de
+    défilement et l'état replié/déplié de chaque section sont conservés d'un rafraîchissement à
+    l'autre, aussi bien dans Fiche que dans Voies.
   - *Voies* : cinq sections. Les voies du profil et la voie de peuple (+ voie du mage) sont
     mises en avant — le magicien, le sorcier et le prêtre y trouvent aussi les voies
     supplémentaires de l'*Atlas d'Osgild* (arcanes exhumés/oubliés/perdus, arcanes obscurs,
@@ -233,8 +256,9 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     [Adjectif] » correctement accordé), une origine/légende, un coût estimé et, dans 20 % des cas,
     une malédiction. Une arme générée porte ses dégâts (formule adaptée au type : épée/hache/arc
     1d8, masse/lance 1d6, dague 1d4), une armure ou un bouclier son bonus de DEF. Un bouton
-    **📥 Ajouter à [personnage]** transfère l'objet complet (nom, description, coût, dégâts/DEF)
-    dans l'inventaire du personnage actif, comme pour le Butin.
+    **📥 Ajouter à [personnage]** transfère l'objet — une arme rejoint directement l'onglet Armes
+    (dégâts corrects, bonus de FOR inclus) tandis que sa fiche complète (nom, description, coût)
+    reste dans Objets ; une armure/un bouclier atterrit dans Objets, prêt à être équipé.
   - *Voyage* : un événement de trajet non lié au combat — environnement, météo, puis un tirage
     catégorisé (rencontre de voyageurs, incident de parcours, point d'intérêt, découverte ou
     présage) avec son détail — pour ponctuer une route sans forcément déclencher une rencontre.

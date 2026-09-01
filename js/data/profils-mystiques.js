@@ -84,7 +84,9 @@ COF.PROFILS.moine = {
     ]},
     { id: 'meditation', nom: 'Voie de la méditation', caps: [
       { r: 1, n: 'Pacifisme', comp: "empathie, apaiser un auditoire", bon: '2+rang', d: "Tant qu'il n'a réalisé aucune action offensive dans le combat : +5 en DEF et DM subis divisés par deux." },
-      { r: 2, n: 'Transe de guérison', f: 'jour', t: 'soin', dmg: '1d4°+VOL', d: "10 min de méditation : récupère [1d4° + VOL] PV (+1d4° par rang 4 atteint dans une voie de moine). Nécessite une récupération rapide entre deux usages, 3 fois par jour maximum." },
+      { r: 2, n: 'Transe de guérison', f: 'jour', t: 'soin', dmg: '1d4°+VOL',
+        scaleDmg: { profil: 'moine', seuilRang: 4, dePlus: 1 },
+        d: "10 min de méditation : récupère [1d4° + VOL] PV (+1d4° par rang 4 atteint dans une voie de moine). Nécessite une récupération rapide entre deux usages, 3 fois par jour maximum." },
       { r: 3, n: 'Maîtrise du ki', d: "Ajoute sa VOL à son Initiative et à ses PV. +2 en DEF (+3 au rang 5)." },
       { r: 4, n: 'Volonté héroïque', d: "+1 en VOL et dé bonus aux tests de VOL." },
       { r: 5, n: 'Projection mentale', a: 'L', f: 'jour', dmg: '1d4°+VOL', d: "1×/jour : projette son esprit hors de son corps pendant [1d4° + VOL] minutes (vol à 10 m par round, traverse les murs mais pas les êtres vivants ni les barrières magiques). Il ressent les DM infligés à son corps. +1 définitif à sa plus faible caractéristique." }
@@ -130,7 +132,9 @@ COF.PROFILS.pretre = {
       { r: 1, n: 'Arme bénie', a: 'A', s: true, d: "Rituel bénissant son arme pour 24 h : un résultat de 1 au dé de DM est relancé (le second résultat compte) et les DM sont considérés comme magiques. Sans effet si une autre créature l'utilise." },
       { r: 2, n: 'Bouclier de la foi', d: "+1 en DEF supplémentaire avec son bouclier orné du symbole de sa foi (+2 au rang 5). Sans effet pour quelqu'un d'autre." },
       { r: 3, n: 'Châtiment divin', a: 'L', t: 'bonus', dmg: '1d4°', d: "Attaque de contact avec un dé bonus, ajoutant son CHA aux DM. Peut dépenser 1 PM pour +1d4° DM (2 PM pour +2d4° au rang 5)." },
-      { r: 4, n: 'Marteau de la foi', a: 'A', s: true, dmg: '2d4°+CHA', d: "Attaque magique contre la DEF (30 m) : projectile d'énergie infligeant [2d4° + CHA] DM. Bonus d'arme magique applicable. +1 aux DM par rang 4 atteint dans une autre voie de prêtre." },
+      { r: 4, n: 'Marteau de la foi', a: 'A', s: true, dmg: '2d4°+CHA',
+        scaleDmg: { profil: 'pretre', seuilRang: 4, dePlus: 1, mode: 'flat' },
+        d: "Attaque magique contre la DEF (30 m) : projectile d'énergie infligeant [2d4° + CHA] DM. Bonus d'arme magique applicable. +1 aux DM par rang 4 atteint dans une autre voie de prêtre." },
       { r: 5, n: 'Mot de pouvoir', a: 'A', s: true, f: 'jour', d: "1×/jour : tous ses ennemis dans un rayon de 10 m sont étourdis pendant 1 round (aucune action et -5 en DEF)." }
     ]},
     { id: 'priere', nom: 'Voie de la prière', caps: [
@@ -143,7 +147,9 @@ COF.PROFILS.pretre = {
     { id: 'soins', nom: 'Voie des soins', caps: [
       { r: 1, n: 'Récupération mineure', a: 'A', s: true, comp: 'médecine, premiers soins', bon: '2+rang', dmg: '1d4°+CHA', d: "Impose les mains sur un allié au contact (ou lui-même) : [1d4° + CHA] PV. Utilisable une fois par jour par rang atteint dans la voie, plus une par rang 3 atteint dans une autre voie de prêtre." },
       { r: 2, n: 'Vigueur divine', a: 'L', s: true, comp: 'résister aux maladies et poisons', bon: '2+rang', d: "Guérit un poison ou une maladie sur une cible au contact (test d'attaque magique possible si l'infection est surnaturelle)." },
-      { r: 3, n: 'Récupération majeure', a: 'L', s: true, t: 'soin', dmg: '3d4°+CHA', d: "Soigne une cible à 20 m : [3d4° + CHA] PV immédiatement. +1d4° par rang 5 atteint dans une voie de prêtre." },
+      { r: 3, n: 'Récupération majeure', a: 'L', s: true, t: 'soin', dmg: '3d4°+CHA',
+        scaleDmg: { profil: 'pretre', seuilRang: 5, dePlus: 1 },
+        d: "Soigne une cible à 20 m : [3d4° + CHA] PV immédiatement. +1d4° par rang 5 atteint dans une voie de prêtre." },
       { r: 4, n: 'Phénix', f: 'jour', t: 'soin', dmg: '2d4°+CHA', d: "1×/jour, en tombant à 0 PV : il se relève et rend [2d4° + CHA] PV à tous ses alliés dans un rayon de 20 m, et le double à lui-même." },
       { r: 5, n: 'Rétablissement', s: true, f: 'jour', t: 'soin', dmg: '3d4°+CHA', d: "1×/jour : soigne une créature par point de CHA, chacune bénéficiant des effets d'une Récupération majeure. Rituel de 10 min au repos dans un rayon de 5 m. Pas de concentration possible." }
     ]},

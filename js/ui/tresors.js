@@ -38,16 +38,6 @@ COF.UI.Tresors = (function () {
     });
   }
 
-  /* Construit l'objet tel qu'il sera stocké dans l'inventaire du personnage :
-     conserve le prix et la description complète, ajoute les dégâts pour une
-     arme ou le bonus de DEF pour une armure/un bouclier. */
-  function construireItem(o) {
-    var item = { nom: o.nom, qte: 1, prix: o.prix, desc: COF.TresorCalc.texteComplet(o) };
-    if (o.type.arme) { item.dmg = o.type.dmg; item.armeType = o.type.armeType; }
-    if (o.type.armure) { item.def = o.type.def; }
-    return item;
-  }
-
   function boutonAjouter(o, perso) {
     if (!perso) return '<div class="note">Aucun personnage actif : ouvrez-en un depuis « Persos » pour le récupérer.</div>';
     if (o.ajoute) return '<button class="btn btn-bloc" disabled style="opacity:.6">✓ Ajouté à ' + esc(perso.nom) + '</button>';
@@ -83,7 +73,12 @@ COF.UI.Tresors = (function () {
       var o = vue.etatCourant();
       var perso = COF.Store.actif();
       if (o && perso && !o.ajoute) {
-        perso.inventaire.push(construireItem(o));
+        COF.Store.ajouterObjet(perso, {
+          nom: o.nom, qte: 1, prix: o.prix, note: COF.TresorCalc.texteComplet(o),
+          dm: o.type.arme ? o.type.dmg : undefined,
+          armeType: o.type.arme ? o.type.armeType : undefined,
+          def: o.type.armure ? o.type.def : undefined
+        });
         o.ajoute = true;
         COF.Store.sauver(perso);
       }

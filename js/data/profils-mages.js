@@ -121,7 +121,9 @@ COF.PROFILS.magicien = {
   ],
   voies: [
     { id: 'arcanes', nom: 'Voie de la magie des arcanes', caps: [
-      { r: 1, n: 'Projectile de mana', a: 'A', s: true, dmg: '1d4°', d: "Cible visible à moins de 30 m : 1d4° DM automatiques. Sur un résultat maximal, relancez le dé et ajoutez (une seule fois). +1 aux DM par rang 4 atteint dans une voie de magicien, jusqu'à un maximum égal à l'INT." },
+      { r: 1, n: 'Projectile de mana', a: 'A', s: true, dmg: '1d4°',
+        scaleDmg: { profil: 'magicien', seuilRang: 4, dePlus: 1, mode: 'flat', maxCarac: 'INT' },
+        d: "Cible visible à moins de 30 m : 1d4° DM automatiques. Sur un résultat maximal, relancez le dé et ajoutez (une seule fois). +1 aux DM par rang 4 atteint dans une voie de magicien, jusqu'à un maximum égal à l'INT." },
       { r: 2, n: 'Lévitation', a: 'M', s: true, d: "Se déplace verticalement de 5 m vers le haut ou 10 m vers le bas par action de mouvement pendant INT minutes. Le vol stationnaire demande une action de mouvement." },
       { r: 3, n: 'Forme gazeuse', a: 'A', s: true, d: "Devient gazeux pendant 1 min : 5 m par action de mouvement au ras du sol, passe par les plus petits interstices, aucune capacité utilisable. Insensible aux armes ordinaires, mais pas à la magie ni aux armes magiques." },
       { r: 4, n: 'Accélération', a: 'A', s: true, dmg: '1d4°+INT', d: "Pendant [1d4° + INT] rounds : une action de mouvement supplémentaire immédiate puis à chaque round. Peut la sacrifier pour +3 en DEF pendant 1 round ou -1 PM sur un sort du round (cumulable avec la concentration)." },

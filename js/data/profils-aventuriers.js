@@ -184,7 +184,9 @@ COF.PROFILS.voleur = {
   voies: [
     { id: 'assassin', nom: "Voie de l'assassin", caps: [
       { r: 1, n: 'Discrétion', comp: "discrétion, déguisement, cacher une arme", bon: '2+rang', d: "Ajoute rang + 2 à ces tests. Connaît l'argotien (langage des signes des voleurs). Dé bonus en attaque contre un adversaire surpris." },
-      { r: 2, n: 'Attaque sournoise', a: 'L', f: 'round', t: 'bonus', dmg: '2d4°', d: "1×/round contre un adversaire surpris ou attaqué de dos, avec une arme légère : +2d4° DM (+1d4° par rang 4 atteint dans une voie de voleur, max 7d4°). Bonus divisé par 2 avec une autre arme." },
+      { r: 2, n: 'Attaque sournoise', a: 'L', f: 'round', t: 'bonus', dmg: '2d4°',
+        scaleDmg: { profil: 'voleur', seuilRang: 4, dePlus: 1, maxNb: 7 },
+        d: "1×/round contre un adversaire surpris ou attaqué de dos, avec une arme légère : +2d4° DM (+1d4° par rang 4 atteint dans une voie de voleur, max 7d4°). Bonus divisé par 2 avec une autre arme." },
       { r: 3, n: 'Attaque par surprise', a: 'A', t: 'bonus', dmg: '2d4°', d: "Contre un adversaire surpris : attaque sournoise en action d'attaque au lieu d'une action limitée, et +2d4° DM supplémentaires." },
       { r: 4, n: 'Disparition', a: 'M', f: 'combat', d: "1×/combat : disparaît (inattaquable, sauf DM de zone) et réapparaît au début de son prochain tour à 20 m maximum. S'il a l'initiative, il peut faire une attaque sournoise." },
       { r: 5, n: 'Ouverture mortelle', a: 'L', f: 'combat', d: "1×/combat : réussite critique automatique (DM ×2) plus une attaque sournoise (dont les DM ne sont pas doublés)." }

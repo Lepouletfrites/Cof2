@@ -102,6 +102,27 @@ COF.Store = (function () {
     return p;
   }
 
+  /* Transfère un objet trouvé (butin, trésor nommé...) vers un personnage.
+     o : { nom, qte, prix, note ou desc, dm, armeType, noFor, def }
+     Une arme (dm présent) devient une vraie entrée dans C.armes — utilisable
+     aussitôt avec le bon bonus de FOR, comme n'importe quelle arme équipée —
+     tandis qu'une trace complète (prix, description) reste dans l'inventaire.
+     Une armure/un bouclier (def présent) reste dans l'inventaire, à équiper
+     depuis la fiche (bonus de DEF appliqué/retiré à l'équipement). */
+  function ajouterObjet(p, o) {
+    if (o.dm) {
+      p.armes.push({ nom: o.nom, type: o.armeType || 'contact', dm: o.dm, portee: null, crit: 20, noFor: !!o.noFor, note: null });
+    }
+    var item = { nom: o.nom, qte: o.qte || 1 };
+    if (o.prix) item.prix = o.prix;
+    var desc = o.desc || o.note || null;
+    if (o.dm) desc = (desc ? desc + ' ' : '') + "Équipée automatiquement dans l'onglet Armes.";
+    if (desc) item.desc = desc;
+    if (o.def) item.def = o.def;
+    p.inventaire.push(item);
+    return item;
+  }
+
   /* Remet PV/PM/PC/DR au maximum */
   function reinitialiser(p) {
     p.pv = COF.Calc.pvMax(p);
@@ -144,7 +165,7 @@ COF.Store = (function () {
   return {
     uid: uid, tous: tous, get: get, sauver: sauver, supprimer: supprimer,
     actif: actif, actifId: actifId, setActif: setActif,
-    nouveau: nouveau, equiperDepart: equiperDepart, reinitialiser: reinitialiser,
+    nouveau: nouveau, equiperDepart: equiperDepart, reinitialiser: reinitialiser, ajouterObjet: ajouterObjet,
     journal: journal, logJet: logJet, viderJournal: viderJournal,
     exporter: exporter, importer: importer
   };

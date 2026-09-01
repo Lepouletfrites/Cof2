@@ -33,21 +33,26 @@ COF.UI = COF.UI || {};
   var VUES = ['persos', 'fiche', 'arene', 'bestiaire', 'generateurs', 'des', 'plus'];
 
   /* Voies est un sous-onglet de Fiche, pas une vue de premier niveau */
-  var sousFiche = 'fiche'; // 'fiche' | 'voies'
+  var sousFiche = 'fiche'; // 'fiche' | 'voies' | 'objets'
 
   function rendreFicheOnglets() {
-    var chipFiche = $('#fonglet-fiche'), chipVoies = $('#fonglet-voies');
+    var chipFiche = $('#fonglet-fiche'), chipVoies = $('#fonglet-voies'), chipObjets = $('#fonglet-objets');
     if (chipFiche) chipFiche.classList.toggle('on', sousFiche === 'fiche');
     if (chipVoies) chipVoies.classList.toggle('on', sousFiche === 'voies');
-    var corps = $('#vue-fiche-corps'), voies = $('#vue-voies');
+    if (chipObjets) chipObjets.classList.toggle('on', sousFiche === 'objets');
+    var corps = $('#vue-fiche-corps'), voies = $('#vue-voies'), objets = $('#vue-objets');
     if (corps) corps.style.display = sousFiche === 'fiche' ? '' : 'none';
     if (voies) voies.style.display = sousFiche === 'voies' ? '' : 'none';
-    if (sousFiche === 'voies') COF.UI.Voies.rendre(); else COF.UI.Fiche.rendre();
+    if (objets) objets.style.display = sousFiche === 'objets' ? '' : 'none';
+    if (sousFiche === 'voies') COF.UI.Voies.rendre();
+    else if (sousFiche === 'objets') COF.UI.Objets.rendre();
+    else COF.UI.Fiche.rendre();
   }
   COF.UI.rendreFicheOnglets = rendreFicheOnglets;
 
   function aller(vue) {
     if (vue === 'voies') { sousFiche = 'voies'; vue = 'fiche'; }
+    else if (vue === 'objets') { sousFiche = 'objets'; vue = 'fiche'; }
     else if (vue === 'fiche') { sousFiche = 'fiche'; }
     VUES.forEach(function (v) {
       var n = $('#vue-' + v); if (n) n.classList.toggle('actif', v === vue);
@@ -253,6 +258,32 @@ COF.UI = COF.UI || {};
   }
   COF.UI.dmgArme = dmgArme;
 
+  /* Certaines capacités indiquent dans leur texte un bonus qui augmente avec
+     un seuil de rang atteint dans d'autres voies d'un même profil (ex.
+     Attaque sournoise : +1d4° par rang 4 dans une voie de voleur, max 7d4°).
+     `cap.scaleDmg = { profil, seuilRang, dePlus, maxNb }` recalcule alors le
+     nombre de dés de tête de `cap.dmg` (mode par défaut). Avec
+     `mode: 'flat'`, ajoute plutôt un bonus fixe croissant (ex. Projectile de
+     mana : +1 DM par rang 4 chez le magicien, plafonné par `maxCarac`
+     — une caractéristique du personnage — ou par `maxFlat`).            */
+  function formuleEchelle(cap, C) {
+    if (!cap.scaleDmg || !cap.dmg) return cap.dmg;
+    var sc = cap.scaleDmg;
+    var count = COF.Calc.rangsAtteintsProfil(C, sc.profil, sc.seuilRang);
+    if (sc.mode === 'flat') {
+      var bonus = count * (sc.dePlus || 1);
+      var plafond = sc.maxCarac ? ((C.carac && C.carac[sc.maxCarac]) || 0) : (sc.maxFlat || Infinity);
+      bonus = Math.min(plafond, bonus);
+      return bonus > 0 ? cap.dmg + '+' + bonus : cap.dmg;
+    }
+    var m = /^(\d*)d(\d+)(°?)/.exec(cap.dmg);
+    if (!m) return cap.dmg;
+    var nb = parseInt(m[1] || '1', 10) + count * (sc.dePlus || 1);
+    if (sc.maxNb) nb = Math.min(sc.maxNb, nb);
+    return nb + 'd' + m[2] + m[3] + cap.dmg.slice(m[0].length);
+  }
+  COF.UI.formuleEchelle = formuleEchelle;
+
   /* Ouvre un jet d'attaque générique (contact/distance/magique) pour une
      capacité de combat (voie de profil, prestige ou hybride). Ne gère
      aucun coût en PM : réservé aux capacités qui ne sont pas des sorts.
@@ -269,11 +300,12 @@ COF.UI = COF.UI || {};
     var sous = voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : '') +
       (cibleInfo ? ' · 🎯 ' + cibleInfo.nom + ' (DEF ' + cibleInfo.def + ')' : '');
     var choixAction = (cap.a && cap.a.indexOf('/') > -1) ? cap.a.split('/') : null;
+    var capDmg = formuleEchelle(cap, C);
 
     if (cap.t === 'soin') {
       jet({
         titre: cap.n, sousTitre: sous, choixAction: choixAction,
-        dmg: cap.dmg, dmgLabel: 'Soins', sansD20: true,
+        dmg: capDmg, dmgLabel: 'Soins', sansD20: true,
         ctx: K.ctx(C, rangCourant), type: 'soins'
       });
       return;
@@ -290,9 +322,9 @@ COF.UI = COF.UI || {};
       var choix = (C.armes || []).map(function (w) {
         var base = dmgArme(C, w);
         var mod = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
-        return { label: w.nom, dmg: base + '+' + cap.dmg, mod: mod, type: w.type };
+        return { label: w.nom, dmg: base + '+' + capDmg, mod: mod, type: w.type };
       });
-      choix.push({ label: 'Bonus seul', dmg: cap.dmg, mod: null });
+      choix.push({ label: 'Bonus seul', dmg: capDmg, mod: null });
 
       /* arme par défaut : à distance si la capacité le mentionne, sinon la première */
       var versDistance = /distance|arc |arbalète|tir\b|flèche|poudre|jet\b/i.test(cap.n + ' ' + (cap.d || ''));
@@ -320,7 +352,7 @@ COF.UI = COF.UI || {};
     jet({
       titre: cap.n, sousTitre: sous, choixAction: choixAction,
       attaqueTypes: types, attaqueDefaut: cap.s ? 'magique' : 'contact',
-      dmg: cap.dmg || null, dmgLabel: 'Dommages',
+      dmg: capDmg || null, dmgLabel: 'Dommages',
       difficulte: cibleInfo ? cibleInfo.def : null, cible: cibleInfo,
       ctx: K.ctx(C, rangCourant), type: 'attaque'
     });
@@ -457,6 +489,7 @@ COF.UI = COF.UI || {};
     COF.UI.Persos.init();
     COF.UI.Fiche.init();
     COF.UI.Voies.init();
+    COF.UI.Objets.init();
     COF.UI.Arene.init();
     COF.UI.Bestiaire.init();
     COF.UI.Generateurs.init();

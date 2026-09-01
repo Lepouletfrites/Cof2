@@ -20,8 +20,14 @@ COF.UI.Fiche = (function () {
   function sauver() { COF.Store.sauver(C); }
 
   function rendre() {
-    C = COF.Store.actif();
     var n = $('#vue-fiche-corps');
+    /* Un simple clic (monter de niveau, changer d'armure...) régénère tout
+       le HTML : sans ça, les sections repliables reviendraient à leur état
+       par défaut et le défilement sauterait en haut de page à chaque fois. */
+    var ouv = $$('.pliable', n).map(function (el) { return el.classList.contains('ferme'); });
+    var scrollY = window.scrollY;
+
+    C = COF.Store.actif();
     if (!C) {
       n.innerHTML = '<div class="vide">Aucun personnage sélectionné.<br><br>' +
         '<button class="btn btn-plein" onclick="COF.UI.aller(\'persos\')">Choisir un personnage</button></div>';
@@ -44,10 +50,12 @@ COF.UI.Fiche = (function () {
     h += blocCompagnons();
     h += blocCompetences();
     h += blocEquipement(pr);
-    h += blocObjets();
     h += blocAjustements();
     h += blocNotes();
     n.innerHTML = h;
+
+    $$('.pliable', n).forEach(function (el, i) { if (ouv[i] !== undefined) el.classList.toggle('ferme', ouv[i]); });
+    window.scrollTo(0, scrollY);
 
     /* replier / déplier */
     $$('.pliable > h2', n).forEach(function (t) {
@@ -344,28 +352,6 @@ COF.UI.Fiche = (function () {
     return h;
   }
 
-  /* ---------------- Objets ---------------- */
-  function blocObjets() {
-    var h = '<div class="carte"><h2>Objets<span class="h2-action" data-act="inv-ajout">+ Objet</span></h2><div class="carte-corps">';
-    if (!C.inventaire.length) {
-      h += '<div class="vide">Sac vide. ' + esc(COF.SAC_DEPART) + '</div>';
-    } else {
-      C.inventaire.forEach(function (o, i) {
-        h += '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) +
-          (o.qte > 1 ? ' ×' + o.qte : '') +
-          (o.prix ? ' <span class="puce">' + o.prix + ' po</span>' : '') +
-          (o.dmg ? ' <span class="puce puce-rang">' + esc(o.dmg) + ' DM</span>' : '') +
-          (o.def ? ' <span class="puce puce-rang">+' + o.def + ' DEF</span>' : '') + '</div>' +
-          ((o.note || o.desc) ? '<div class="s">' + esc(o.note || o.desc) + '</div>' : '') + '</div>' +
-          '<div class="actions">' +
-          (o.dmg ? '<button class="btn btn-or btn-sm" data-act="obj-attaquer" data-i="' + i + '">Attaquer</button>' : '') +
-          '<button class="btn btn-sm" data-act="inv-suppr" data-i="' + i + '">✕</button></div></div>';
-      });
-    }
-    h += '</div></div>';
-    return h;
-  }
-
   /* ---------------- Ajustements ---------------- */
   var AJUST = [
     { k: 'def',  l: 'Défense' },      { k: 'init', l: 'Initiative' },
@@ -518,27 +504,15 @@ COF.UI.Fiche = (function () {
         break;
       }
 
-      case 'niveau+': C.niveau++; sauver(); rendre(); break;
+      case 'niveau+': {
+        var pvAvant = K.pvMax(C);
+        C.niveau++;
+        var gain = Math.max(0, K.pvMax(C) - pvAvant);
+        if (C.pv !== null) C.pv += gain;
+        sauver(); rendre();
+        break;
+      }
       case 'niveau-': if (C.niveau > 1) { C.niveau--; sauver(); rendre(); } break;
-
-      case 'inv-ajout': {
-        var nom = prompt('Nom de l\'objet :');
-        if (nom) { C.inventaire.push({ nom: nom, qte: 1 }); sauver(); rendre(); }
-        break;
-      }
-      case 'inv-suppr': C.inventaire.splice(+i, 1); sauver(); rendre(); break;
-
-      case 'obj-attaquer': {
-        var oi = C.inventaire[+i];
-        if (!oi || !oi.dmg) break;
-        var aa2 = K.attaques(C);
-        var att2 = oi.armeType === 'distance' ? aa2.distance : aa2.contact;
-        COF.UI.jet({
-          titre: oi.nom, sousTitre: (oi.armeType === 'distance' ? 'Attaque à distance' : 'Attaque au contact') +
-            ' · DM ' + oi.dmg, mod: att2, dmg: oi.dmg, dmgLabel: 'Dommages', ctx: K.ctx(C), type: 'attaque'
-        });
-        break;
-      }
 
       case 'comp-ajouter': {
         var tid = node.getAttribute('data-t');
@@ -620,10 +594,7 @@ COF.UI.Fiche = (function () {
     }
     else if (a === 'ajust') {
       C.bonus[t.getAttribute('data-k')] = parseInt(t.value, 10) || 0;
-      sauver();
-      var ouv = COF.UI.$$('#vue-fiche-corps .pliable').map(function (n) { return n.classList.contains('ferme'); });
-      rendre();
-      COF.UI.$$('#vue-fiche-corps .pliable').forEach(function (n, i) { n.classList.toggle('ferme', !!ouv[i]); });
+      sauver(); rendre();
     }
   });
 
@@ -721,20 +692,21 @@ COF.UI.Fiche = (function () {
       var sous = x.voie.nom + ' · rang ' + c.r + ' · ' + cout + ' PM dépensés (reste ' + C.pm + ')' +
         (peutConcentration && etat.concentration ? ' · concentration' : '') +
         (c.d ? ' — ' + c.d.slice(0, 120) : '');
+      var capDmg = COF.UI.formuleEchelle(c, C);
 
       if (c.t === 'soin') {
         COF.UI.jet({
           titre: c.n, sousTitre: sous,
-          dmg: c.dmg, dmgLabel: 'Soins', sansD20: true,
+          dmg: capDmg, dmgLabel: 'Soins', sansD20: true,
           ctx: K.ctx(C, x.rang), type: 'soins'
         });
       } else if (c.t === 'bonus') {
         /* le sort ajoute ses DM à ceux d'une arme (arme élémentaire, tempête de mana…) */
         var choix = (C.armes || []).map(function (w) {
           var mod = w.type === 'distance' ? a.distance : (w.type === 'magique' ? a.magique : a.contact);
-          return { label: w.nom, dmg: COF.UI.dmgArme(C, w) + '+' + c.dmg, mod: mod, type: w.type };
+          return { label: w.nom, dmg: COF.UI.dmgArme(C, w) + '+' + capDmg, mod: mod, type: w.type };
         });
-        choix.push({ label: 'Bonus seul', dmg: c.dmg, mod: a.magique });
+        choix.push({ label: 'Bonus seul', dmg: capDmg, mod: a.magique });
         COF.UI.jet({
           titre: c.n, sousTitre: sous,
           attaqueTypes: [
@@ -751,7 +723,7 @@ COF.UI.Fiche = (function () {
         COF.UI.jet({
           titre: c.n, sousTitre: sous,
           mod: a.magique, difficulte: null,
-          dmg: c.dmg || null, dmgLabel: 'Dommages',
+          dmg: capDmg || null, dmgLabel: 'Dommages',
           ctx: K.ctx(C, x.rang), type: 'attaque'
         });
       }

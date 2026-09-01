@@ -205,6 +205,20 @@ COF.Calc = (function () {
     return v ? v.rang : 0;
   }
 
+  /* Nombre de voies distinctes d'un profil donné (principal ou hybride) où
+     le personnage a atteint au moins `seuil`. Sert aux capacités dont le
+     texte dit « +X par rang N atteint dans une voie de [profil] ».
+     Les voies du profil PRINCIPAL sont stockées sous la clé « profil.<voieId> »
+     (sans le nom du profil lui-même) : on ne peut donc les rattacher à
+     `profilId` que si c'est justement le profil actif du personnage. */
+  function rangsAtteintsProfil(p, profilId, seuil) {
+    return (p.voies || []).filter(function (v) {
+      if (v.rang < seuil) return false;
+      if (p.profil === profilId && v.key.indexOf('profil.') === 0) return true;
+      return v.key.indexOf('hyb.' + profilId + '.') === 0;
+    }).length;
+  }
+
   return {
     profil: profil, famille: famille, carac: carac,
     armure: armure, bouclier: bouclier, agiEffective: agiEffective,
@@ -212,7 +226,7 @@ COF.Calc = (function () {
     def: def, init: init, attaques: attaques, deEvo: deEvo, ctx: ctx,
     capacites: capacites, sorts: sorts, voieDef: voieDef,
     competences: competences, pointsCapacite: pointsCapacite,
-    peutAcquerir: peutAcquerir, rangDe: rangDe, nivAttaque: nivAttaque,
+    peutAcquerir: peutAcquerir, rangDe: rangDe, nivAttaque: nivAttaque, rangsAtteintsProfil: rangsAtteintsProfil,
     estPrestige: estPrestige, estHistorique: estHistorique, rangsDe: rangsDe, niveauRequis: niveauRequis,
     prestigeActive: prestigeActive
   };

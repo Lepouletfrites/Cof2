@@ -124,7 +124,11 @@ COF.Recompense = (function () {
                  a.nom.toLowerCase().indexOf(nomArme.toLowerCase()) >= 0;
         })[0];
         if (trouve && Math.random() < (l.role ? 0.9 : 0.4)) {
-          out.push({ nom: trouve.nom, note: 'Récupérée sur ' + l.c.nom.toLowerCase() + '.', prix: trouve.prix });
+          var armeType = COF.ARMES_DISTANCE.indexOf(trouve) >= 0 ? 'distance' : 'contact';
+          out.push({
+            nom: trouve.nom, note: 'Récupérée sur ' + l.c.nom.toLowerCase() + '.', prix: trouve.prix,
+            dm: trouve.dm, armeType: armeType, noFor: trouve.noFor
+          });
         }
       }
       if (Math.random() < 0.5) {

@@ -181,18 +181,18 @@ COF.UI.Butin = (function () {
   function marquerListe(liste, i, perso, qte) {
     var it = liste[i];
     if (!it || it.ajoute) return;
-    var item = { nom: it.nom, qte: qte || 1, note: it.note || null };
-    if (it.prix) item.prix = it.prix;
-    perso.inventaire.push(item);
+    COF.Store.ajouterObjet(perso, {
+      nom: it.nom, qte: qte || 1, note: it.note, prix: it.prix,
+      dm: it.dm, armeType: it.armeType, noFor: it.noFor
+    });
     it.ajoute = true;
   }
   function marquerMagique(l, cle, perso) {
     var m = l[cle];
     if (!m || m.ajoute) return;
-    var item = { nom: '✨ ' + m.nom, qte: 1, note: m.desc };
-    if (m.dm) { item.dmg = m.dm; item.armeType = m.armeType || 'contact'; }
-    if (m.def) item.def = m.def;
-    perso.inventaire.push(item);
+    COF.Store.ajouterObjet(perso, {
+      nom: '✨ ' + m.nom, qte: 1, note: m.desc, dm: m.dm, armeType: m.armeType, def: m.def
+    });
     m.ajoute = true;
   }
 

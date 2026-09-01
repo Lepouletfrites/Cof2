@@ -28,8 +28,16 @@ COF.UI.Voies = (function () {
   function sauver() { COF.Store.sauver(C); }
 
   function rendre() {
-    C = COF.Store.actif();
     var n = $('#vue-voies');
+    /* Un simple changement (menu déroulant, acquérir/retirer un rang...)
+       régénère tout le HTML : sans ça, les voies dépliées et les sections
+       repliables reviendraient à leur état par défaut et le défilement
+       sauterait en haut de page à chaque fois. */
+    var ouvVoies = $$('.voie', n).map(function (el) { return el.classList.contains('ouvert'); });
+    var ouvPliables = $$('.pliable', n).map(function (el) { return el.classList.contains('ferme'); });
+    var scrollY = window.scrollY;
+
+    C = COF.Store.actif();
     if (!C) { n.innerHTML = '<div class="vide">Aucun personnage sélectionné.</div>'; return; }
 
     var pr = COF.PROFILS[C.profil];
@@ -86,6 +94,10 @@ COF.UI.Voies = (function () {
     h += blocHistorique();
 
     n.innerHTML = h;
+
+    $$('.voie', n).forEach(function (el, i) { if (ouvVoies[i] !== undefined) el.classList.toggle('ouvert', ouvVoies[i]); });
+    $$('.pliable', n).forEach(function (el, i) { if (ouvPliables[i] !== undefined) el.classList.toggle('ferme', ouvPliables[i]); });
+    window.scrollTo(0, scrollY);
 
     $$('.voie-tete', n).forEach(function (t) {
       t.addEventListener('click', function (e) {
@@ -314,13 +326,41 @@ COF.UI.Voies = (function () {
         });
       });
     });
+    /* Voies de prestige (rang 4-8) : incluses par défaut dans les viviers non
+       restreints à une liste de profils précise ni à « la famille du perso ». */
+    if (!cfg.profils && !cfg.memeFamille) {
+      Object.keys(COF.PRESTIGE || {}).forEach(function (pk) {
+        var pv = COF.PRESTIGE[pk];
+        if (familles && pv.fam !== 'generique' && familles.indexOf(pv.fam) < 0) return;
+        pv.caps.forEach(function (c) {
+          if (c.r < rangMin || c.r > cfg.rangMax) return;
+          if (cfg.sorts && !c.s) return;
+          out.push({ profil: null, profilNom: 'Voie de prestige', voie: pk, voieNom: pv.nom, prestige: true, cap: c });
+        });
+      });
+    }
     return out;
   }
 
-  function choisirVoie(id, profil, voie, r) {
+  function choisirVoie(id, o) {
     ensureChoix();
-    C.choixVoies[id] = { profil: profil, voie: voie, r: r };
+    C.choixVoies[id] = { profil: o.profil, voie: o.voie, r: o.cap.r, prestige: !!o.prestige };
     sauver(); rendre();
+  }
+
+  /* Retrouve la capacité (et son libellé de source) désignée par un choix
+     mémorisé, qu'elle vienne d'un profil normal ou d'une voie de prestige. */
+  function resoudreChoixVoie(ch) {
+    if (!ch) return null;
+    if (ch.prestige) {
+      var pv = COF.PRESTIGE[ch.voie];
+      var capP = pv ? pv.caps.filter(function (cc) { return cc.r === ch.r; })[0] : null;
+      return capP ? { cap: capP, nom: 'Voie de prestige — ' + pv.nom } : null;
+    }
+    var pr = COF.PROFILS[ch.profil];
+    var v2 = pr ? pr.voies.filter(function (vv) { return vv.id === ch.voie; })[0] : null;
+    var cap2 = v2 ? v2.caps.filter(function (cc) { return cc.r === ch.r; })[0] : null;
+    return cap2 ? { cap: cap2, nom: pr.nom + ' — ' + v2.nom } : null;
   }
 
   function choisirCarac(id, carId, val) {
@@ -368,7 +408,7 @@ COF.UI.Voies = (function () {
       $$('button[data-idx]', root).forEach(function (b) {
         b.addEventListener('click', function () {
           var o = opts[+b.getAttribute('data-idx')];
-          choisirVoie(idChoix(key, cap), o.profil, o.voie, o.cap.r);
+          choisirVoie(idChoix(key, cap), o);
           COF.UI.fermerModale();
         });
       });
@@ -380,19 +420,15 @@ COF.UI.Voies = (function () {
     var h = '';
     if (c.choixVoie) {
       var ch = (C.choixVoies || {})[id];
-      var capChoisie = null, pr = null, v2 = null;
-      if (ch) {
-        pr = COF.PROFILS[ch.profil];
-        v2 = pr ? pr.voies.filter(function (vv) { return vv.id === ch.voie; })[0] : null;
-        capChoisie = v2 ? v2.caps.filter(function (cc) { return cc.r === ch.r; })[0] : null;
-      }
+      var resolu = resoudreChoixVoie(ch);
+      var capChoisie = resolu ? resolu.cap : null;
       if (capChoisie) {
         h += '<div class="note" style="margin:8px 0 4px;color:var(--or)">Capacité choisie :</div>';
         h += '<div class="cap acquise" style="margin-bottom:2px">' +
           '<div class="cap-tete"><div class="cap-num">' + capChoisie.r + '</div>' +
           '<div class="cap-nom">' + esc(capChoisie.n) + ' ' + puces(capChoisie) + '</div></div>' +
           '<div class="cap-desc">' + esc(capChoisie.d) + '</div>' +
-          '<div class="note" style="margin:4px 0">' + esc(pr.nom) + ' — ' + esc(v2.nom) + '</div>' +
+          '<div class="note" style="margin:4px 0">' + esc(resolu.nom) + '</div>' +
           '<div class="cap-actions">' +
           '<button class="btn btn-sm" data-vact="choixvoie-ouvrir" data-k="' + key + '" data-r="' + c.r + '">Changer</button>' +
           (capChoisie.dmg ? '<button class="btn btn-sm" data-vact="choixvoie-attaquer" data-k="' + key + '" data-r="' + c.r + '">Attaquer</button>' : '') +
@@ -442,12 +478,8 @@ COF.UI.Voies = (function () {
     } else if (act === 'choixvoie-attaquer') {
       var idA = idChoix(key, { r: +node.getAttribute('data-r') });
       var chA = (C.choixVoies || {})[idA];
-      if (chA) {
-        var prA = COF.PROFILS[chA.profil];
-        var vA = prA.voies.filter(function (vv) { return vv.id === chA.voie; })[0];
-        var capA = vA.caps.filter(function (cc) { return cc.r === chA.r; })[0];
-        COF.UI.jetCapacite(capA, prA.nom + ' — ' + vA.nom, chA.r);
-      }
+      var resoluA = resoudreChoixVoie(chA);
+      if (resoluA) COF.UI.jetCapacite(resoluA.cap, resoluA.nom, chA.r);
     } else if (act === 'choixcarac-set') {
       var capC = def.caps.filter(function (x) { return x.r === +node.getAttribute('data-r'); })[0];
       choisirCarac(idChoix(key, capC), node.getAttribute('data-car'), capC.choixCarac.val);

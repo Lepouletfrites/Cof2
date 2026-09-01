@@ -9,11 +9,19 @@ COF.TresorCalc = (function () {
   var piocher = COF.piocher, piockerPoids = COF.piockerPoids;
   var TYPES_FEMININS = ['epee', 'hache', 'armure', 'amulette', 'cape', 'couronne', 'lance', 'masse'];
 
+  /* Contracte « de » avec l'article de l'épithète : de le → du, de les → des,
+     de l' reste de l', de la reste de la. */
+  function deEpithete(epithete) {
+    if (/^le /i.test(epithete)) return 'du ' + epithete.slice(3);
+    if (/^les /i.test(epithete)) return 'des ' + epithete.slice(4);
+    return 'de ' + epithete;
+  }
+
   function genererNom(type) {
     var style = piocher(['compose', 'compose', 'epithete', 'adjectif']);
     if (style === 'compose') return piocher(COF.TRESOR_NOM_PREFIXES) + piocher(COF.TRESOR_NOM_SUFFIXES);
     var nomType = type ? type.nom : 'Objet';
-    if (style === 'epithete') return nomType + ' de ' + piocher(COF.TRESOR_EPITHETES);
+    if (style === 'epithete') return nomType + ' ' + deEpithete(piocher(COF.TRESOR_EPITHETES));
     var fem = type && TYPES_FEMININS.indexOf(type.id) >= 0;
     return nomType + ' ' + piocher(fem ? COF.TRESOR_ADJ_F : COF.TRESOR_ADJ_M);
   }

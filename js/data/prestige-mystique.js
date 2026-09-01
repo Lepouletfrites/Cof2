@@ -14,7 +14,7 @@ COF.PRESTIGE.armuresacree = {
     { r: 4, n: 'Armure de bronze', a: 'M', d: "Un cube de métal de 50 cm se déploie sur un mot de commande (action de mouvement) : RD 3, sans aucune pénalité d'encombrement." },
     { r: 5, n: 'Pouvoir unique', a: 'L', choix: true, choixVoie: { rangMin: 1, rangMax: 4, sorts: true }, d: "Associe à l'armure un sort de rang 1 à 4 de n'importe quelle voie. Usages par combat : rang 1 → 4×, rang 2 → 3×, rang 3 → 2×, rang 4 → 1×." },
     { r: 6, n: "Armure d'argent", d: "L'armure prend la couleur de l'argent : RD 5." },
-    { r: 7, n: 'Pouvoir puissant', a: 'L', choix: true, choixVoie: { rangMin: 4, rangMax: 5, sorts: true }, d: "Associe à l'armure un sort de rang 4 à 8 de n'importe quelle voie, jamais plus d'une fois par combat. Rang 5 → 3×/jour, rang 6 → 2×/jour, rang 7 → 1×/jour." },
+    { r: 7, n: 'Pouvoir puissant', a: 'L', choix: true, choixVoie: { rangMin: 4, rangMax: 8, sorts: true }, d: "Associe à l'armure un sort de rang 4 à 8 de n'importe quelle voie, jamais plus d'une fois par combat. Rang 5 → 3×/jour, rang 6 → 2×/jour, rang 7 → 1×/jour." },
     { r: 8, n: "Armure d'or", d: "L'armure prend la couleur de l'or : RD 7." }
   ]
 };
