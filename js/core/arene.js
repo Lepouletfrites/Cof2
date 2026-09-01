@@ -38,7 +38,8 @@ COF.Arene = (function () {
     var combattant = {
       id: uid(), type: 'creature', base: c.nom, refId: c.id,
       pvMax: c.pv, pv: c.pv, def: c.def, init: c.init,
-      att: c.att || [], nc: c.nc, etats: [], role: role || null
+      att: c.att || [], caps: c.caps || [], car: c.car || {},
+      nc: c.nc, etats: [], role: role || null
     };
     combattant.nom = nomUnique(s, c.nom);
     s.combattants.push(combattant);

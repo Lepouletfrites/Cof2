@@ -158,8 +158,11 @@ COF.UI = COF.UI || {};
         '<label>Modificateur</label><input type="number" id="j-mod" value="' + etat.mod + '">' +
         '<label style="margin-left:auto">Difficulté / DEF</label><input type="number" id="j-diff" value="' + (etat.diff === null ? '' : etat.diff) + '" placeholder="—">' +
         '</div>';
-      if (cfg.dmg) {
-        html += '<div class="champ" style="margin-top:8px"><label>Bonus circonstanciel aux dégâts (facultatif)</label>' +
+      /* Le champ de bonus reste utile même sans formule de base (ex. une
+         capacité de créature sans DM chiffrés dans sa fiche) : c'est alors
+         la seule source de dégâts éventuels. */
+      if (cfg.type === 'attaque') {
+        html += '<div class="champ" style="margin-top:8px"><label>Bonus circonstanciel aux dégâts' + (cfg.dmg ? ' (facultatif)' : '') + '</label>' +
           '<input id="j-dmg-bonus" placeholder="+1, +1d4, -2…"></div>';
       }
       html += '<button class="btn btn-plein btn-bloc" id="j-lancer">Lancer le d20</button>';
@@ -397,9 +400,9 @@ COF.UI = COF.UI || {};
     }
     h += '</div>';
 
-    if (cfg.dmg) {
+    if (cfg.dmg || cfg.type === 'attaque') {
       h += '<button class="btn ' + (r.crit ? 'btn-sang' : 'btn-or') + ' btn-bloc" id="j-dmg">' +
-        (r.crit ? '💥 Dommages CRITIQUES (×2)' : (cfg.dmgLabel || 'Dommages') + ' — ' + esc(cfg.dmg)) +
+        (r.crit ? '💥 Dommages CRITIQUES (×2)' : (cfg.dmgLabel || 'Dommages') + (cfg.dmg ? ' — ' + esc(cfg.dmg) : '')) +
         '</button><div id="j-dmg-res"></div>';
     }
     h += '<button class="btn btn-bloc" id="j-relancer" style="margin-top:8px">↻ Relancer</button>';
@@ -432,7 +435,12 @@ COF.UI = COF.UI || {};
     vibre(12);
     var bonusEl = $('#j-dmg-bonus', root);
     var bonus = bonusEl ? normaliserBonus(bonusEl.value) : '';
-    var formule = cfg.dmg + bonus;
+    var formule = (cfg.dmg || '') + bonus;
+    if (!formule) {
+      var zoneVide = $(direct ? '#j-res' : '#j-dmg-res', root);
+      zoneVide.innerHTML = '<div class="note" style="margin-top:8px">Aucune formule de dégâts : indiquez un bonus circonstanciel ci-dessus pour chiffrer l\'effet.</div>';
+      return;
+    }
     var r = COF.Dice.dommages(formule, cfg.ctx || {}, { crit: crit });
     var det = r.detail.map(function (d) {
       return d.jets ? d.label + ' [' + d.jets.join(', ') + ']' : d.label + ' ' + sgn(d.val);

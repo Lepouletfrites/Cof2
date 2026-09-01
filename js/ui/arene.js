@@ -280,6 +280,18 @@ COF.UI.Arene = (function () {
           (a.portee ? ' · portée ' + a.portee + ' m' : '') + (a.note ? ' · ' + esc(a.note) : '') + '</div></div>' +
           '<div class="actions"><button class="btn btn-or btn-sm" data-aact="cr-att" data-id="' + cb.id + '" data-i="' + i + '">Choisir</button></div></div>';
       });
+      /* Capacités actives (action indiquée) : utilisables comme une attaque,
+         sur le modèle des compétences de voie d'un PJ. */
+      var capsActives = (cb.caps || []).filter(function (x) { return x.a; });
+      if (capsActives.length) {
+        h += '<div class="note" style="margin:10px 0 4px">Capacités</div>';
+        capsActives.forEach(function (cap) {
+          var iCap = cb.caps.indexOf(cap);
+          h += '<div class="ligne"><div class="info"><div class="t">' + esc(cap.n) + '</div>' +
+            '<div class="s">' + (cap.dmg ? 'DM ' + esc(cap.dmg) : 'pas de DM fixe') + '</div></div>' +
+            '<div class="actions"><button class="btn btn-sm" data-aact="cr-cap" data-id="' + cb.id + '" data-i="' + iCap + '">Choisir</button></div></div>';
+        });
+      }
       COF.UI.ouvrirModale('⚔️ ' + donnees(cb).nom, h);
       return;
     }
@@ -350,6 +362,19 @@ COF.UI.Arene = (function () {
       sousTitre: (a.portee ? 'portée ' + a.portee + ' m' : '') + (a.note ? ' · ' + a.note : '') +
         (ci ? ' · 🎯 ' + ci.nom + ' (DEF ' + ci.def + ')' : ''),
       mod: a.mod, difficulte: ci ? ci.def : null, dmg: a.dmg || null, dmgLabel: 'Dommages',
+      cible: ci,
+      ctx: { carac: {}, niveau: Math.floor(cb.nc) || 1, deEvo: COF.deEvolutif(Math.floor(cb.nc) || 1) },
+      type: 'attaque'
+    });
+  }
+
+  function lancerCrCap(cb, i, ci) {
+    var cap = cb.caps[i];
+    var modDefaut = (cb.att && cb.att[0]) ? cb.att[0].mod : (Math.floor(cb.nc) + ((cb.car && cb.car.VOL) ? cb.car.VOL[0] : 0));
+    COF.UI.jet({
+      titre: donnees(cb).nom + ' — ' + cap.n,
+      sousTitre: cap.d + (ci ? ' · 🎯 ' + ci.nom + ' (DEF ' + ci.def + ')' : ''),
+      mod: modDefaut, difficulte: ci ? ci.def : null, dmg: cap.dmg || null, dmgLabel: 'Dommages',
       cible: ci,
       ctx: { carac: {}, niveau: Math.floor(cb.nc) || 1, deEvo: COF.deEvolutif(Math.floor(cb.nc) || 1) },
       type: 'attaque'
@@ -456,6 +481,11 @@ COF.UI.Arene = (function () {
       case 'cr-att': {
         var i1 = +node.getAttribute('data-i');
         ouvrirChoixCible(cb.id, function (ci) { lancerCrAtt(cb, i1, ci); });
+        break;
+      }
+      case 'cr-cap': {
+        var i1b = +node.getAttribute('data-i');
+        ouvrirChoixCible(cb.id, function (ci) { lancerCrCap(cb, i1b, ci); });
         break;
       }
       case 'pj-type': {

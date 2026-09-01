@@ -174,8 +174,13 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   glacées), par **catégorie** et par **plage de NC** (jusqu'à NC 21 pour les créatures épiques du
   supplément), avec recherche plein texte sur le nom et la description. Chaque fiche donne le
   profil complet (caractéristiques cliquables pour un test, DEF/PV/Init., RD, capacités) et un
-  bouton Attaquer par mode d'attaque, qui enchaîne test d'attaque puis dégâts. Le filtre est
-  exposé via `COF.UI.Bestiaire.filtrer()`, utilisé par le générateur de rencontres.
+  bouton Attaquer par mode d'attaque, qui enchaîne test d'attaque puis dégâts. Les **capacités**
+  qui indiquent une action (souffle, attaque en traître...) ont elles aussi un bouton **Utiliser**,
+  sur le modèle des compétences de voie d'un PJ : modificateur par défaut repris de l'attaque
+  principale (ou de l'attaque magique NC + VOL, modifiable), et un champ de bonus circonstanciel
+  pour chiffrer des dégâts variables quand la fiche n'en donne pas de formule toute faite (ex.
+  « +1d4 DM » d'une attaque en traître). Le filtre est exposé via `COF.UI.Bestiaire.filtrer()`,
+  utilisé par le générateur de rencontres.
 
   *Les 202 créatures du supplément ont été extraites automatiquement du PDF (script d'analyse de
   texte) : les statistiques de combat (caractéristiques, DEF/PV/Init/RD, attaques) sont fiables,
@@ -190,9 +195,10 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   dans le bestiaire ou des personnages enregistrés. Chaque combattant a sa propre jauge de PV
   (+/-) et, pour un personnage qui lance des sorts, sa jauge de PM ; ses états préjudiciables
   (les dix états officiels, avec leur effet rappelé) se togglent depuis la fiche du combattant.
-  Le bouton **Attaquer** ouvre le bon menu selon le type de combattant — attaques du bestiaire
-  pour une créature ; attaques à mains nues, armes, **sorts et capacités de dégâts** (avec
-  dépense de PM pour les sorts) pour un personnage. Choisir une attaque **demande ensuite de
+  Le bouton **Attaquer** ouvre le bon menu selon le type de combattant — attaques et **capacités
+  actives** du bestiaire pour une créature (mêmes conditions que dans l'onglet Bestiaire) ;
+  attaques à mains nues, armes, **sorts et capacités de dégâts** (avec dépense de PM pour les
+  sorts) pour un personnage. Choisir une attaque **demande ensuite de
   désigner sa cible** parmi les autres combattants (ou de rester en test manuel) : la difficulté
   se règle alors automatiquement sur la DEF de la cible choisie, et un succès **applique les
   dégâts immédiatement**, sans étape supplémentaire. **Trier par initiative** classe tous les

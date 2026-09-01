@@ -195,13 +195,19 @@ COF.UI.Bestiaire = (function () {
       });
     }
 
-    /* capacités */
+    /* capacités — celles qui s'utilisent activement (action indiquée) peuvent
+       être lancées comme une attaque, sur le modèle des compétences de voie :
+       modificateur par défaut repris de l'attaque principale (ou de l'attaque
+       magique NC + VOL), dégâts éventuels à chiffrer via le bonus circonstanciel
+       du jet si la fiche ne donne pas de formule toute faite. */
     if (c.caps && c.caps.length) {
       h += '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--or);margin:12px 0 6px">Capacités</div>';
-      c.caps.forEach(function (cap) {
+      c.caps.forEach(function (cap, i) {
         h += '<div class="cap"><div class="cap-tete"><div class="cap-nom">' + esc(cap.n) +
           (cap.a ? ' <span class="puce puce-' + cap.a.toLowerCase() + '">' + cap.a + '</span>' : '') +
-          '</div></div><div class="cap-desc" style="padding-left:0">' + esc(cap.d) + '</div></div>';
+          '</div></div><div class="cap-desc" style="padding-left:0">' + esc(cap.d) + '</div>' +
+          (cap.a ? '<div class="cap-actions"><button class="btn btn-sm" data-bact="cap-utiliser" data-id="' + c.id + '" data-i="' + i + '">Utiliser</button></div>' : '') +
+          '</div>';
       });
     }
 
@@ -234,6 +240,18 @@ COF.UI.Bestiaire = (function () {
         mod: a.mod, difficulte: null,
         dmg: a.dmg || null, dmgLabel: 'Dommages',
         ctx: { carac: {}, niveau: Math.floor(cr.nc) || 1, deEvo: COF.deEvolutif(Math.floor(cr.nc) || 1) },
+        type: 'attaque'
+      });
+    } else if (act === 'cap-utiliser') {
+      var crC = get(node.getAttribute('data-id'));
+      var cap = crC.caps[+node.getAttribute('data-i')];
+      var modDefaut = (crC.att && crC.att[0]) ? crC.att[0].mod : (Math.floor(crC.nc) + (crC.car.VOL ? crC.car.VOL[0] : 0));
+      COF.UI.jet({
+        titre: crC.nom + ' — ' + cap.n,
+        sousTitre: 'NC ' + crC.ncLabel + ' — ' + cap.d,
+        mod: modDefaut, difficulte: null,
+        dmg: cap.dmg || null, dmgLabel: 'Dommages',
+        ctx: { carac: {}, niveau: Math.floor(crC.nc) || 1, deEvo: COF.deEvolutif(Math.floor(crC.nc) || 1) },
         type: 'attaque'
       });
     } else if (act === 'test-carac') {
