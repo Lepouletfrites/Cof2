@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v10';
+var CACHE_VERSION = 'cof2-v12';
 
 var FICHIERS = [
   './',
@@ -20,6 +20,9 @@ var FICHIERS = [
   'js/data/profils-combattants.js',
   'js/data/profils-mages.js',
   'js/data/profils-mystiques.js',
+  'js/data/atlas-mage.js',
+  'js/data/atlas-mystique.js',
+  'js/data/historique.js',
   'js/data/prestige-generiques.js',
   'js/data/prestige-aventurier.js',
   'js/data/prestige-combattant.js',

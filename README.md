@@ -38,6 +38,9 @@ Puis rendez-vous sur `http://localhost:8777`.
 | `pnj.js` | Générateur de PNJ : syllabaires procéduraux par peuple, âges, apparence, ~65 métiers, idéal/travers officiels, manies, motivations, secrets, accroches, panthéon d'Osgild (31 divinités) |
 | `recompenses.js` | Générateur de butin : richesse par environnement et par palier (pauvre → somptueux), objets divers et trouvailles de fouille, trophées/composants de créature, objets de valeur de coffre, catalogue de 30 objets magiques sur trois paliers |
 | `oracle.js` | Oracle & Muse pour le solo : 9 niveaux de vraisemblance, 22 focus × 65 actions × 62 sujets (≈ 89 000 combinaisons d'événement), 62 mots d'inspiration, détails sensoriels par sens |
+| `atlas-mage.js` | *Atlas d'Osgild* : 3 voies supplémentaires de magicien (arcanes exhumés, oubliés, perdus) et 1 de sorcier (arcanes obscurs) |
+| `atlas-mystique.js` | *Atlas d'Osgild* : voie de la corruption (prêtre maléfique, en alternative à la voie des soins) |
+| `historique.js` | *Atlas d'Osgild* : 9 voies d'origine géographique (campagnes, cités, déserts, forêts, grottes, marais, montagnes, plaines, rivages) et 8 voies professionnelles (courtisan, érudit, expert, homme du peuple, homme d'armes, miséreux, nanti, nomade) |
 
 **14 profils × 5 voies × 5 rangs = 350 capacités**, plus 40 capacités de peuple et
 **53 voies de prestige × 5 rangs = 265 capacités** : **655 au total**.
@@ -65,7 +68,9 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   `FOR`/`AGI`/`CON`/`PER`/`CHA`/`INT`/`VOL`, `rang`, `niveau`.
 - **`calc.js`** — toutes les valeurs dérivées : PV, PM, PC, DR, DEF (avec plafond d'AGI dû à
   l'armure), Initiative, valeurs d'attaque (plafonnées au niveau 10), dé évolutif, points de
-  capacité, bonus de compétence.
+  capacité, bonus de compétence. Reconnaît aussi les clés `historique.<id>` (voies d'*Atlas
+  d'Osgild*) : coût fixe d'1 point de capacité par rang et aucun niveau requis, quel que soit
+  le rang.
 - **`compagnons.js`** — calcule DEF/PV/Init./attaque d'un compagnon pour le personnage courant ;
   détecte l'éligibilité même via une voie de profil hybride ou une voie de prestige.
 - **`rencontre.js`** — générateur de rencontres. Barème de points par NC calibré sur les
@@ -108,11 +113,16 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     récupération rapide et complète, états préjudiciables, armes (attaque + dommages en deux
     taps), sorts (dépense automatique des PM, brûlure de mana si besoin), capacités, bonus de
     compétence, équipement, ajustements permanents, notes.
-  - *Voies* : quatre sections. Les 5 voies du profil et la voie de peuple (+ voie du mage) sont
-    mises en avant ; les **voies de prestige** (rangs 4 à 8, une seule par carrière, verrouillage
-    automatique des autres dès qu'une est choisie) et les **voies de tous les autres profils**
-    pour construire un profil hybride sont accessibles dans des sections repliées. Acquisition
-    rang par rang avec vérification du niveau requis et suivi des points de capacité.
+  - *Voies* : cinq sections. Les voies du profil et la voie de peuple (+ voie du mage) sont
+    mises en avant — le magicien, le sorcier et le prêtre y trouvent aussi les voies
+    supplémentaires de l'*Atlas d'Osgild* (arcanes exhumés/oubliés/perdus, arcanes obscurs,
+    corruption), sélectionnables dès le niveau 1 comme n'importe quelle autre voie de profil ;
+    les **voies de prestige** (rangs 4 à 8, une seule par carrière, verrouillage automatique des
+    autres dès qu'une est choisie), les **voies de tous les autres profils** pour construire un
+    profil hybride, et les **voies d'historique** (règle optionnelle de l'*Atlas* : 9 voies
+    d'origine géographique et 8 voies professionnelles, 1 point de capacité par rang, sans
+    niveau requis) sont accessibles dans des sections repliées. Acquisition rang par rang avec
+    vérification du niveau requis et suivi des points de capacité.
 - **Bestiaire** — les 84 créatures du livre, filtrables par **environnement** (les cinq milieux
   naturels du livre plus villes, ruines et terres glacées), par **catégorie** et par **plage de
   NC**, avec recherche plein texte sur le nom et la description. Chaque fiche donne le profil

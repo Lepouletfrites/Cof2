@@ -70,7 +70,9 @@ COF.Recompense = (function () {
   function concretiser(item) {
     if (!item) return null;
     if (item.arme) {
-      var arme = piocher(COF.ARMES_CONTACT.concat(COF.ARMES_DISTANCE));
+      /* les mains nues ne sont pas un objet qu'on trouve dans un butin */
+      var pool = COF.ARMES_CONTACT.concat(COF.ARMES_DISTANCE).filter(function (a) { return a.id !== 'mainsnues'; });
+      var arme = piocher(pool);
       var suffixe = item.nom.replace(/^Arme\s*/, '');
       return { tier: item.tier, nom: arme.nom + ' ' + suffixe, desc: item.desc, dm: arme.dm };
     }

@@ -301,7 +301,9 @@ COF.UI.Arene = (function () {
       h += '<div class="note" style="margin:10px 0 4px">Armes</div>';
       p.armes.forEach(function (w, i) {
         h += '<div class="ligne"><div class="info"><div class="t">' + esc(w.nom) + '</div>' +
-          '<div class="s">DM ' + esc(COF.UI.dmgArme(p, w)) + (w.portee ? ' · portée ' + w.portee + ' m' : '') + '</div></div>' +
+          '<div class="s">DM ' + esc(COF.UI.dmgArme(p, w)) +
+          (w.dm2 ? ' (' + esc(COF.UI.dmgArme(p, { type: w.type, dm: w.dm2, noFor: w.noFor })) + ' à deux mains)' : '') +
+          (w.portee ? ' · portée ' + w.portee + ' m' : '') + '</div></div>' +
           '<div class="actions"><button class="btn btn-or btn-sm" data-aact="pj-arme" data-id="' + cb.id + '" data-i="' + i + '">Choisir</button></div></div>';
       });
     }
@@ -368,12 +370,18 @@ COF.UI.Arene = (function () {
     var K = COF.Calc, aa = K.attaques(p);
     var w = p.armes[i];
     var att = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
-    COF.UI.jet({
+    var dm = COF.UI.dmgArme(p, w);
+    var cfg = {
       titre: p.nom + ' — ' + w.nom,
       sousTitre: ci ? '🎯 ' + ci.nom + ' (DEF ' + ci.def + ')' : '',
-      mod: att, critMin: w.crit || 20, dmg: COF.UI.dmgArme(p, w), dmgLabel: 'Dommages',
+      mod: att, critMin: w.crit || 20, dmg: dm, dmgLabel: 'Dommages',
       difficulte: ci ? ci.def : null, cible: ci, ctx: K.ctx(p), type: 'attaque'
-    });
+    };
+    if (w.dm2) {
+      var dm2 = COF.UI.dmgArme(p, { type: w.type, dm: w.dm2, noFor: w.noFor });
+      cfg.armeChoix = [{ label: 'Une main', dmg: dm }, { label: 'Deux mains', dmg: dm2 }];
+    }
+    COF.UI.jet(cfg);
   }
 
   function lancerPjSort(p, voieKey, rang, ci) {

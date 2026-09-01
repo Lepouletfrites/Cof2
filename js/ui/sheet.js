@@ -429,15 +429,17 @@ COF.UI.Fiche = (function () {
       case 'arme-jet': {
         var w = C.armes[+i], aa = K.attaques(C);
         var att = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
-        var dm = w.dm;
-        if (w.type === 'contact' && !w.noFor) dm += '+FOR';
-        if (w.type === 'contact' && C.bonus.dmC) dm += '+' + C.bonus.dmC;
-        if (w.type === 'distance' && C.bonus.dmD) dm += '+' + C.bonus.dmD;
-        COF.UI.jet({
+        var dm = COF.UI.dmgArme(C, w);
+        var cfg = {
           titre: w.nom, sousTitre: (w.type === 'distance' ? 'Attaque à distance' : 'Attaque au contact') +
             ' · DM ' + dm, mod: att, critMin: w.crit || 20,
           dmg: dm, dmgLabel: 'Dommages', ctx: K.ctx(C), type: 'attaque'
-        });
+        };
+        if (w.dm2) {
+          var dm2 = COF.UI.dmgArme(C, { type: w.type, dm: w.dm2, noFor: w.noFor });
+          cfg.armeChoix = [{ label: 'Une main', dmg: dm }, { label: 'Deux mains', dmg: dm2 }];
+        }
+        COF.UI.jet(cfg);
         break;
       }
 
@@ -770,6 +772,8 @@ COF.UI.Fiche = (function () {
       '<div class="champ"><label>Portée (m)</label><input id="w-portee" type="number" value="' + (w.portee || '') + '"></div>' +
       '<div class="champ"><label>Critique sur</label><input id="w-crit" type="number" value="' + (w.crit || 20) + '"></div>' +
       '</div>' +
+      '<div class="champ"><label>Dommages à deux mains (arme polyvalente, facultatif)</label>' +
+      '<input id="w-dm2" placeholder="ex. 1d12" value="' + esc(w.dm2 || '') + '"></div>' +
       '<div class="champ"><label>Note</label><input id="w-note" value="' + esc(w.note || '') + '"></div>' +
       '<button class="btn btn-plein btn-bloc" id="w-ok">Enregistrer</button>' +
       (idx !== null ? '<button class="btn btn-sang btn-bloc" id="w-del" style="margin-top:8px">Supprimer</button>' : '');
@@ -787,12 +791,14 @@ COF.UI.Fiche = (function () {
         COF.UI.$('#w-portee', root).value = src.portee || '';
         COF.UI.$('#w-crit', root).value = src.crit || 20;
         COF.UI.$('#w-note', root).value = src.note || '';
+        COF.UI.$('#w-dm2', root).value = src.dm2 || '';
       });
       COF.UI.$('#w-ok', root).addEventListener('click', function () {
         var nw = {
           nom: COF.UI.$('#w-nom', root).value || 'Arme',
           type: COF.UI.$('#w-type', root).value,
           dm: COF.UI.$('#w-dm', root).value || '1d6',
+          dm2: COF.UI.$('#w-dm2', root).value || null,
           portee: parseInt(COF.UI.$('#w-portee', root).value, 10) || null,
           crit: parseInt(COF.UI.$('#w-crit', root).value, 10) || 20,
           note: COF.UI.$('#w-note', root).value

@@ -130,8 +130,13 @@ COF.Store = (function () {
 
   /* ---------- Export / import ---------- */
   function exporter(p) { return JSON.stringify(p, null, 2); }
+  /* Fusionne sur un personnage vierge : un export plus ancien que le
+     schéma actuel (champ manquant — bourse, inventaire, compagnons...)
+     ne doit jamais faire planter la fiche à l'affichage. */
   function importer(json) {
-    var p = JSON.parse(json);
+    var brut = JSON.parse(json);
+    var p = nouveau();
+    for (var k in brut) if (brut.hasOwnProperty(k)) p[k] = brut[k];
     p.id = uid();
     return sauver(p);
   }

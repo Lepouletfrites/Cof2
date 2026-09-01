@@ -82,6 +82,9 @@ COF.UI.Voies = (function () {
     /* ---- Autres voies : profil hybride (repliée) ---- */
     h += blocHybride(pr);
 
+    /* ---- Voies d'historique (repliée) ---- */
+    h += blocHistorique();
+
     n.innerHTML = h;
 
     $$('.voie-tete', n).forEach(function (t) {
@@ -184,6 +187,45 @@ COF.UI.Voies = (function () {
     return h;
   }
 
+  /* ---------------- Voies d'historique (Atlas d'Osgild) ---------------- */
+  function blocHistorique() {
+    var ouvertes = (C.voies || []).filter(function (v) { return v.key.indexOf('historique.') === 0; });
+    var h = '<div class="carte pliable ' + (ouvertes.length ? '' : 'ferme') + '">' +
+      "<h2>Voies d'historique" + (ouvertes.length ? ' (' + ouvertes.length + ')' : '') +
+      '</h2><div class="carte-corps">';
+
+    h += '<div class="note" style="margin-bottom:10px">' +
+      "Règle optionnelle de l'Atlas d'Osgild : en plus de ses voies de profil, un personnage peut investir " +
+      "dans une voie liée à son origine géographique et/ou à son métier d'avant l'aventure. Ces voies coûtent " +
+      "toujours <b>1 point de capacité par rang</b>, sans aucun niveau requis.</div>";
+
+    if (ouvertes.length) {
+      h += '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--or);margin-bottom:6px">Voies ouvertes</div>';
+      ouvertes.forEach(function (v) {
+        var def = COF.Calc.voieDef(C, v.key);
+        if (def) h += voieHTML(def, v.key);
+      });
+      h += '<div class="sep"></div>';
+    }
+
+    h += '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--or);margin-bottom:6px">Origine géographique</div>';
+    COF.HISTORIQUE_GEO.forEach(function (v) {
+      var key = 'historique.' + v.id;
+      if (ouvertes.some(function (o) { return o.key === key; })) return;
+      h += voieHTML(v, key);
+    });
+
+    h += '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--or);margin:10px 0 6px">Voie professionnelle</div>';
+    COF.HISTORIQUE_PRO.forEach(function (v) {
+      var key = 'historique.' + v.id;
+      if (ouvertes.some(function (o) { return o.key === key; })) return;
+      h += voieHTML(v, key);
+    });
+
+    h += '</div></div>';
+    return h;
+  }
+
   /* ---------------- Rendu d'une voie ---------------- */
   function voieHTML(voie, key, opts) {
     opts = opts || {};
@@ -215,10 +257,10 @@ COF.UI.Voies = (function () {
       if (acquise && c.r === rang) {
         h += '<button class="btn btn-sm" data-vact="retirer" data-k="' + key + '">Retirer ce rang</button>';
       } else if (suivant) {
+        var cout = COF.Calc.estHistorique(key) ? 1 : (COF.RULES.rangCout[c.r] || 2);
         if (opts.bloque) h += '<span class="note">Une seule voie de prestige par carrière</span>';
         else if (nivOK) h += '<button class="btn btn-or btn-sm" data-vact="acquerir" data-k="' + key +
-          '" data-r="' + c.r + '">Acquérir (' + (COF.RULES.rangCout[c.r] || 2) + ' pt' +
-          ((COF.RULES.rangCout[c.r] || 2) > 1 ? 's' : '') + ')</button>';
+          '" data-r="' + c.r + '">Acquérir (' + cout + ' pt' + (cout > 1 ? 's' : '') + ')</button>';
         else h += '<span class="note">Niveau ' + COF.Calc.niveauRequis(key, c.r) + ' requis</span>';
       }
       if (c.dmg && acquise) h += '<button class="btn btn-sm" data-vact="attaquer" data-k="' + key +

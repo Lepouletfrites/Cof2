@@ -67,7 +67,8 @@ COF.Calc = (function () {
        "mage"                   voie du mage
        "profil.brute"           voie du profil principal
        "hyb.guerrier.combat"    voie d'un autre profil (profil hybride)
-       "prestige.colosse"       voie de prestige                        */
+       "prestige.colosse"       voie de prestige
+       "historique.nomade"      voie d'historique (Atlas d'Osgild)     */
   function voieDef(p, key) {
     if (key === 'mage') return COF.VOIE_MAGE;
     var parts = key.split('.');
@@ -77,6 +78,11 @@ COF.Calc = (function () {
     }
     if (parts[0] === 'prestige') {
       return (COF.PRESTIGE && COF.PRESTIGE[parts[1]]) || null;
+    }
+    if (parts[0] === 'historique') {
+      var geo = (COF.HISTORIQUE_GEO || []).filter(function (v) { return v.id === parts[1]; })[0];
+      if (geo) return geo;
+      return (COF.HISTORIQUE_PRO || []).filter(function (v) { return v.id === parts[1]; })[0] || null;
     }
     if (parts[0] === 'hyb') {
       var pro = COF.PROFILS[parts[1]];
@@ -91,14 +97,17 @@ COF.Calc = (function () {
   }
 
   function estPrestige(key) { return key.indexOf('prestige.') === 0; }
+  function estHistorique(key) { return key.indexOf('historique.') === 0; }
 
   /* Rangs disponibles dans une voie (1-5, ou 4-8 / 3-7 en prestige) */
   function rangsDe(voie) {
     return voie.caps.map(function (c) { return c.r; }).sort(function (a, b) { return a - b; });
   }
 
-  /* Niveau requis pour un rang donné, selon le type de voie */
+  /* Niveau requis pour un rang donné, selon le type de voie.
+     Les voies d'historique n'ont aucune limitation de rang liée au niveau. */
   function niveauRequis(key, rang) {
+    if (estHistorique(key)) return 1;
     if (estPrestige(key)) return COF.RULES.prestigeNiveau[rang] || 99;
     return COF.RULES.rangNiveau[rang] || 99;
   }
@@ -161,8 +170,10 @@ COF.Calc = (function () {
     (p.voies || []).forEach(function (v) {
       var def = voieDef(p, v.key);
       if (!def) return;
+      var histo = estHistorique(v.key);
       var base = rangsDe(def)[0];
       for (var r = base; r <= (v.rang || 0); r++) {
+        if (histo) { depense += 1; continue; }         // voie d'historique : 1 point par rang, toujours
         if (r === 1 && gratuits > 0) { gratuits--; continue; }
         depense += COF.RULES.rangCout[r] || 2;
       }
@@ -202,7 +213,7 @@ COF.Calc = (function () {
     capacites: capacites, sorts: sorts, voieDef: voieDef,
     competences: competences, pointsCapacite: pointsCapacite,
     peutAcquerir: peutAcquerir, rangDe: rangDe, nivAttaque: nivAttaque,
-    estPrestige: estPrestige, rangsDe: rangsDe, niveauRequis: niveauRequis,
+    estPrestige: estPrestige, estHistorique: estHistorique, rangsDe: rangsDe, niveauRequis: niveauRequis,
     prestigeActive: prestigeActive
   };
 })();
