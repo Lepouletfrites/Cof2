@@ -32,8 +32,8 @@ COF.Recompense = (function () {
      le butin de rencontre sans dépendre d'un combat résolu. */
   function pointsNiveau(niveau) {
     var PTS = COF.Rencontre.PTS;
-    var k = Math.max(0, Math.min(13, Math.round(niveau)));
-    return PTS[k] || PTS[13];
+    var k = Math.max(0, Math.min(21, Math.round(niveau)));
+    return PTS[k] || PTS[21];
   }
 
   function richesseMult(id) {

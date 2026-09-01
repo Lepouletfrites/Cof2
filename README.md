@@ -35,6 +35,7 @@ Puis rendez-vous sur `http://localhost:8777`.
 | `prestige-mystique.js` | 12 voies de prestige de mystique |
 | `compagnons.js` | 14 gabarits de compagnons (loup, familiers, golem, zombie, montures, familier fantastique, vermine, être féérique...) |
 | `bestiaire-1/2/3.js` | 84 créatures du livre de base : 10 humanoïdes, 24 animaux, 50 créatures fantastiques — avec 8 environnements et 3 catégories |
+| `bestiaire-supp-1/2/3.js` | 202 créatures supplémentaires extraites du supplément *Bestiaire* (Black Book Éditions, 2025) — 286 créatures au total. Catégorie et environnements déduits automatiquement du texte source ; à corriger au cas par cas si besoin (voir note ci-dessous) |
 | `pnj.js` | Générateur de PNJ : syllabaires procéduraux par peuple, âges, apparence, ~65 métiers, idéal/travers officiels, manies, motivations, secrets, accroches, panthéon d'Osgild (31 divinités) |
 | `recompenses.js` | Générateur de butin : richesse par environnement et par palier (pauvre → somptueux), objets divers et trouvailles de fouille, trophées/composants de créature, objets de valeur de coffre, catalogue de 30 objets magiques sur trois paliers |
 | `oracle.js` | Oracle & Muse pour le solo : 9 niveaux de vraisemblance, 22 focus × 65 actions × 62 sujets (≈ 89 000 combinaisons d'événement), 62 mots d'inspiration, détails sensoriels par sens |
@@ -112,7 +113,10 @@ Chaque capacité est structurée pour être exploitable par le moteur :
   - *Fiche* : caractéristiques cliquables (test d20), combat, jauges PV/PM/PC/DR avec
     récupération rapide et complète, états préjudiciables, armes (attaque + dommages en deux
     taps), sorts (dépense automatique des PM, brûlure de mana si besoin), capacités, bonus de
-    compétence, équipement, ajustements permanents, notes.
+    compétence, équipement, ajustements permanents, notes. Avant tout jet de dommages, un champ
+    libre permet d'ajouter un bonus circonstanciel (`+1`, `+1d4`...) sans toucher à la formule de
+    base. Les sorts/capacités utilisables avec deux types d'action différents (ex. Rétrécissement,
+    Agrandissement, Ventriloquie) affichent un bouton pour choisir laquelle est utilisée.
   - *Voies* : cinq sections. Les voies du profil et la voie de peuple (+ voie du mage) sont
     mises en avant — le magicien, le sorcier et le prêtre y trouvent aussi les voies
     supplémentaires de l'*Atlas d'Osgild* (arcanes exhumés/oubliés/perdus, arcanes obscurs,
@@ -122,13 +126,25 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     profil hybride, et les **voies d'historique** (règle optionnelle de l'*Atlas* : 9 voies
     d'origine géographique et 8 voies professionnelles, 1 point de capacité par rang, sans
     niveau requis) sont accessibles dans des sections repliées. Acquisition rang par rang avec
-    vérification du niveau requis et suivi des points de capacité.
-- **Bestiaire** — les 84 créatures du livre, filtrables par **environnement** (les cinq milieux
-  naturels du livre plus villes, ruines et terres glacées), par **catégorie** et par **plage de
-  NC**, avec recherche plein texte sur le nom et la description. Chaque fiche donne le profil
-  complet (caractéristiques cliquables pour un test, DEF/PV/Init., RD, capacités) et un bouton
-  Attaquer par mode d'attaque, qui enchaîne test d'attaque puis dégâts. Le filtre est exposé via
-  `COF.UI.Bestiaire.filtrer()` pour le futur générateur de rencontres.
+    vérification du niveau requis et suivi des points de capacité. Les capacités qui laissent
+    piocher une capacité dans une autre voie (ex. *Plus d'une corde à son arc*) ouvrent une liste
+    des capacités éligibles à choisir directement dans l'appli ; celles qui accordent un bonus de
+    caractéristique définitif au choix (ex. *Caractéristique d'expert*) l'appliquent aussitôt sur
+    la fiche (et le retirent automatiquement si le rang qui l'octroie est retiré). Ce mécanisme
+    n'est branché que sur les quelques capacités explicitement repérées ; les autres capacités à
+    choix restent décrites en texte libre.
+- **Bestiaire** — 286 créatures (84 du livre de base + 202 du supplément *Bestiaire*), filtrables
+  par **environnement** (les cinq milieux naturels du livre plus villes, ruines et terres
+  glacées), par **catégorie** et par **plage de NC** (jusqu'à NC 21 pour les créatures épiques du
+  supplément), avec recherche plein texte sur le nom et la description. Chaque fiche donne le
+  profil complet (caractéristiques cliquables pour un test, DEF/PV/Init., RD, capacités) et un
+  bouton Attaquer par mode d'attaque, qui enchaîne test d'attaque puis dégâts. Le filtre est
+  exposé via `COF.UI.Bestiaire.filtrer()`, utilisé par le générateur de rencontres.
+
+  *Les 202 créatures du supplément ont été extraites automatiquement du PDF (script d'analyse de
+  texte) : les statistiques de combat (caractéristiques, DEF/PV/Init/RD, attaques) sont fiables,
+  mais la catégorie, les environnements de rencontre et, plus rarement, le texte de certaines
+  capacités sont déduits par heuristique et peuvent nécessiter une retouche ponctuelle.*
 - **Compagnons** — carte dédiée sur la fiche : les compagnons accessibles par les voies déjà
   acquises (rôdeur, druide, magicien, forgesort, sorcier, chevalier, ou certaines voies de
   prestige) apparaissent en un clic ; chaque compagnon actif a son nom éditable, sa propre jauge

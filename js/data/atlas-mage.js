@@ -19,16 +19,16 @@ COF.PROFILS = COF.PROFILS || {};
         { r: 5, n: 'Nuage empoisonné', a: 'L', s: true, dmg: '3d4°+INT', d: "Nuage immobile de 10 m de côté infligeant [3d4° + INT] DM de poison par round pendant INT minutes (test de CON difficulté 15 pour diviser par deux). Dispersé par un vent puissant." }
       ]},
       { id: 'arcanesoublies', nom: 'Voie des arcanes oubliés', caps: [
-        { r: 1, n: 'Ventriloquie', a: 'G', s: true, d: "Projette sa voix depuis un point à moins de 20 m pendant INT rounds. Coûte 1 PM en action gratuite, 0 PM en action de mouvement." },
+        { r: 1, n: 'Ventriloquie', a: 'G/M', s: true, d: "Projette sa voix depuis un point à moins de 20 m pendant INT rounds. Coûte 1 PM en action gratuite, 0 PM en action de mouvement." },
         { r: 2, n: 'Bouclier de mana', a: 'G', s: true, d: "Une fois par round, en action gratuite contre une attaque annoncée (avant le résultat) : +6 en DEF et annule complètement les DM d'un Projectile de mana." },
         { r: 3, n: 'Corde magique', a: 'L', s: true, d: "Une corde de 20 m se dresse et se déplace seule (10 m par action de mouvement) pendant INT minutes ; peut tenter de renverser un adversaire à portée (test d'AGI difficulté 10). DEF 10, 15 PV ; perd 1 m de longueur par PV perdu." },
-        { r: 4, n: 'Rétrécissement', a: 'A', s: true, d: "Le magicien (A) ou une cible humanoïde volontaire (L) est réduit à 10 cm pendant INT minutes : +10 en discrétion, mais subit +1d4° DM par catégorie de taille de son agresseur (minimum 1 DM par attaque)." },
+        { r: 4, n: 'Rétrécissement', a: 'A/L', s: true, d: "Le magicien (A) ou une cible humanoïde volontaire (L) est réduit à 10 cm pendant INT minutes : +10 en discrétion, mais subit +1d4° DM par catégorie de taille de son agresseur (minimum 1 DM par attaque)." },
         { r: 5, n: 'Zone de magie nulle', a: 'L', s: true, d: "Zone immobile de 10 m de diamètre centrée sur lui où toute magie cesse de fonctionner ; les effets surnaturels non magiques (souffles, attaques naturelles extraordinaires) voient leurs effets divisés par deux." }
       ]},
       { id: 'arcanesperdus', nom: 'Voie des arcanes perdus', caps: [
         { r: 1, n: 'Disque de transport', a: 'L', s: true, d: "Un disque lumineux d'1 m le suit (portée 0-10 m) pendant INT heures et transporte [niveau × 20] kg, dont une créature de taille M ; s'il porte le magicien, celui-ci peut s'y tenir et se déplacer de 5 m par action de mouvement." },
         { r: 2, n: 'Fuite rapide', a: 'M', s: true, d: "Se déplace de 20 m par action de mouvement pendant INT minutes." },
-        { r: 3, n: 'Agrandissement', a: 'A', s: true, d: "Le magicien (A) ou une cible volontaire (L) touchée gagne une catégorie de taille pendant INT minutes : +3 en FOR, aux DM et en RD. Grandir dans un espace inadapté inflige 2d4° DM et fait échouer le sort." },
+        { r: 3, n: 'Agrandissement', a: 'A/L', s: true, d: "Le magicien (A) ou une cible volontaire (L) touchée gagne une catégorie de taille pendant INT minutes : +3 en FOR, aux DM et en RD. Grandir dans un espace inadapté inflige 2d4° DM et fait échouer le sort." },
         { r: 4, n: 'Inversion de la gravité', a: 'A', s: true, d: "Dans une zone de 10 x 10 m (portée 10 m), la gravité s'inverse : les créatures au sol chutent vers le haut (DM de chute, 1d4° évolutif par 3 m, max 4d4°) puis retombent à la fin du sort et doivent réussir un test d'AGI difficulté 20 ou être renversées." },
         { r: 5, n: 'Métamorphose', a: 'L', s: true, d: "Prend la forme d'une créature non humanoïde déjà rencontrée (ou dont il possède un fragment) pendant INT minutes, en utilisant son profil sauf l'INT et les PV. Coût en PM et niveau requis selon le NC : de 2 PM/niveau 7 (NC 0-3) à 10 PM/niveau 19 (NC 7)." }
       ]}

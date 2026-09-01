@@ -202,7 +202,9 @@ COF.UI.Fiche = (function () {
     if (c.s) h += '<span class="puce puce-sort">sort</span>';
     if (c.t === 'bonus') h += '<span class="puce puce-rang">bonus aux DM</span>';
     if (c.t === 'soin') h += '<span class="puce puce-g">soins</span>';
-    if (c.a) h += '<span class="puce puce-' + c.a.toLowerCase() + '">' + c.a + '</span>';
+    if (c.a) c.a.split('/').forEach(function (a) {
+      h += '<span class="puce puce-' + a.toLowerCase() + '">' + a + '</span>';
+    });
     if (c.f) h += '<span class="puce">1×/' + c.f + '</span>';
     return h;
   }
@@ -617,7 +619,8 @@ COF.UI.Fiche = (function () {
   function lancerSort(x) {
     var K = COF.Calc, c = x.cap;
     var peutConcentration = c.a === 'A';   // seule une action d'attaque peut devenir une action limitée
-    var etat = { concentration: false };
+    var choixAction = (c.a && c.a.indexOf('/') > -1) ? c.a.split('/') : null;
+    var etat = { concentration: false, action: 0 };
 
     function coutActuel() {
       return (peutConcentration && etat.concentration) ? Math.max(0, c.r - 2) : c.r;
@@ -628,6 +631,14 @@ COF.UI.Fiche = (function () {
       var manque = C.pm < cout;
       var h = '<div class="note" style="margin-bottom:8px">' + esc(x.voie.nom) + ' · rang ' + c.r + '</div>';
       h += '<div style="margin-bottom:12px">' + esc(c.d) + '</div>';
+      if (choixAction) {
+        h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-mute);margin-bottom:5px">Action utilisée</div>';
+        h += '<div class="chips" style="margin-bottom:12px">' +
+          choixAction.map(function (a, i) {
+            var lbl = COF.RULES.actions && COF.RULES.actions[a] ? COF.RULES.actions[a].nom : a;
+            return '<span class="chip' + (i === etat.action ? ' on' : '') + '" data-sortaction="' + i + '">' + esc(lbl) + '</span>';
+          }).join('') + '</div>';
+      }
       if (peutConcentration) {
         h += '<div class="chip' + (etat.concentration ? ' on' : '') + '" id="sort-concentration" style="display:inline-block;margin-bottom:12px;cursor:pointer">' +
           'Concentration : devient une action limitée, coût −2 PM</div>';
@@ -635,7 +646,7 @@ COF.UI.Fiche = (function () {
       h += '<div class="stats" style="margin-bottom:12px">' +
         '<div class="stat"><div class="lbl">Coût</div><div class="v">' + cout + ' PM</div></div>' +
         '<div class="stat"><div class="lbl">Action</div><div class="v" style="font-size:15px">' +
-          (peutConcentration && etat.concentration ? 'L' : (c.a || '—')) + '</div></div>' +
+          (peutConcentration && etat.concentration ? 'L' : (choixAction ? choixAction[etat.action] : (c.a || '—'))) + '</div></div>' +
         '<div class="stat"><div class="lbl">PM dispo.</div><div class="v" style="' +
           (manque ? 'color:var(--sang-clair)' : '') + '">' + C.pm + ' / ' + K.pmMax(C) + '</div></div>' +
         '</div>';
@@ -648,6 +659,12 @@ COF.UI.Fiche = (function () {
 
     function ouvrir() {
       COF.UI.ouvrirModale(c.n, contenu(), function (root) {
+        $$('[data-sortaction]', root).forEach(function (ch) {
+          ch.addEventListener('click', function () {
+            etat.action = parseInt(ch.getAttribute('data-sortaction'), 10);
+            ouvrir();
+          });
+        });
         var chip = COF.UI.$('#sort-concentration', root);
         if (chip) chip.addEventListener('click', function () {
           etat.concentration = !etat.concentration;

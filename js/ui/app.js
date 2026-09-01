@@ -112,6 +112,15 @@ COF.UI = COF.UI || {};
     var html = '';
     html += '<div class="note" style="margin-bottom:12px">' + esc(cfg.sousTitre || '') + '</div>';
 
+    if (cfg.choixAction) {
+      html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-mute);margin-bottom:5px">Action utilisée</div>';
+      html += '<div class="chips" style="margin-bottom:10px">' +
+        cfg.choixAction.map(function (a, i) {
+          var lbl = COF.RULES.actions && COF.RULES.actions[a] ? COF.RULES.actions[a].nom : a;
+          return '<span class="chip' + (i === 0 ? ' on' : '') + '" data-choixaction="' + i + '">' + esc(lbl) + '</span>';
+        }).join('') + '</div>';
+    }
+
     if (!cfg.sansD20) {
       if (cfg.attaqueTypes) {
         html += '<div class="chips" style="margin-bottom:10px">' +
@@ -144,16 +153,29 @@ COF.UI = COF.UI || {};
         '<label>Modificateur</label><input type="number" id="j-mod" value="' + etat.mod + '">' +
         '<label style="margin-left:auto">Difficulté / DEF</label><input type="number" id="j-diff" value="' + (etat.diff === null ? '' : etat.diff) + '" placeholder="—">' +
         '</div>';
+      if (cfg.dmg) {
+        html += '<div class="champ" style="margin-top:8px"><label>Bonus circonstanciel aux dégâts (facultatif)</label>' +
+          '<input id="j-dmg-bonus" placeholder="+1, +1d4, -2…"></div>';
+      }
       html += '<button class="btn btn-plein btn-bloc" id="j-lancer">Lancer le d20</button>';
       if (cfg.dmg) {
         html += '<button class="btn btn-bloc" id="j-dmg-skip" style="margin-top:8px">Dégâts seuls (sans test d\'attaque)</button>';
       }
     } else {
+      html += '<div class="champ" style="margin-bottom:8px"><label>Bonus circonstanciel aux dégâts (facultatif)</label>' +
+        '<input id="j-dmg-bonus" placeholder="+1, +1d4, -2…"></div>';
       html += '<button class="btn btn-plein btn-bloc" id="j-dmg-direct">Lancer ' + esc(cfg.dmg) + '</button>';
     }
     html += '<div id="j-res"></div>';
 
     ouvrirModale(cfg.titre || 'Jet de dés', html, function (root) {
+      $$('[data-choixaction]', root).forEach(function (ch) {
+        ch.addEventListener('click', function () {
+          $$('[data-choixaction]', root).forEach(function (x) { x.classList.remove('on'); });
+          ch.classList.add('on');
+        });
+      });
+
       $$('.opt', root).forEach(function (o) {
         o.addEventListener('click', function () {
           var k = o.getAttribute('data-o');
@@ -246,10 +268,11 @@ COF.UI = COF.UI || {};
     var a = K.attaques(C);
     var sous = voieNom + ' · rang ' + cap.r + (cap.d ? ' — ' + cap.d : '') +
       (cibleInfo ? ' · 🎯 ' + cibleInfo.nom + ' (DEF ' + cibleInfo.def + ')' : '');
+    var choixAction = (cap.a && cap.a.indexOf('/') > -1) ? cap.a.split('/') : null;
 
     if (cap.t === 'soin') {
       jet({
-        titre: cap.n, sousTitre: sous,
+        titre: cap.n, sousTitre: sous, choixAction: choixAction,
         dmg: cap.dmg, dmgLabel: 'Soins', sansD20: true,
         ctx: K.ctx(C, rangCourant), type: 'soins'
       });
@@ -282,7 +305,7 @@ COF.UI = COF.UI || {};
       if (def > 0) { var tmp = choix[0]; choix[0] = choix[def]; choix[def] = tmp; }
 
       jet({
-        titre: cap.n, sousTitre: sous,
+        titre: cap.n, sousTitre: sous, choixAction: choixAction,
         attaqueTypes: types,
         attaqueDefaut: choix[0].type === 'distance' ? 'distance' : (cap.s ? 'magique' : 'contact'),
         armeChoix: choix,
@@ -295,7 +318,7 @@ COF.UI = COF.UI || {};
     }
 
     jet({
-      titre: cap.n, sousTitre: sous,
+      titre: cap.n, sousTitre: sous, choixAction: choixAction,
       attaqueTypes: types, attaqueDefaut: cap.s ? 'magique' : 'contact',
       dmg: cap.dmg || null, dmgLabel: 'Dommages',
       difficulte: cibleInfo ? cibleInfo.def : null, cible: cibleInfo,
@@ -351,11 +374,23 @@ COF.UI = COF.UI || {};
     $('#j-relancer', root).addEventListener('click', function () { lancerTest(cfg, etat, root); });
   }
 
+  /* Normalise un bonus circonstanciel saisi librement ("1d4", "-2"…)
+     en un terme préfixé d'un signe, prêt à être concaténé à une formule. */
+  function normaliserBonus(s) {
+    s = (s || '').trim();
+    if (!s) return '';
+    if (s[0] !== '+' && s[0] !== '-') s = '+' + s;
+    return s;
+  }
+
   /* hit : true/undefined = le jet est considéré réussi (ou aucun test n'a eu lieu, ex.
      « Dégâts seuls ») → applique les dégâts à cfg.cible si fourni ; false = attaque ratée. */
   function afficherDmg(cfg, crit, root, direct, hit) {
     vibre(12);
-    var r = COF.Dice.dommages(cfg.dmg, cfg.ctx || {}, { crit: crit });
+    var bonusEl = $('#j-dmg-bonus', root);
+    var bonus = bonusEl ? normaliserBonus(bonusEl.value) : '';
+    var formule = cfg.dmg + bonus;
+    var r = COF.Dice.dommages(formule, cfg.ctx || {}, { crit: crit });
     var det = r.detail.map(function (d) {
       return d.jets ? d.label + ' [' + d.jets.join(', ') + ']' : d.label + ' ' + sgn(d.val);
     }).join(' · ');
@@ -379,7 +414,7 @@ COF.UI = COF.UI || {};
 
     COF.Store.logJet({
       t: Date.now(), titre: (cfg.type === 'soins' ? 'Soins — ' : 'DM — ') + cfg.titre,
-      sous: cfg.dmg + (crit ? ' ×2' : ''), total: r.total, dm: true
+      sous: formule + (crit ? ' ×2' : ''), total: r.total, dm: true
     });
 
     $('#j-dmg-relance', root).addEventListener('click', function () { afficherDmg(cfg, crit, root, direct, hit); });

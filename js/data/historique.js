@@ -84,7 +84,7 @@ COF.HISTORIQUE_PRO = [
     { r: 2, n: 'Secrets et commérages', comp: 'trouver des informations secrètes ou sensibles, perception auditive', bon: '2+rang', d: "Bonus égal à rang + 2. Une fois par aventure, s'invite à une réunion, une fête ou une cérémonie non conviée." },
     { r: 3, n: 'Le diable est dans les détails', comp: 'perception visuelle, percer un mensonge ou le langage corporel', bon: '2+rang', d: "Bonus égal à rang + 2. Se rappelle toujours précisément ce qu'on lui a dit." },
     { r: 4, n: 'J’ai un ami…', d: "Une fois par jour (test de CHA difficulté 10), obtient une entrevue avec une personne d'importance moyenne ; difficulté 15 pour les plus grands représentants de ses milieux." },
-    { r: 5, n: 'Plus d’une corde à son arc', d: "Choisit une capacité de rang 1 à 3 de son choix dans n'importe quel profil de la famille des aventuriers." }
+    { r: 5, n: 'Plus d’une corde à son arc', choixVoie: { rangMax: 3, familles: ['aventurier'] }, d: "Choisit une capacité de rang 1 à 3 de son choix dans n'importe quel profil de la famille des aventuriers." }
   ]},
   { id: 'erudit', nom: "Voie de l'érudit", caps: [
     { r: 1, n: 'Érudition', comp: 'un domaine choisi (histoire/géographie, occultisme/magie, sciences/techniques, plantes/créatures)', bon: '2+rang', d: "Une langue supplémentaire par rang atteint dans la voie ; bonus égal à rang + 2 dans le domaine choisi." },
@@ -98,7 +98,7 @@ COF.HISTORIQUE_PRO = [
     { r: 2, n: 'Expertise', d: "Dé bonus pour tous les tests en rapport avec son métier ; deux fois moins de temps qu'un professionnel ordinaire pour un même résultat." },
     { r: 3, n: 'Talent spécial', d: "Le joueur et le MJ conviennent d'une capacité spéciale liée à la profession de l'expert (ex. le boulanger fabrique un pain de voyage par rang et par aventure qui rend 1 DR ; le forgeron affûte une arme par récupération rapide, +1 en plage de critique jusqu'à la fin du prochain combat)." },
     { r: 4, n: 'Maître en son domaine', d: "Test de CHA difficulté 10 pour obtenir une entrevue avec n'importe quel personnage puissant ; difficulté 15 pour un service notable (recommandation, renseignement, escorte...)." },
-    { r: 5, n: "Caractéristique d'expert", d: "En accord avec le MJ, choisit une caractéristique de métier (FOR, AGI, INT ou CHA) et l'augmente de +1." }
+    { r: 5, n: "Caractéristique d'expert", choixCarac: { liste: ['FOR', 'AGI', 'INT', 'CHA'], val: 1 }, d: "En accord avec le MJ, choisit une caractéristique de métier (FOR, AGI, INT ou CHA) et l'augmente de +1." }
   ]},
   { id: 'hommedupeuple', nom: 'Voie de l’homme du peuple', caps: [
     { r: 1, n: 'La vie est dure', d: "+3 pour tous les tests de résistance physique et d'endurance. Au rang 4, +1 DR supplémentaire." },

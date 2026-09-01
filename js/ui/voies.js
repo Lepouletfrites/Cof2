@@ -265,7 +265,9 @@ COF.UI.Voies = (function () {
       }
       if (c.dmg && acquise) h += '<button class="btn btn-sm" data-vact="attaquer" data-k="' + key +
         '" data-r="' + c.r + '">Attaquer</button>';
-      h += '</div></div>';
+      h += '</div>';
+      if (acquise && (c.choixVoie || c.choixCarac)) h += choixHTML(c, key);
+      h += '</div>';
     });
     h += '</div></div>';
     return h;
@@ -274,10 +276,136 @@ COF.UI.Voies = (function () {
   function puces(c) {
     var h = '';
     if (c.s) h += '<span class="puce puce-sort">sort · ' + c.r + ' PM</span>';
-    if (c.a) h += '<span class="puce puce-' + c.a.toLowerCase() + '">' + c.a + '</span>';
+    if (c.a) c.a.split('/').forEach(function (a) {
+      h += '<span class="puce puce-' + a.toLowerCase() + '">' + a + '</span>';
+    });
     if (c.f) h += '<span class="puce">1×/' + c.f + '</span>';
     if (c.comp) h += '<span class="puce">compétence</span>';
     if (c.choix) h += '<span class="puce">choix</span>';
+    return h;
+  }
+
+  /* ---------------- Choix au sein d'une capacité ----------------
+     Certaines capacités laissent piocher une autre capacité (dans une
+     autre voie) ou choisir une caractéristique à augmenter de façon
+     définitive. C.choixVoies / C.choixCaracs mémorisent ces choix,
+     indexés par « clé de voie # rang », pour pouvoir les défaire
+     proprement si le rang qui les octroie est retiré.               */
+  function ensureChoix() {
+    C.choixVoies = C.choixVoies || {};
+    C.choixCaracs = C.choixCaracs || {};
+  }
+
+  function idChoix(key, c) { return key + '#' + c.r; }
+
+  function capacitesEligiblesVoie(cfg) {
+    var out = [];
+    Object.keys(COF.PROFILS).forEach(function (pid) {
+      var pr = COF.PROFILS[pid];
+      if (cfg.familles && cfg.familles.indexOf(pr.famille) < 0) return;
+      (pr.voies || []).forEach(function (v) {
+        v.caps.forEach(function (c) {
+          if (c.r <= cfg.rangMax) out.push({ profil: pid, profilNom: pr.nom, voie: v.id, voieNom: v.nom, cap: c });
+        });
+      });
+    });
+    return out;
+  }
+
+  function choisirVoie(id, profil, voie, r) {
+    ensureChoix();
+    C.choixVoies[id] = { profil: profil, voie: voie, r: r };
+    sauver(); rendre();
+  }
+
+  function choisirCarac(id, carId, val) {
+    ensureChoix();
+    var ancien = C.choixCaracs[id];
+    if (ancien) C.carac[ancien.id] = (C.carac[ancien.id] || 0) - ancien.val;
+    C.carac[carId] = (C.carac[carId] || 0) + val;
+    C.choixCaracs[id] = { id: carId, val: val };
+    sauver(); rendre();
+  }
+
+  /* Retire les choix devenus invalides quand le rang qui les octroyait
+     est retiré, et annule au passage le bonus de caractéristique déjà
+     appliqué sur la fiche. */
+  function nettoyerChoix(key, rangRestant) {
+    ensureChoix();
+    Object.keys(C.choixCaracs).forEach(function (k) {
+      if (k.indexOf(key + '#') !== 0) return;
+      var r = parseInt(k.split('#')[1], 10);
+      if (r > rangRestant) {
+        var ch = C.choixCaracs[k];
+        C.carac[ch.id] = (C.carac[ch.id] || 0) - ch.val;
+        delete C.choixCaracs[k];
+      }
+    });
+    Object.keys(C.choixVoies).forEach(function (k) {
+      if (k.indexOf(key + '#') !== 0) return;
+      var r = parseInt(k.split('#')[1], 10);
+      if (r > rangRestant) delete C.choixVoies[k];
+    });
+  }
+
+  function ouvrirChoixVoie(key, cap) {
+    var opts = capacitesEligiblesVoie(cap.choixVoie);
+    var html = '<div class="note" style="margin-bottom:10px">' + esc(cap.d) + '</div>';
+    opts.forEach(function (o, i) {
+      html += '<div class="cap acquise" style="margin-bottom:6px">' +
+        '<div class="cap-tete"><div class="cap-num">' + o.cap.r + '</div>' +
+        '<div class="cap-nom">' + esc(o.cap.n) + ' ' + puces(o.cap) + '</div></div>' +
+        '<div class="cap-desc">' + esc(o.cap.d) + '</div>' +
+        '<div class="note" style="margin:4px 0">' + esc(o.profilNom) + ' — ' + esc(o.voieNom) + '</div>' +
+        '<div class="cap-actions"><button class="btn btn-or btn-sm" data-idx="' + i + '">Choisir</button></div></div>';
+    });
+    COF.UI.ouvrirModale(cap.n, html, function (root) {
+      $$('button[data-idx]', root).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var o = opts[+b.getAttribute('data-idx')];
+          choisirVoie(idChoix(key, cap), o.profil, o.voie, o.cap.r);
+          COF.UI.fermerModale();
+        });
+      });
+    });
+  }
+
+  function choixHTML(c, key) {
+    var id = idChoix(key, c);
+    var h = '';
+    if (c.choixVoie) {
+      var ch = (C.choixVoies || {})[id];
+      var capChoisie = null, pr = null, v2 = null;
+      if (ch) {
+        pr = COF.PROFILS[ch.profil];
+        v2 = pr ? pr.voies.filter(function (vv) { return vv.id === ch.voie; })[0] : null;
+        capChoisie = v2 ? v2.caps.filter(function (cc) { return cc.r === ch.r; })[0] : null;
+      }
+      if (capChoisie) {
+        h += '<div class="note" style="margin:8px 0 4px;color:var(--or)">Capacité choisie :</div>';
+        h += '<div class="cap acquise" style="margin-bottom:2px">' +
+          '<div class="cap-tete"><div class="cap-num">' + capChoisie.r + '</div>' +
+          '<div class="cap-nom">' + esc(capChoisie.n) + ' ' + puces(capChoisie) + '</div></div>' +
+          '<div class="cap-desc">' + esc(capChoisie.d) + '</div>' +
+          '<div class="note" style="margin:4px 0">' + esc(pr.nom) + ' — ' + esc(v2.nom) + '</div>' +
+          '<div class="cap-actions">' +
+          '<button class="btn btn-sm" data-vact="choixvoie-ouvrir" data-k="' + key + '" data-r="' + c.r + '">Changer</button>' +
+          (capChoisie.dmg ? '<button class="btn btn-sm" data-vact="choixvoie-attaquer" data-k="' + key + '" data-r="' + c.r + '">Attaquer</button>' : '') +
+          '</div></div>';
+      } else {
+        h += '<button class="btn btn-or btn-sm" data-vact="choixvoie-ouvrir" data-k="' + key + '" data-r="' + c.r + '">Choisir une capacité</button>';
+      }
+    }
+    if (c.choixCarac) {
+      var chc = (C.choixCaracs || {})[id];
+      h += '<div class="note" style="margin:8px 0 4px;color:var(--or)">Caractéristique bonifiée (+' + c.choixCarac.val + ', définitif) :</div>';
+      h += '<div class="chips" style="margin-bottom:4px">' +
+        c.choixCarac.liste.map(function (car) {
+          var on = chc && chc.id === car;
+          return '<span class="chip' + (on ? ' on' : '') + '" data-vact="choixcarac-set" data-k="' + key + '" data-r="' + c.r + '" data-car="' + car + '">' + car + '</span>';
+        }).join('') + '</div>';
+      if (chc) h += '<div class="note">Bonus déjà appliqué à la fiche (' + chc.id + ' +' + chc.val + ').</div>';
+    }
     return h;
   }
 
@@ -296,12 +424,28 @@ COF.UI.Voies = (function () {
       if (v) {
         var base = COF.Calc.rangsDe(def)[0];
         v.rang--;
+        nettoyerChoix(key, v.rang);
         if (v.rang < base) C.voies = C.voies.filter(function (x) { return x.key !== key; });
       }
       sauver(); rendre();
     } else if (act === 'attaquer') {
       var cap = def.caps.filter(function (x) { return x.r === +node.getAttribute('data-r'); })[0];
       COF.UI.jetCapacite(cap, def.nom, v ? v.rang : cap.r);
+    } else if (act === 'choixvoie-ouvrir') {
+      var capV = def.caps.filter(function (x) { return x.r === +node.getAttribute('data-r'); })[0];
+      ouvrirChoixVoie(key, capV);
+    } else if (act === 'choixvoie-attaquer') {
+      var idA = idChoix(key, { r: +node.getAttribute('data-r') });
+      var chA = (C.choixVoies || {})[idA];
+      if (chA) {
+        var prA = COF.PROFILS[chA.profil];
+        var vA = prA.voies.filter(function (vv) { return vv.id === chA.voie; })[0];
+        var capA = vA.caps.filter(function (cc) { return cc.r === chA.r; })[0];
+        COF.UI.jetCapacite(capA, prA.nom + ' — ' + vA.nom, chA.r);
+      }
+    } else if (act === 'choixcarac-set') {
+      var capC = def.caps.filter(function (x) { return x.r === +node.getAttribute('data-r'); })[0];
+      choisirCarac(idChoix(key, capC), node.getAttribute('data-car'), capC.choixCarac.val);
     }
   }
 

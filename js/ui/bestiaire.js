@@ -10,7 +10,7 @@ COF.UI.Bestiaire = (function () {
   var $ = COF.UI.$, $$ = COF.UI.$$, esc = COF.UI.esc, sgn = COF.UI.sgn;
 
   /* état des filtres — exposé pour le futur générateur de rencontres */
-  var F = { q: '', env: null, cat: null, ncMin: 0, ncMax: 13 };
+  var F = { q: '', env: null, cat: null, ncMin: 0, ncMax: 21 };
 
   function init() {
     document.addEventListener('click', function (e) {
@@ -76,8 +76,8 @@ COF.UI.Bestiaire = (function () {
     h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-mute);margin-bottom:5px">' +
       'Niveau de créature — ' + ncTxt(F.ncMin) + ' à ' + ncTxt(F.ncMax) + '</div>';
     h += '<div class="mod-ligne" style="margin-bottom:6px">' +
-      '<label>NC min</label><input type="number" id="best-ncmin" value="' + F.ncMin + '" min="0" max="13" step="1">' +
-      '<label style="margin-left:auto">NC max</label><input type="number" id="best-ncmax" value="' + F.ncMax + '" min="0" max="13" step="1">' +
+      '<label>NC min</label><input type="number" id="best-ncmin" value="' + F.ncMin + '" min="0" max="21" step="1">' +
+      '<label style="margin-left:auto">NC max</label><input type="number" id="best-ncmax" value="' + F.ncMax + '" min="0" max="21" step="1">' +
       '</div>';
     h += '<button class="btn btn-bloc btn-sm" data-bact="reset">Réinitialiser les filtres</button>';
     h += '</div></div>';
@@ -113,7 +113,7 @@ COF.UI.Bestiaire = (function () {
       var el = $('#' + id, n);
       el.addEventListener('change', function () {
         var v = parseInt(el.value, 10);
-        if (isNaN(v)) v = (id === 'best-ncmin' ? 0 : 13);
+        if (isNaN(v)) v = (id === 'best-ncmin' ? 0 : 21);
         if (id === 'best-ncmin') F.ncMin = v; else F.ncMax = v;
         rendre();
       });
@@ -219,7 +219,7 @@ COF.UI.Bestiaire = (function () {
       F.cat = vc || null;
       rendre();
     } else if (act === 'reset') {
-      F = { q: '', env: null, cat: null, ncMin: 0, ncMax: 13 };
+      F = { q: '', env: null, cat: null, ncMin: 0, ncMax: 21 };
       rendre();
     } else if (act === 'fiche') {
       var c = get(node.getAttribute('data-id'));

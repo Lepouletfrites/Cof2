@@ -20,7 +20,12 @@ COF.Rencontre = (function () {
        chef ogre + 5 ogres .......... niveau 10  → 123 pts / budget 150   */
   var PTS = {
     0: 1, 0.5: 2, 1: 4, 2: 8, 3: 15, 4: 24, 5: 35, 6: 48,
-    7: 65, 8: 90, 9: 118, 10: 150, 11: 190, 12: 235, 13: 290
+    7: 65, 8: 90, 9: 118, 10: 150, 11: 190, 12: 235, 13: 290,
+    /* 14-21 : extrapolation de la même courbe (croissance ~1.15-1.22×
+       par niveau), au-delà des exemples officiels du livre de base —
+       nécessaire pour couvrir les créatures épiques du supplément
+       Bestiaire (jusqu'à NC 21). */
+    14: 355, 15: 430, 16: 515, 17: 610, 18: 720, 19: 845, 20: 985, 21: 1140
   };
 
   var DIFFICULTES = [
@@ -38,12 +43,12 @@ COF.Rencontre = (function () {
     var n = c.nc;
     if (PTS[n] !== undefined) return PTS[n];
     var k = Math.round(n);
-    return PTS[k] !== undefined ? PTS[k] : PTS[13];
+    return PTS[k] !== undefined ? PTS[k] : PTS[21];
   }
 
   function budget(nbPJ, niveau, difficulte) {
     var d = DIFFICULTES.filter(function (x) { return x.id === difficulte; })[0] || DIFFICULTES[1];
-    var base = PTS[Math.max(0, Math.min(13, Math.round(niveau)))] || PTS[13];
+    var base = PTS[Math.max(0, Math.min(21, Math.round(niveau)))] || PTS[21];
     return Math.round(base * (nbPJ / 4) * d.mult);
   }
 
