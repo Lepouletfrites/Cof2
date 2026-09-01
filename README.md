@@ -286,12 +286,35 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     notable et sortie(s) — à combiner avec Rencontre si l'occupant s'avère combatif et avec Butin
     pour le contenu d'un trésor repéré. Comble le manque entre Rencontre (le combat), Butin (le
     loot) et Voyage (le trajet) : ce que contient concrètement la pièce qu'on vient d'ouvrir.
+  - *Objets magiques* : implémente les tables officielles du chapitre « Objets magiques » du
+    livre de base, en huit catégories (chips) — **Potion**, **Parchemin**, **Baguette** (charges
+    2d20, niveau de magie selon la règle), **Arme magique** (palier +1/+2/+3, type d'arme tiré des
+    vraies tables d'équipement, propriétés — affûtée, élémentaire, fléau d'une créature — avec leur
+    niveau de magie), **Armure/bouclier magique** (palier + catalogue réel + propriétés — RD,
+    résistances, natation...), **Objet de pouvoir** (rang du pouvoir puis profil pondéré exactement
+    comme la table du livre), **Objet de puissance** (bonus de caractéristique, formule de niveau
+    de magie officielle selon qu'elle est majeure ou mineure) et **Objet de compétence** (+5 à un
+    test). Partout où la règle demande un sort ou une capacité (potion, parchemin, baguette, objet
+    de pouvoir), un vrai sort/capacité de la base de voies est pioché — pas une liste figée — pour
+    un nombre de combinaisons bien plus grand que les tables du livre. Le coût est calculé avec les
+    formules officielles de valeur. Un bouton **Utiliser** lance directement le sort/la capacité
+    piochée (via le même moteur que les compétences de voie) ; **Ajouter au personnage** range
+    l'objet dans Objets, avec les mêmes mécanismes que le générateur de Trésors pour les armes
+    (dégâts et bonus magique inclus), les armures (emplacement équipable) et, en plus, les objets
+    de puissance (bonus de caractéristique équipable/déséquipable, comme un anneau de force).
+  - *Objet prestigieux* : génère un objet doté de sa propre voie à 5 rangs et lié à un profil
+    réel, sur le modèle de l'exemple « La Lame des Échos » du livre de base — le rang 1 donne un
+    bonus mineur (+1 attaque/dégâts ou +1 DEF), les rangs 2 à 5 lient chacun une vraie capacité de
+    ce profil (piochée dans la base de voies) à l'objet, avec sa propre condition de déblocage
+    procédurale. Le rang 1 s'applique automatiquement à l'ajout ; les rangs suivants restent
+    consultatifs, à débloquer en jeu selon leur condition (au meneur de trancher, comme l'indique
+    le livre).
 
-  Les cinq nouveaux générateurs partagent le même petit moteur réutilisable
+  Les sept nouveaux générateurs partagent le même petit moteur réutilisable
   (`COF.creerGenerateurChamps` côté données, `COF.UI.creerVueChamps` côté interface) que le
   générateur de PNJ : verrou 🔒/🔓 par champ, relance individuelle ↻, tirage complet qui respecte
-  les verrous. Toutes leurs tables ont été étendues (+40 à +80 % d'entrées selon les catégories)
-  pour réduire les répétitions sur une session longue.
+  les verrous. Toutes les tables des cinq premiers ont été étendues (+40 à +80 % d'entrées selon
+  les catégories) pour réduire les répétitions sur une session longue.
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 

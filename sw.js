@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v23';
+var CACHE_VERSION = 'cof2-v24';
 
 var FICHIERS = [
   './',
@@ -43,6 +43,8 @@ var FICHIERS = [
   'js/data/tresors-nommes.js',
   'js/data/voyage.js',
   'js/data/donjon.js',
+  'js/data/objets-magiques.js',
+  'js/data/objet-prestigieux.js',
 
   'js/core/procedural.js',
   'js/core/dice.js',
@@ -58,6 +60,8 @@ var FICHIERS = [
   'js/core/tresors-nommes.js',
   'js/core/voyage.js',
   'js/core/donjon.js',
+  'js/core/objets-magiques.js',
+  'js/core/objet-prestigieux.js',
   'js/core/store.js',
 
   'js/ui/app.js',
@@ -77,6 +81,8 @@ var FICHIERS = [
   'js/ui/tresors.js',
   'js/ui/voyage.js',
   'js/ui/donjon.js',
+  'js/ui/objets-magiques.js',
+  'js/ui/objet-prestigieux.js',
   'js/ui/des.js'
 ];
 

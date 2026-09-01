@@ -63,16 +63,19 @@ COF.UI.Objets = (function () {
       h += '<div class="vide">Sac vide. ' + esc(COF.SAC_DEPART) + '</div>';
     } else {
       C.inventaire.forEach(function (o, i) {
-        var equipe = !!(o.slot && o.equipe);
+        var equipe = !!((o.slot || o.caracBonus) && o.equipe);
         h += '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) +
           (o.qte > 1 ? ' ×' + o.qte : '') +
           (o.prix ? ' <span class="puce">' + o.prix + ' po</span>' : '') +
           (o.dmg ? ' <span class="puce puce-rang">' + esc(o.dmg) + ' DM</span>' : '') +
-          (o.def ? ' <span class="puce puce-rang">+' + o.def + ' DEF' + (equipe ? ' · équipé' : '') + '</span>' : '') + '</div>' +
+          (o.def ? ' <span class="puce puce-rang">+' + o.def + ' DEF' + (equipe ? ' · équipé' : '') + '</span>' : '') +
+          (o.caracBonus ? ' <span class="puce puce-rang">' + sgn(o.caracBonus.val) + ' ' + o.caracBonus.id + (equipe ? ' · équipé' : '') + '</span>' : '') + '</div>' +
           ((o.note || o.desc) ? '<div class="s">' + esc(o.note || o.desc) + '</div>' : '') + '</div>' +
           '<div class="actions">' +
           (o.dmg ? '<button class="btn btn-or btn-sm" data-oact="obj-attaquer" data-i="' + i + '">Attaquer</button>' : '') +
           (o.def && o.slot ? '<button class="btn btn-sm' + (equipe ? '' : ' btn-or') + '" data-oact="obj-equiper" data-i="' + i + '">' +
+            (equipe ? 'Déséquiper' : 'Équiper') + '</button>' : '') +
+          (o.caracBonus ? '<button class="btn btn-sm' + (equipe ? '' : ' btn-or') + '" data-oact="obj-carac" data-i="' + i + '">' +
             (equipe ? 'Déséquiper' : 'Équiper') + '</button>' : '') +
           '<button class="btn btn-sm" data-oact="obj-transfert" data-i="' + i + '" title="Transférer">⇄</button>' +
           '<button class="btn btn-sm" data-oact="obj-suppr" data-i="' + i + '">✕</button></div></div>';
@@ -124,6 +127,9 @@ COF.UI.Objets = (function () {
     var target = COF.Store.get(targetId);
     if (!target) return;
     var o = C.inventaire.splice(i, 1)[0];
+    if (o.caracBonus && o.equipe) {
+      C.carac[o.caracBonus.id] = (C.carac[o.caracBonus.id] || 0) - o.caracBonus.val;
+    }
     o.equipe = false;
     target.inventaire = target.inventaire || [];
     target.inventaire.push(o);
@@ -156,7 +162,14 @@ COF.UI.Objets = (function () {
         if (nom) { C.inventaire.push({ nom: nom, qte: 1 }); sauver(); rendre(); }
         break;
       }
-      case 'obj-suppr': C.inventaire.splice(+i, 1); sauver(); rendre(); break;
+      case 'obj-suppr': {
+        var oSuppr = C.inventaire[+i];
+        if (oSuppr && oSuppr.caracBonus && oSuppr.equipe) {
+          C.carac[oSuppr.caracBonus.id] = (C.carac[oSuppr.caracBonus.id] || 0) - oSuppr.caracBonus.val;
+        }
+        C.inventaire.splice(+i, 1); sauver(); rendre();
+        break;
+      }
       case 'obj-transfert': ouvrirTransfert('objet', +i); break;
 
       case 'obj-attaquer': {
@@ -179,9 +192,19 @@ COF.UI.Objets = (function () {
         if (oe.equipe) {
           oe.equipe = false;
         } else {
-          C.inventaire.forEach(function (o) { if (o.slot === oe.slot) o.equipe = false; });
+          C.inventaire.forEach(function (o) { if (o.slot && o.slot === oe.slot) o.equipe = false; });
           oe.equipe = true;
         }
+        sauver(); rendre();
+        break;
+      }
+
+      case 'obj-carac': {
+        var oc = C.inventaire[+i];
+        if (!oc || !oc.caracBonus) break;
+        C.carac = C.carac || {};
+        oc.equipe = !oc.equipe;
+        C.carac[oc.caracBonus.id] = (C.carac[oc.caracBonus.id] || 0) + (oc.equipe ? oc.caracBonus.val : -oc.caracBonus.val);
         sauver(); rendre();
         break;
       }

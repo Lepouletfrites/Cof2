@@ -102,20 +102,23 @@ COF.Store = (function () {
     return p;
   }
 
-  /* Transfère un objet trouvé (butin, trésor nommé...) vers un personnage.
-     o : { nom, qte, prix, note ou desc, dm, armeType, noFor, def, slot,
-           bonus, elementaires }
+  /* Transfère un objet trouvé (butin, trésor nommé, objet magique...) vers
+     un personnage.
+     o : { nom, qte, prix, note ou desc, dm, armeType, noFor, crit, def, slot,
+           bonus, elementaires, caracBonus: {id, val} }
      Une arme (dm présent) devient une vraie entrée dans C.armes — utilisable
      aussitôt avec le bon bonus de FOR (et le bonus magique/élémentaire d'un
      pouvoir, le cas échéant), comme n'importe quelle arme équipée — tandis
      qu'une trace complète (prix, description) reste dans l'inventaire.
      Une armure/un bouclier (def + slot présents) reste dans l'inventaire,
      à équiper depuis la fiche : l'équiper remplace l'armure/le bouclier du
-     catalogue en cours plutôt que de s'y additionner. */
+     catalogue en cours plutôt que de s'y additionner. Un bonus de
+     caractéristique définitif (caracBonus) s'équipe/se déséquipe depuis
+     Objets, en ajustant directement C.carac. */
   function ajouterObjet(p, o) {
     if (o.dm) {
       p.armes.push({
-        nom: o.nom, type: o.armeType || 'contact', dm: o.dm, portee: null, crit: 20,
+        nom: o.nom, type: o.armeType || 'contact', dm: o.dm, portee: null, crit: o.crit || 20,
         noFor: !!o.noFor, note: null, bonus: o.bonus || 0, elementaires: o.elementaires || []
       });
     }
@@ -125,6 +128,7 @@ COF.Store = (function () {
     if (o.dm) desc = (desc ? desc + ' ' : '') + "Équipée automatiquement dans l'onglet Armes.";
     if (desc) item.desc = desc;
     if (o.def) { item.def = o.def; item.slot = o.slot; }
+    if (o.caracBonus) item.caracBonus = o.caracBonus;
     p.inventaire.push(item);
     return item;
   }
