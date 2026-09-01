@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v14';
+var CACHE_VERSION = 'cof2-v17';
 
 var FICHIERS = [
   './',
@@ -38,7 +38,12 @@ var FICHIERS = [
   'js/data/pnj.js',
   'js/data/recompenses.js',
   'js/data/oracle.js',
+  'js/data/lieux.js',
+  'js/data/quetes.js',
+  'js/data/tresors-nommes.js',
+  'js/data/voyage.js',
 
+  'js/core/procedural.js',
   'js/core/dice.js',
   'js/core/calc.js',
   'js/core/compagnons.js',
@@ -47,9 +52,14 @@ var FICHIERS = [
   'js/core/recompense.js',
   'js/core/arene.js',
   'js/core/oracle.js',
+  'js/core/lieux.js',
+  'js/core/quetes.js',
+  'js/core/tresors-nommes.js',
+  'js/core/voyage.js',
   'js/core/store.js',
 
   'js/ui/app.js',
+  'js/ui/champs-ui.js',
   'js/ui/persos.js',
   'js/ui/sheet.js',
   'js/ui/voies.js',
@@ -59,6 +69,10 @@ var FICHIERS = [
   'js/ui/arene.js',
   'js/ui/butin.js',
   'js/ui/oracle.js',
+  'js/ui/lieux.js',
+  'js/ui/quetes.js',
+  'js/ui/tresors.js',
+  'js/ui/voyage.js',
   'js/ui/des.js'
 ];
 

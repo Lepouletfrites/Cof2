@@ -41,7 +41,7 @@ COF.PROFILS.arquebusier = {
     { id: 'mercenaire', nom: 'Voie du mercenaire', caps: [
       { r: 1, n: 'Pilier de bar', comp: "interaction sociale en taverne, résister à l'alcool", bon: '2+rang', dmg: '1d4°', d: "Ajoute rang + 2 à ces tests. Inflige 1d4° DM à mains nues (non létal) et divise par 2 les DM non létaux subis." },
       { r: 2, n: 'Mort ou vif', a: 'L', d: "Attaque au contact ou à distance. Si réussie : DM habituels (ou temporaires) et au choix désarmer, renverser ou affaiblir (1d4 rounds) un adversaire de NC < rang. Critique : deux effets cumulés." },
-      { r: 3, n: 'Combattant aguerri', choix: true, d: "Choisir une capacité de rang 1 de guerrier, de voleur (armure de cuir) ou de rôdeur (cuir renforcé). +1 en DEF." },
+      { r: 3, n: 'Combattant aguerri', choix: true, choixVoie: { profils: ['guerrier', 'voleur', 'rodeur'], rangMax: 1 }, d: "Choisir une capacité de rang 1 de guerrier, de voleur (armure de cuir) ou de rôdeur (cuir renforcé). +1 en DEF." },
       { r: 4, n: 'Constitution héroïque', d: "+1 en CON et dé bonus aux tests de CON." },
       { r: 5, n: 'Combat de masse', d: "Dans un combat impliquant au moins 10 créatures actives : 1 action d'attaque ou de mouvement supplémentaire par tour. +1 en DEF." }
     ]},

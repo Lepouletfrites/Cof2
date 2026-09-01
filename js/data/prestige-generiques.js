@@ -13,11 +13,11 @@ COF.PRESTIGE.expert = {
   prereq: "Avoir le rang 2 dans au moins trois voies du même profil, et aucune voie hors de la famille du profil principal.",
   note: "Chaque capacité choisie doit provenir d'une voie différente de la même famille. Les restrictions d'armure des voies d'origine s'appliquent. Inaccessible aux profils hybrides sortis de leur famille.",
   caps: [
-    { r: 4, n: 'Capacité de néophyte', choix: true, d: "Choisir une capacité de rang 1 de n'importe quelle voie d'un profil de sa famille." },
-    { r: 5, n: "Capacité d'initié", choix: true, d: "Choisir une capacité de rang 2 de n'importe quelle voie d'un profil de sa famille." },
-    { r: 6, n: 'Capacité de professionnel', choix: true, d: "Choisir une capacité de rang 3 de n'importe quelle voie d'un profil de sa famille." },
-    { r: 7, n: "Capacité d'expert", choix: true, d: "Choisir une capacité de rang 4 de n'importe quelle voie d'un profil de sa famille." },
-    { r: 8, n: 'Capacité de maître', choix: true, d: "Choisir une capacité de rang 5 de n'importe quelle voie d'un profil de sa famille." }
+    { r: 4, n: 'Capacité de néophyte', choix: true, choixVoie: { memeFamille: true, rangMin: 1, rangMax: 1 }, d: "Choisir une capacité de rang 1 de n'importe quelle voie d'un profil de sa famille." },
+    { r: 5, n: "Capacité d'initié", choix: true, choixVoie: { memeFamille: true, rangMin: 2, rangMax: 2 }, d: "Choisir une capacité de rang 2 de n'importe quelle voie d'un profil de sa famille." },
+    { r: 6, n: 'Capacité de professionnel', choix: true, choixVoie: { memeFamille: true, rangMin: 3, rangMax: 3 }, d: "Choisir une capacité de rang 3 de n'importe quelle voie d'un profil de sa famille." },
+    { r: 7, n: "Capacité d'expert", choix: true, choixVoie: { memeFamille: true, rangMin: 4, rangMax: 4 }, d: "Choisir une capacité de rang 4 de n'importe quelle voie d'un profil de sa famille." },
+    { r: 8, n: 'Capacité de maître', choix: true, choixVoie: { memeFamille: true, rangMin: 5, rangMax: 5 }, d: "Choisir une capacité de rang 5 de n'importe quelle voie d'un profil de sa famille." }
   ]
 };
 

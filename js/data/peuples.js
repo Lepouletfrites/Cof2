@@ -34,7 +34,7 @@ COF.PEUPLES = {
     voie: {
       id: 'demiorc', nom: 'Voie du demi-orc', caps: [
         { r: 1, n: 'Impressionnant', d: "+3 aux tests d'intimidation. Vision dans le noir total comme en pénombre jusqu'à 30 m." },
-        { r: 2, n: 'Talent pour la violence', choix: true, d: "Choisir une capacité de rang 1 de n'importe quelle voie de barbare ou de guerrier." },
+        { r: 2, n: 'Talent pour la violence', choix: true, choixVoie: { profils: ['barbare', 'guerrier'], rangMax: 1 }, d: "Choisir une capacité de rang 1 de n'importe quelle voie de barbare ou de guerrier." },
         { r: 3, n: 'Critique brutal', d: "Zone de critique au contact augmentée de 1 (19-20) et +1d4° aux DM en cas de critique.", dmg: '1d4°' },
         { r: 4, n: 'Attaque sanglante', a: 'L', d: "Attaque de contact provoquant un saignement : 1d4° DM par round suivant jusqu'à soins. Non cumulable.", dmg: '1d4°' },
         { r: 5, n: 'Colosse', d: "+1 en FOR et +1 en CON." }
@@ -51,7 +51,7 @@ COF.PEUPLES = {
       id: 'elfehaut', nom: 'Voie de l’elfe haut', caps: [
         { r: 1, n: 'Lumière intérieure', d: "La nuit étoilée compte comme de la pénombre. +3 aux tests d'érudition (INT) et artistiques (CHA)." },
         { r: 2, n: 'Force d’âme', d: "Immunisé à la peur et au sommeil magique. Bonus égal au rang aux tests opposés d'attaque magique pour résister à un sort." },
-        { r: 3, n: 'Talent pour la magie', choix: true, d: "Choisir une capacité de rang 1 de magicien ou d'ensorceleur, utilisable en armure (sauf bonus de DEF). Ou une capacité de rang 2 sans armure." },
+        { r: 3, n: 'Talent pour la magie', choix: true, choixVoie: { profils: ['magicien', 'ensorceleur'], rangMax: 2 }, d: "Choisir une capacité de rang 1 de magicien ou d'ensorceleur, utilisable en armure (sauf bonus de DEF). Ou une capacité de rang 2 sans armure." },
         { r: 4, n: 'Immortel', d: "Moitié moins de repos, nourriture et boisson. Immunisé aux poisons et maladies." },
         { r: 5, n: 'Supériorité elfique', d: "+1 en VOL et +1 en INT ou CHA." }
       ]
@@ -66,7 +66,7 @@ COF.PEUPLES = {
     voie: {
       id: 'elfesylvain', nom: 'Voie de l’elfe sylvain', caps: [
         { r: 1, n: 'Lumière des étoiles', d: "La nuit étoilée compte comme de la pénombre. +3 aux tests de survie en forêt (escalade, discrétion, chasse…)." },
-        { r: 2, n: 'Enfant de la forêt', choix: true, d: "Choisir une capacité de rang 1 de druide ou de rôdeur, utilisable jusqu'au cuir renforcé." },
+        { r: 2, n: 'Enfant de la forêt', choix: true, choixVoie: { profils: ['druide', 'rodeur'], rangMax: 1 }, d: "Choisir une capacité de rang 1 de druide ou de rôdeur, utilisable jusqu'au cuir renforcé." },
         { r: 3, n: 'Archer émérite', d: "Critique sur 19-20 à l'arc, +1d4° aux DM en cas de critique. Maîtrise l'arc court quel que soit le profil.", dmg: '1d4°' },
         { r: 4, n: 'Flèche sanglante', a: 'L', d: "Attaque à distance provoquant un saignement : 1d4° DM par round jusqu'à soins. Non cumulable.", dmg: '1d4°' },
         { r: 5, n: 'Supériorité elfique', d: "+1 en AGI et +1 en PER." }
@@ -81,7 +81,7 @@ COF.PEUPLES = {
     mods: [{ plus: ['INT', 'PER'], moins: ['FOR'] }],
     voie: {
       id: 'gnome', nom: 'Voie du gnome', caps: [
-        { r: 1, n: 'Don étrange', choix: true, d: "+3 aux tests scientifiques (INT). Choisir une capacité de rang 1 d'ensorceleur (1×/jour seulement si armure). Vision dans le noir jusqu'à 10 m." },
+        { r: 1, n: 'Don étrange', choix: true, choixVoie: { profils: ['ensorceleur'], rangMax: 1 }, d: "+3 aux tests scientifiques (INT). Choisir une capacité de rang 1 d'ensorceleur (1×/jour seulement si armure). Vision dans le noir jusqu'à 10 m." },
         { r: 2, n: 'Petit pote', d: "+3 à tous les tests d'interaction sociale (sauf intimidation). +1 point de chance." },
         { r: 3, n: 'Insignifiant', d: "+2 en DEF contre les créatures de taille grande ou supérieure (+3 au rang 5)." },
         { r: 4, n: 'Merveille technologique', d: "Maîtrise les arbalètes (et armes à poudre si autorisées) quel que soit le profil. Ajoute son AGI aux DM de ces armes." },
@@ -116,7 +116,7 @@ COF.PEUPLES = {
       id: 'humain', nom: 'Voie de l’humain', caps: [
         { r: 1, n: 'Diversité', d: "+3 aux tests de deux domaines liés à l'origine (montagnard, citadin, campagnard, riverain, sauvage, nomade…). +1 point de chance." },
         { r: 2, n: 'Instinct de survie', f: 'combat', d: "1×/combat, une attaque qui devrait le mettre à 0 PV inflige des DM divisés par 2 (min 1). Puis +2 en DEF pour le reste du combat." },
-        { r: 3, n: 'Touche-à-tout', choix: true, d: "Obtenir une capacité de rang 1 ou 2 de n'importe quel profil (limitations d'armure applicables au rang 2 ou si bonus de DEF)." },
+        { r: 3, n: 'Touche-à-tout', choix: true, choixVoie: { rangMax: 2 }, d: "Obtenir une capacité de rang 1 ou 2 de n'importe quel profil (limitations d'armure applicables au rang 2 ou si bonus de DEF)." },
         { r: 4, n: 'Loup parmi les loups', f: 'round', d: "1×/round, +1d4° aux DM contre un adversaire humanoïde de taille moyenne (DM initiaux seulement).", dmg: '1d4°' },
         { r: 5, n: 'Polyvalence', d: "+1 à la caractéristique la plus faible et +1 en VOL." }
       ]

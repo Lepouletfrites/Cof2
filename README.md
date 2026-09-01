@@ -116,7 +116,11 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     compétence, équipement, ajustements permanents, notes. Avant tout jet de dommages, un champ
     libre permet d'ajouter un bonus circonstanciel (`+1`, `+1d4`...) sans toucher à la formule de
     base. Les sorts/capacités utilisables avec deux types d'action différents (ex. Rétrécissement,
-    Agrandissement, Ventriloquie) affichent un bouton pour choisir laquelle est utilisée.
+    Agrandissement, Ventriloquie) affichent un bouton pour choisir laquelle est utilisée. Une
+    section **Objets** dédiée liste l'inventaire avec sa description complète (pas un résumé),
+    son coût s'il est connu, et un bouton **Attaquer** pour tout objet qui porte des dégâts (armes
+    trouvées en butin ou objets nommés du générateur de Trésors) — au lieu de l'ancienne liste
+    minimaliste, nom + note, auparavant reléguée dans la carte Équipement.
   - *Voies* : cinq sections. Les voies du profil et la voie de peuple (+ voie du mage) sont
     mises en avant — le magicien, le sorcier et le prêtre y trouvent aussi les voies
     supplémentaires de l'*Atlas d'Osgild* (arcanes exhumés/oubliés/perdus, arcanes obscurs,
@@ -127,12 +131,18 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     d'origine géographique et 8 voies professionnelles, 1 point de capacité par rang, sans
     niveau requis) sont accessibles dans des sections repliées. Acquisition rang par rang avec
     vérification du niveau requis et suivi des points de capacité. Les capacités qui laissent
-    piocher une capacité dans une autre voie (ex. *Plus d'une corde à son arc*) ouvrent une liste
-    des capacités éligibles à choisir directement dans l'appli ; celles qui accordent un bonus de
+    piocher une capacité (ou un sort) dans une autre voie — *Plus d'une corde à son arc*,
+    *Touche-à-tout*, *Talent pour la violence/la magie*, *Enfant de la forêt*, *Don étrange*,
+    *Combattant aguerri*, *Formation d'élite*, les *Domaines* du touche-à-tout, les capacités de
+    néophyte/initié/professionnel/expert/maître de la voie de l'expert, *Bâton magique*, *Pouvoir
+    unique/puissant*... — ouvrent une liste des capacités éligibles (filtrée par profil, famille ou
+    rang selon la règle) à choisir directement dans l'appli ; celles qui accordent un bonus de
     caractéristique définitif au choix (ex. *Caractéristique d'expert*) l'appliquent aussitôt sur
     la fiche (et le retirent automatiquement si le rang qui l'octroie est retiré). Ce mécanisme
-    n'est branché que sur les quelques capacités explicitement repérées ; les autres capacités à
-    choix restent décrites en texte libre.
+    n'est branché que sur les capacités explicitement repérées comme de simples piochages dans un
+    vivier de capacités/sorts ; les capacités à choix plus spécifiques (cristaux, élixirs, élément
+    de prédilection, bonus « au choix » non liés à une liste de capacités) restent décrites en
+    texte libre.
 - **Bestiaire** — 286 créatures (84 du livre de base + 202 du supplément *Bestiaire*), filtrables
   par **environnement** (les cinq milieux naturels du livre plus villes, ruines et terres
   glacées), par **catégorie** et par **plage de NC** (jusqu'à NC 21 pour les créatures épiques du
@@ -204,6 +214,35 @@ Chaque capacité est structurée pour être exploitable par le moteur :
     modifiée ou interrompue. Le **détail sensoriel** pioche une touche descriptive par sens (vue,
     son, odeur, toucher) pour ancrer une description. Chaque tirage reste visible pendant qu'on
     en lance un autre, et un court historique de session liste les derniers résultats.
+  - *Lieux* : trois générateurs à champs verrouillables, sur le même principe que le PNJ.
+    **Taverne** — nom procédural (patrons combinatoires « Le/La [nom] [adjectif] », « Chez
+    [patron] », « Aux [pluriel] »), ambiance, spécialité, tenancier (peuple/nom/trait réutilisés du
+    générateur de PNJ, correctement accordés), particularité et rumeur qu'on y entend. **Boutique**
+    — type de commerce (armurerie, forge, alchimiste, bijoutier, sellier, libraire, antiquaire...),
+    enseigne, marchand, réputation, 3 à 5 objets en vente avec leur prix (tirés des vraies tables
+    d'équipement, prix légèrement variable) et une anecdote. **Village/ville** — nom procédural,
+    taille (hameau → cité, avec fourchette de population), spécialité économique, gouvernance,
+    ambiance, problème du moment et un personnage notable.
+  - *Quêtes* : compose une accroche complète — commanditaire, motivation réelle (souvent différente
+    de ce qu'il prétend), objectif, cible concrète, lieu (relié aux environnements du générateur de
+    Rencontre), obstacle principal, complication et récompense — puis les assemble en un paragraphe
+    de synthèse prêt à lire ou à adapter tel quel pour démarrer une session sans préparation.
+  - *Trésors* : génère un objet magique unique et nommé (au-delà du système +N générique du
+    Butin) — type, palier (mineur/majeur/légendaire, avec 1 ou 2 pouvoirs selon le palier), nom
+    procédural (mot composé façon « Sombrelame », ou « [Type] de/du [Épithète] », ou « [Type]
+    [Adjectif] » correctement accordé), une origine/légende, un coût estimé et, dans 20 % des cas,
+    une malédiction. Une arme générée porte ses dégâts (formule adaptée au type : épée/hache/arc
+    1d8, masse/lance 1d6, dague 1d4), une armure ou un bouclier son bonus de DEF. Un bouton
+    **📥 Ajouter à [personnage]** transfère l'objet complet (nom, description, coût, dégâts/DEF)
+    dans l'inventaire du personnage actif, comme pour le Butin.
+  - *Voyage* : un événement de trajet non lié au combat — environnement, météo, puis un tirage
+    catégorisé (rencontre de voyageurs, incident de parcours, point d'intérêt, découverte ou
+    présage) avec son détail — pour ponctuer une route sans forcément déclencher une rencontre.
+
+  Les quatre nouveaux générateurs partagent le même petit moteur réutilisable
+  (`COF.creerGenerateurChamps` côté données, `COF.UI.creerVueChamps` côté interface) que le
+  générateur de PNJ : verrou 🔒/🔓 par champ, relance individuelle ↻, tirage complet qui respecte
+  les verrous.
 - **Dés** — lanceur libre, formules personnalisées, journal des jets.
 - **Plus** — aide-mémoire des règles, tables, export / import.
 

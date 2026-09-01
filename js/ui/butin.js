@@ -181,13 +181,18 @@ COF.UI.Butin = (function () {
   function marquerListe(liste, i, perso, qte) {
     var it = liste[i];
     if (!it || it.ajoute) return;
-    perso.inventaire.push({ nom: it.nom, qte: qte || 1, note: it.note || null });
+    var item = { nom: it.nom, qte: qte || 1, note: it.note || null };
+    if (it.prix) item.prix = it.prix;
+    perso.inventaire.push(item);
     it.ajoute = true;
   }
   function marquerMagique(l, cle, perso) {
     var m = l[cle];
     if (!m || m.ajoute) return;
-    perso.inventaire.push({ nom: '✨ ' + m.nom, qte: 1, note: m.desc });
+    var item = { nom: '✨ ' + m.nom, qte: 1, note: m.desc };
+    if (m.dm) { item.dmg = m.dm; item.armeType = m.armeType || 'contact'; }
+    if (m.def) item.def = m.def;
+    perso.inventaire.push(item);
     m.ajoute = true;
   }
 

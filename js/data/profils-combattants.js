@@ -105,7 +105,7 @@ COF.PROFILS.chevalier = {
       { r: 2, n: 'Écuyer', dmg: '1d4°+1', d: "Un écuyer loyal : DEF [10 + rang], PV [niveau × 4], attaque = attaque magique, DM 1d4°+1. Grâce à lui : +1 à la zone de critique au contact et le chevalier, sa monture et jusqu'à CHA alliés récupèrent 1d4° PV de plus après chaque récupération complète." },
       { r: 3, n: 'Autorité naturelle', comp: 'donner des ordres, intimider', bon: '2+rang', d: "Ajoute rang + 2 à ces tests. Formation au port de l'armure de plaque complète (DEF +7) sans perdre les capacités de chevalier." },
       { r: 4, n: 'Massacrer la piétaille', t: 'bonus', dmg: '1d4°', d: "+1d4° DM contre la piétaille (au moins 4 créatures semblables impliquées dans le combat). Les cavaliers ne sont jamais de la piétaille." },
-      { r: 5, n: "Formation d'élite", choix: true, d: "Choisir une capacité de rang 1 à 3 de n'importe quel profil de combattant ou d'aventurier. De plus, choisir une caractéristique : dé bonus à ses tests." }
+      { r: 5, n: "Formation d'élite", choix: true, choixVoie: { familles: ['combattant', 'aventurier'], rangMax: 3 }, d: "Choisir une capacité de rang 1 à 3 de n'importe quel profil de combattant ou d'aventurier. De plus, choisir une caractéristique : dé bonus à ses tests." }
     ]}
   ]
 };

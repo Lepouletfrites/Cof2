@@ -128,10 +128,10 @@ COF.PRESTIGE.toucheatout = {
   id: 'toucheatout', nom: 'Voie du touche à tout', fam: 'aventurier',
   desc: "La polyvalence ultime : une liberté totale dans le choix des capacités.",
   caps: [
-    { r: 4, n: "Domaine de l'aventure", choix: true, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie d'aventurier." },
-    { r: 5, n: 'Domaine de la guerre', choix: true, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie de combattant." },
-    { r: 6, n: 'Domaine du mystique', choix: true, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie de mystique. Un sort reste lançable même avec une caractéristique de magie à +0." },
-    { r: 7, n: 'Domaine de la magie', choix: true, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie de mage. Un sort reste lançable même avec une caractéristique de magie à +0." },
+    { r: 4, n: "Domaine de l'aventure", choix: true, choixVoie: { familles: ['aventurier'], rangMax: 2 }, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie d'aventurier." },
+    { r: 5, n: 'Domaine de la guerre', choix: true, choixVoie: { familles: ['combattant'], rangMax: 2 }, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie de combattant." },
+    { r: 6, n: 'Domaine du mystique', choix: true, choixVoie: { familles: ['mystique'], rangMax: 2 }, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie de mystique. Un sort reste lançable même avec une caractéristique de magie à +0." },
+    { r: 7, n: 'Domaine de la magie', choix: true, choixVoie: { familles: ['mage'], rangMax: 2 }, d: "Choisir une capacité de rang 1 ou 2 issue d'une voie de mage. Un sort reste lançable même avec une caractéristique de magie à +0." },
     { r: 8, n: 'Ultra polyvalent', d: "+1 aux deux caractéristiques les plus faibles (au choix en cas d'égalité)." }
   ]
 };

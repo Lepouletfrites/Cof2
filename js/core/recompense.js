@@ -74,7 +74,8 @@ COF.Recompense = (function () {
       var pool = COF.ARMES_CONTACT.concat(COF.ARMES_DISTANCE).filter(function (a) { return a.id !== 'mainsnues'; });
       var arme = piocher(pool);
       var suffixe = item.nom.replace(/^Arme\s*/, '');
-      return { tier: item.tier, nom: arme.nom + ' ' + suffixe, desc: item.desc, dm: arme.dm };
+      var armeType = COF.ARMES_DISTANCE.indexOf(arme) >= 0 ? 'distance' : 'contact';
+      return { tier: item.tier, nom: arme.nom + ' ' + suffixe, desc: item.desc, dm: arme.dm, armeType: armeType };
     }
     if (item.armure) {
       var armure = piocher(COF.ARMURES.filter(function (a) { return a.id !== 'aucune'; }));

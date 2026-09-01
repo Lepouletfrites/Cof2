@@ -44,6 +44,7 @@ COF.UI.Fiche = (function () {
     h += blocCompagnons();
     h += blocCompetences();
     h += blocEquipement(pr);
+    h += blocObjets();
     h += blocAjustements();
     h += blocNotes();
     n.innerHTML = h;
@@ -339,15 +340,28 @@ COF.UI.Fiche = (function () {
         return '<div class="champ"><label>' + m + '</label><input type="number" data-act="bourse" data-m="' + m + '" value="' + (C.bourse[m] || 0) + '"></div>';
       }).join('') + '</div>';
 
-    h += '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--or);margin:6px 0">Inventaire' +
-      '<span class="h2-action" style="float:right" data-act="inv-ajout">+ Objet</span></div>';
-    if (!C.inventaire.length) h += '<div class="note">Sac vide. ' + esc(COF.SAC_DEPART) + '</div>';
-    C.inventaire.forEach(function (o, i) {
-      h += '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) +
-        (o.qte > 1 ? ' ×' + o.qte : '') + '</div>' +
-        (o.note ? '<div class="s">' + esc(o.note) + '</div>' : '') + '</div>' +
-        '<div class="actions"><button class="btn btn-sm" data-act="inv-suppr" data-i="' + i + '">✕</button></div></div>';
-    });
+    h += '</div></div>';
+    return h;
+  }
+
+  /* ---------------- Objets ---------------- */
+  function blocObjets() {
+    var h = '<div class="carte"><h2>Objets<span class="h2-action" data-act="inv-ajout">+ Objet</span></h2><div class="carte-corps">';
+    if (!C.inventaire.length) {
+      h += '<div class="vide">Sac vide. ' + esc(COF.SAC_DEPART) + '</div>';
+    } else {
+      C.inventaire.forEach(function (o, i) {
+        h += '<div class="ligne"><div class="info"><div class="t">' + esc(o.nom) +
+          (o.qte > 1 ? ' ×' + o.qte : '') +
+          (o.prix ? ' <span class="puce">' + o.prix + ' po</span>' : '') +
+          (o.dmg ? ' <span class="puce puce-rang">' + esc(o.dmg) + ' DM</span>' : '') +
+          (o.def ? ' <span class="puce puce-rang">+' + o.def + ' DEF</span>' : '') + '</div>' +
+          ((o.note || o.desc) ? '<div class="s">' + esc(o.note || o.desc) + '</div>' : '') + '</div>' +
+          '<div class="actions">' +
+          (o.dmg ? '<button class="btn btn-or btn-sm" data-act="obj-attaquer" data-i="' + i + '">Attaquer</button>' : '') +
+          '<button class="btn btn-sm" data-act="inv-suppr" data-i="' + i + '">✕</button></div></div>';
+      });
+    }
     h += '</div></div>';
     return h;
   }
@@ -513,6 +527,18 @@ COF.UI.Fiche = (function () {
         break;
       }
       case 'inv-suppr': C.inventaire.splice(+i, 1); sauver(); rendre(); break;
+
+      case 'obj-attaquer': {
+        var oi = C.inventaire[+i];
+        if (!oi || !oi.dmg) break;
+        var aa2 = K.attaques(C);
+        var att2 = oi.armeType === 'distance' ? aa2.distance : aa2.contact;
+        COF.UI.jet({
+          titre: oi.nom, sousTitre: (oi.armeType === 'distance' ? 'Attaque à distance' : 'Attaque au contact') +
+            ' · DM ' + oi.dmg, mod: att2, dmg: oi.dmg, dmgLabel: 'Dommages', ctx: K.ctx(C), type: 'attaque'
+        });
+        break;
+      }
 
       case 'comp-ajouter': {
         var tid = node.getAttribute('data-t');

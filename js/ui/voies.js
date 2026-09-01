@@ -300,12 +300,17 @@ COF.UI.Voies = (function () {
 
   function capacitesEligiblesVoie(cfg) {
     var out = [];
+    var familles = cfg.memeFamille ? [(COF.PROFILS[C.profil] || {}).famille] : cfg.familles;
+    var rangMin = cfg.rangMin || 1;
     Object.keys(COF.PROFILS).forEach(function (pid) {
       var pr = COF.PROFILS[pid];
-      if (cfg.familles && cfg.familles.indexOf(pr.famille) < 0) return;
+      if (familles && familles.indexOf(pr.famille) < 0) return;
+      if (cfg.profils && cfg.profils.indexOf(pid) < 0) return;
       (pr.voies || []).forEach(function (v) {
         v.caps.forEach(function (c) {
-          if (c.r <= cfg.rangMax) out.push({ profil: pid, profilNom: pr.nom, voie: v.id, voieNom: v.nom, cap: c });
+          if (c.r < rangMin || c.r > cfg.rangMax) return;
+          if (cfg.sorts && !c.s) return;
+          out.push({ profil: pid, profilNom: pr.nom, voie: v.id, voieNom: v.nom, cap: c });
         });
       });
     });
