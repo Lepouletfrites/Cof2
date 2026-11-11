@@ -29,43 +29,88 @@ COF.UI = COF.UI || {};
 
   COF.UI.$ = $; COF.UI.$$ = $$; COF.UI.el = el; COF.UI.sgn = sgn; COF.UI.esc = esc;
 
-  /* ---------- Navigation par onglets ---------- */
-  var VUES = ['persos', 'fiche', 'arene', 'bestiaire', 'generateurs', 'des', 'plus'];
+  /* ---------- Navigation : 5 pôles et leurs sous-onglets ----------
+     Héros    : tout ce qui concerne le personnage joué
+     Combat   : préparer (rencontre), consulter (bestiaire), jouer (arène)
+     Trésors  : butin, objets magiques, catalogue du Compagnon, objet prestigieux
+     Aventure : outils du MJ pour le récit et le monde
+     Outils   : dés libres et aide-mémoire des règles
+     Chaque sous-onglet indique la section HTML qui l'affiche (« vue »). Les
+     générateurs partagent la section #vue-generateurs.                    */
+  var VUES = ['persos', 'fiche', 'artisanat', 'arene', 'bestiaire', 'generateurs', 'des', 'plus'];
 
-  /* Voies est un sous-onglet de Fiche, pas une vue de premier niveau */
-  var sousFiche = 'fiche'; // 'fiche' | 'voies' | 'objets'
+  var POLES = [
+    { id: 'heros', subs: [
+      ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'],
+      ['artisanat', '⚒️ Artisanat', 'artisanat'], ['persos', '👥 Personnages', 'persos']] },
+    { id: 'combat', subs: [
+      ['arene', '⚔️ Arène', 'arene'], ['rencontre', '🎯 Rencontre', 'generateurs'], ['bestiaire', '🐉 Bestiaire', 'bestiaire']] },
+    { id: 'tresors', subs: [
+      ['butin', '💰 Butin', 'generateurs'], ['objmagie', '🪄 Objets magiques', 'generateurs'],
+      ['catalogue', '📚 Catalogue du Compagnon', 'generateurs'], ['objprestige', '👑 Objet prestigieux', 'generateurs']] },
+    { id: 'aventure', subs: [
+      ['oracle', '🔮 Oracle', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'],
+      ['intrigue', '🎭 Intrigue', 'generateurs'], ['lieux', '🏘️ Lieux', 'generateurs'], ['voyage', '🧭 Voyage', 'generateurs'],
+      ['donjon', '🗝️ Donjon', 'generateurs'], ['solo', '🕰️ Vie & temps', 'generateurs']] },
+    { id: 'outils', subs: [
+      ['des', '🎲 Dés', 'des'], ['regles', '📖 Règles', 'plus']] }
+  ];
+  var SUBS = {};
+  POLES.forEach(function (p) {
+    p.subs.forEach(function (s) { SUBS[s[0]] = { id: s[0], nom: s[1], vue: s[2], pole: p.id }; });
+  });
+  /* Anciens noms de vues, encore utilisés par certains liens. */
+  var ALIAS = { generateurs: 'rencontre', plus: 'regles' };
+  var dernierSous = { heros: 'fiche', combat: 'arene', tresors: 'butin', aventure: 'oracle', outils: 'des' };
 
   function rendreFicheOnglets() {
-    var chipFiche = $('#fonglet-fiche'), chipVoies = $('#fonglet-voies'), chipObjets = $('#fonglet-objets');
-    if (chipFiche) chipFiche.classList.toggle('on', sousFiche === 'fiche');
-    if (chipVoies) chipVoies.classList.toggle('on', sousFiche === 'voies');
-    if (chipObjets) chipObjets.classList.toggle('on', sousFiche === 'objets');
     var corps = $('#vue-fiche-corps'), voies = $('#vue-voies'), objets = $('#vue-objets');
-    if (corps) corps.style.display = sousFiche === 'fiche' ? '' : 'none';
-    if (voies) voies.style.display = sousFiche === 'voies' ? '' : 'none';
-    if (objets) objets.style.display = sousFiche === 'objets' ? '' : 'none';
-    if (sousFiche === 'voies') COF.UI.Voies.rendre();
-    else if (sousFiche === 'objets') COF.UI.Objets.rendre();
+    var s = dernierSous.heros;
+    if (corps) corps.style.display = s === 'fiche' ? '' : 'none';
+    if (voies) voies.style.display = s === 'voies' ? '' : 'none';
+    if (objets) objets.style.display = s === 'objets' ? '' : 'none';
+    if (s === 'voies') COF.UI.Voies.rendre();
+    else if (s === 'objets') COF.UI.Objets.rendre();
     else COF.UI.Fiche.rendre();
   }
   COF.UI.rendreFicheOnglets = rendreFicheOnglets;
 
-  function aller(vue) {
-    if (vue === 'voies') { sousFiche = 'voies'; vue = 'fiche'; }
-    else if (vue === 'objets') { sousFiche = 'objets'; vue = 'fiche'; }
-    else if (vue === 'fiche') { sousFiche = 'fiche'; }
+  function rendreSousNav(pole) {
+    var p = POLES.filter(function (x) { return x.id === pole; })[0];
+    var n = $('#sous-nav');
+    n.innerHTML = p.subs.map(function (s) {
+      return '<button data-sousnav="' + s[0] + '" class="' + (dernierSous[pole] === s[0] ? 'on' : '') + '">' + esc(s[1]) + '</button>';
+    }).join('');
+    var actif = n.querySelector('.on');
+    if (actif && actif.scrollIntoView) actif.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  /* aller(id) : id d'un pôle (rouvre son dernier sous-onglet), d'un
+     sous-onglet, ou ancien nom de vue. */
+  function aller(cible) {
+    cible = ALIAS[cible] || cible;
+    if (dernierSous[cible] && !SUBS[cible]) cible = dernierSous[cible];
+    var sub = SUBS[cible] || SUBS.fiche;
+    dernierSous[sub.pole] = sub.id;
+
     VUES.forEach(function (v) {
-      var n = $('#vue-' + v); if (n) n.classList.toggle('actif', v === vue);
-      var b = $('#nav-' + v); if (b) b.classList.toggle('actif', v === vue);
+      var n = $('#vue-' + v); if (n) n.classList.toggle('actif', v === sub.vue);
     });
+    POLES.forEach(function (p) {
+      var b = $('#nav-' + p.id); if (b) b.classList.toggle('actif', p.id === sub.pole);
+    });
+    rendreSousNav(sub.pole);
     window.scrollTo(0, 0);
-    COF.UI.vueActive = vue;
-    if (vue === 'fiche') rendreFicheOnglets();
-    if (vue === 'arene') COF.UI.Arene.rendre($('#vue-arene'));
-    if (vue === 'persos') COF.UI.Persos.rendre();
-    if (vue === 'bestiaire') COF.UI.Bestiaire.rendre();
-    if (vue === 'generateurs') COF.UI.Generateurs.rendre();
-    if (vue === 'des') COF.UI.rendreJournal();
+    COF.UI.vueActive = sub.vue;
+    COF.UI.sousActif = sub.id;
+
+    if (sub.vue === 'fiche') rendreFicheOnglets();
+    else if (sub.vue === 'arene') COF.UI.Arene.rendre($('#vue-arene'));
+    else if (sub.vue === 'persos') COF.UI.Persos.rendre();
+    else if (sub.vue === 'artisanat') COF.UI.Artisanat.rendre();
+    else if (sub.vue === 'bestiaire') COF.UI.Bestiaire.rendre();
+    else if (sub.vue === 'generateurs') COF.UI.Generateurs.afficher(sub.id);
+    else if (sub.vue === 'des') COF.UI.rendreJournal();
     majTitre();
   }
   COF.UI.aller = aller;
@@ -491,25 +536,24 @@ COF.UI = COF.UI || {};
 
   /* ---------- Démarrage ---------- */
   function init() {
-    VUES.forEach(function (v) {
-      var b = $('#nav-' + v);
-      if (b) b.addEventListener('click', function () { aller(v); });
+    POLES.forEach(function (p) {
+      var b = $('#nav-' + p.id);
+      if (b) b.addEventListener('click', function () { aller(p.id); });
     });
     $('#modale-fermer').addEventListener('click', fermerModale);
     $('#modale').addEventListener('click', function (e) {
       if (e.target.id === 'modale') fermerModale();
     });
-    document.addEventListener('click', function (e) {
-      var t = e.target.closest ? e.target.closest('[data-fonglet]') : null;
-      if (!t) return;
-      sousFiche = t.getAttribute('data-fonglet');
-      rendreFicheOnglets();
+    $('#sous-nav').addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-sousnav]') : null;
+      if (t) aller(t.getAttribute('data-sousnav'));
     });
 
     COF.UI.Persos.init();
     COF.UI.Fiche.init();
     COF.UI.Voies.init();
     COF.UI.Objets.init();
+    COF.UI.Artisanat.init();
     COF.UI.Arene.init();
     COF.UI.Bestiaire.init();
     COF.UI.Generateurs.init();

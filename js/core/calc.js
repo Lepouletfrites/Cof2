@@ -100,6 +100,9 @@ COF.Calc = (function () {
       var pe = COF.PEUPLES[parts[1]];
       return pe && pe.voie ? pe.voie : null;
     }
+    if (parts[0] === 'artisan') {
+      return (COF.ARTISAN_VOIES || []).filter(function (v) { return v.id === parts[1]; })[0] || null;
+    }
     if (parts[0] === 'domaine') {
       return (COF.DOMAINES && COF.DOMAINES[parts[1]]) || null;
     }
@@ -124,7 +127,9 @@ COF.Calc = (function () {
   }
 
   function estPrestige(key) { return key.indexOf('prestige.') === 0; }
-  function estHistorique(key) { return key.indexOf('historique.') === 0; }
+  /* Voies d'historique (Atlas) et voies d'artisan (Compagnon) : 1 point par
+     rang, sans niveau requis, hors limite des six voies. */
+  function estHistorique(key) { return key.indexOf('historique.') === 0 || key.indexOf('artisan.') === 0; }
 
   /* Rangs disponibles dans une voie (1-5, ou 4-8 / 3-7 en prestige) */
   function rangsDe(voie) {

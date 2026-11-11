@@ -111,6 +111,9 @@ COF.UI.Voies = (function () {
     /* ---- Voies d'historique (repliée) ---- */
     h += blocHistorique();
 
+    /* ---- Voies d'artisan (repliée) ---- */
+    h += blocArtisan();
+
     n.innerHTML = h;
 
     $$('.voie', n).forEach(function (el, i) { if (ouvVoies[i] !== undefined) el.classList.toggle('ouvert', ouvVoies[i]); });
@@ -282,6 +285,20 @@ COF.UI.Voies = (function () {
       h += voieHTML(v, key);
     });
 
+    h += '</div></div>';
+    return h;
+  }
+
+  /* ---------------- Voies d'artisan (Compagnon du joueur) ---------------- */
+  function blocArtisan() {
+    if (!COF.ARTISAN_VOIES) return '';
+    var nb = (C.voies || []).filter(function (v) { return v.key.indexOf('artisan.') === 0; }).length;
+    var h = '<div class="carte pliable ' + (nb ? '' : 'ferme') + '">' +
+      "<h2>Voies d'artisan" + (nb ? ' (' + nb + ')' : '') + '</h2><div class="carte-corps">';
+    h += '<div class="note" style="margin-bottom:10px">Compagnon du joueur : <b>1 point de capacité par rang</b>, sans niveau requis, ' +
+      'même au-delà des six voies. Chaque rang donne 3 rangs de voies de recettes, à répartir dans ' +
+      '<a href="#" onclick="COF.UI.aller(\'artisanat\');return false">⚒️ Artisanat</a>.</div>';
+    COF.ARTISAN_VOIES.forEach(function (v) { h += voieHTML(v, 'artisan.' + v.id); });
     h += '</div></div>';
     return h;
   }

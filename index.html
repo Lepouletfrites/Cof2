@@ -16,34 +16,46 @@
 </head>
 <body>
 
+<!-- En-tête : personnage actif + sous-onglets du pôle courant -->
 <header class="topbar">
-  <div style="flex:1;min-width:0">
-    <h1 id="titre">COF2 Compagnon</h1>
-    <div class="sub" id="sous-titre">Chargement…</div>
+  <div class="topbar-ligne">
+    <div style="flex:1;min-width:0">
+      <h1 id="titre">COF2 Compagnon</h1>
+      <div class="sub" id="sous-titre">Chargement…</div>
+    </div>
+    <button class="topbar-btn" onclick="COF.UI.aller('persos')" title="Changer de personnage">👥 Persos</button>
   </div>
-  <button class="topbar-btn" onclick="COF.UI.aller('persos')">Persos</button>
+  <nav class="sous-nav" id="sous-nav"></nav>
 </header>
 
-<!-- ============ PERSONNAGES ============ -->
+<!-- ============ PERSONNAGES (pôle Héros) ============ -->
 <section class="view" id="vue-persos">
   <div class="carte">
     <h2>Mes personnages</h2>
     <div id="liste-pj"></div>
   </div>
   <button class="btn btn-plein btn-bloc" id="btn-nouveau">+ Créer un personnage</button>
+  <div class="carte" style="margin-top:12px">
+    <h2>Sauvegarde</h2>
+    <div class="carte-corps">
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1" id="btn-export">Exporter le perso actif</button>
+        <button class="btn" style="flex:1" id="btn-import">Importer</button>
+      </div>
+      <div class="note" style="margin-top:10px">Les personnages sont enregistrés dans le navigateur de cet appareil.</div>
+    </div>
+  </div>
 </section>
 
-<!-- ============ FICHE (avec sous-onglet Voies) ============ -->
+<!-- ============ FICHE / VOIES / INVENTAIRE (pôle Héros) ============ -->
 <section class="view" id="vue-fiche">
-  <div class="carte"><div class="carte-corps" style="padding-bottom:2px"><div class="chips">
-    <span class="chip" id="fonglet-fiche" data-fonglet="fiche">🛡️ Fiche</span>
-    <span class="chip" id="fonglet-voies" data-fonglet="voies">📜 Voies</span>
-    <span class="chip" id="fonglet-objets" data-fonglet="objets">🎒 Objets</span>
-  </div></div></div>
   <div id="vue-fiche-corps"></div>
   <div id="vue-voies"></div>
   <div id="vue-objets"></div>
 </section>
+
+<!-- ============ ARTISANAT (pôle Héros) ============ -->
+<section class="view" id="vue-artisanat"></section>
 
 <!-- ============ ARÈNE ============ -->
 <section class="view" id="vue-arene"></section>
@@ -86,19 +98,9 @@
   </div>
 </section>
 
-<!-- ============ PLUS ============ -->
+<!-- ============ RÈGLES (pôle Outils) ============ -->
 <section class="view" id="vue-plus">
   <div id="plus-contenu"></div>
-  <div class="carte">
-    <h2>Sauvegarde</h2>
-    <div class="carte-corps">
-      <div style="display:flex;gap:8px">
-        <button class="btn" style="flex:1" id="btn-export">Exporter</button>
-        <button class="btn" style="flex:1" id="btn-import">Importer</button>
-      </div>
-      <div class="note" style="margin-top:10px">Les personnages sont enregistrés dans le navigateur de cet appareil.</div>
-    </div>
-  </div>
   <div class="note" style="text-align:center;padding:10px 4px 20px;font-size:11.5px">
     Outil personnel non officiel pour <b>Chroniques Oubliées Fantasy 2</b>.<br>
     COF2 est une création de Black Book Éditions.
@@ -107,12 +109,11 @@
 
 <!-- ============ NAVIGATION ============ -->
 <nav class="nav">
-  <button id="nav-fiche"><span class="ic">🛡️</span><span class="tx">Fiche</span></button>
-  <button id="nav-arene"><span class="ic">⚔️</span><span class="tx">Arène</span></button>
-  <button id="nav-des"><span class="ic">🎲</span><span class="tx">Dés</span></button>
-  <button id="nav-bestiaire"><span class="ic">🐉</span><span class="tx">Bestiaire</span></button>
-  <button id="nav-generateurs"><span class="ic">⚗️</span><span class="tx">Généra.</span></button>
-  <button id="nav-plus"><span class="ic">☰</span><span class="tx">Plus</span></button>
+  <button id="nav-heros"><span class="ic">🛡️</span><span class="tx">Héros</span></button>
+  <button id="nav-combat"><span class="ic">⚔️</span><span class="tx">Combat</span></button>
+  <button id="nav-tresors"><span class="ic">💰</span><span class="tx">Trésors</span></button>
+  <button id="nav-aventure"><span class="ic">🗺️</span><span class="tx">Aventure</span></button>
+  <button id="nav-outils"><span class="ic">🎲</span><span class="tx">Dés & règles</span></button>
 </nav>
 
 <!-- ============ MODALE ============ -->
@@ -163,6 +164,7 @@
 <script src="js/data/objets-magiques.js"></script>
 <script src="js/data/armes-recettes.js"></script>
 <script src="js/data/catalogue-compagnon.js"></script>
+<script src="js/data/artisanat.js"></script>
 <script src="js/data/objet-prestigieux.js"></script>
 <script src="js/data/intrigue.js"></script>
 <script src="js/data/solo.js"></script>
@@ -182,6 +184,7 @@
 <script src="js/core/donjon.js"></script>
 <script src="js/core/objets-magiques.js"></script>
 <script src="js/core/arme-magique.js"></script>
+<script src="js/core/artisanat.js"></script>
 <script src="js/core/objet-prestigieux.js"></script>
 <script src="js/core/intrigue.js"></script>
 <script src="js/core/solo.js"></script>
@@ -205,6 +208,7 @@
 <script src="js/ui/objets-magiques.js"></script>
 <script src="js/ui/arme-magique.js"></script>
 <script src="js/ui/catalogue.js"></script>
+<script src="js/ui/artisanat.js"></script>
 <script src="js/ui/objet-prestigieux.js"></script>
 <script src="js/ui/intrigue.js"></script>
 <script src="js/ui/solo.js"></script>

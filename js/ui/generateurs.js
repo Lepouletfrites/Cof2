@@ -41,24 +41,10 @@ COF.UI.Generateurs = (function () {
 
   /* ---------- Rendu ---------- */
   function rendre() {
+    /* Les sous-onglets sont affichés par la barre de navigation commune
+       (COF.UI.aller) : cette section ne fait qu'afficher l'outil choisi. */
     var n = $('#vue-generateurs');
-    var h = '<div class="carte"><div class="carte-corps" style="padding-bottom:2px"><div class="chips">' +
-      '<span class="chip ' + (SOUS === 'rencontre' ? 'on' : '') + '" data-gact="sous" data-v="rencontre">⚔️ Rencontre</span>' +
-      '<span class="chip ' + (SOUS === 'butin' ? 'on' : '') + '" data-gact="sous" data-v="butin">💰 Butin</span>' +
-      '<span class="chip ' + (SOUS === 'pnj' ? 'on' : '') + '" data-gact="sous" data-v="pnj">👤 PNJ</span>' +
-      '<span class="chip ' + (SOUS === 'oracle' ? 'on' : '') + '" data-gact="sous" data-v="oracle">🔮 Oracle</span>' +
-      '<span class="chip ' + (SOUS === 'lieux' ? 'on' : '') + '" data-gact="sous" data-v="lieux">🏘️ Lieux</span>' +
-      '<span class="chip ' + (SOUS === 'quetes' ? 'on' : '') + '" data-gact="sous" data-v="quetes">📜 Quêtes</span>' +
-      '<span class="chip ' + (SOUS === 'voyage' ? 'on' : '') + '" data-gact="sous" data-v="voyage">🧭 Voyage</span>' +
-      '<span class="chip ' + (SOUS === 'donjon' ? 'on' : '') + '" data-gact="sous" data-v="donjon">🗝️ Donjon</span>' +
-      '<span class="chip ' + (SOUS === 'objmagie' ? 'on' : '') + '" data-gact="sous" data-v="objmagie">🪄 Objets magiques</span>' +
-      '<span class="chip ' + (SOUS === 'catalogue' ? 'on' : '') + '" data-gact="sous" data-v="catalogue">📚 Catalogue du Compagnon</span>' +
-      '<span class="chip ' + (SOUS === 'objprestige' ? 'on' : '') + '" data-gact="sous" data-v="objprestige">👑 Objet prestigieux</span>' +
-      '<span class="chip ' + (SOUS === 'intrigue' ? 'on' : '') + '" data-gact="sous" data-v="intrigue">🎭 Intrigue</span>' +
-      '<span class="chip ' + (SOUS === 'solo' ? 'on' : '') + '" data-gact="sous" data-v="solo">🕰️ Vie & temps</span>' +
-      '</div></div></div>';
-    h += '<div id="gen-corps"></div>';
-    n.innerHTML = h;
+    n.innerHTML = '<div id="gen-corps"></div>';
 
     if (SOUS === 'pnj') { COF.UI.Pnj.rendre($('#gen-corps')); return; }
     if (SOUS === 'butin') { COF.UI.Butin.rendre($('#gen-corps')); return; }
@@ -220,7 +206,7 @@ COF.UI.Generateurs = (function () {
   /* ---------- Actions ---------- */
   function actions(act, node) {
     switch (act) {
-      case 'sous': SOUS = node.getAttribute('data-v'); rendre(); break;
+      case 'sous': COF.UI.aller(node.getAttribute('data-v')); break;
       case 'env': P.env = node.getAttribute('data-v'); resultat = null; rendre(); break;
       case 'diff': P.difficulte = node.getAttribute('data-v'); rendre(); break;
       case 'style': P.style = node.getAttribute('data-v'); rendre(); break;
@@ -252,13 +238,14 @@ COF.UI.Generateurs = (function () {
       case 'init': if (resultat) ordreInitiative(resultat); break;
       case 'butin': {
         if (!resultat) break;
-        SOUS = 'butin';
         COF.UI.Butin.depuisRencontre();
-        rendre();
+        COF.UI.aller('butin');   // le butin vit dans le pôle Trésors
         break;
       }
     }
   }
 
-  return { init: init, rendre: rendre, dernierResultat: dernierResultat };
+  function afficher(id) { SOUS = id; rendre(); }
+
+  return { init: init, rendre: rendre, afficher: afficher, dernierResultat: dernierResultat };
 })();

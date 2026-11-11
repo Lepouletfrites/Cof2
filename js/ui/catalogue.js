@@ -60,6 +60,7 @@ COF.UI.Catalogue = (function () {
       var t = e.target.closest ? e.target.closest('[data-catact]') : null;
       if (!t || !t.closest('#cat-compagnon')) return;
       var act = t.getAttribute('data-catact'), k = t.getAttribute('data-k');
+      if (act === 'fabriquer') { COF.UI.Artisanat.fabriquerObjet(k); return; }
       if (act === 'groupe') { etat.groupe = t.getAttribute('data-v'); etat.tire = null; }
       else if (act === 'ouvrir') { etat.ouvert[k] = !etat.ouvert[k]; }
       else if (act === 'hasard') {
@@ -108,7 +109,8 @@ COF.UI.Catalogue = (function () {
     }
     h += '</div>';
     if (o.t !== 'propriété') {
-      h += '<div class="actions">' + (perso
+      h += '<div class="actions">' +
+        (perso ? '<button class="btn btn-sm" data-catact="fabriquer" data-k="' + esc(k) + '" title="Fabriquer (Artisanat)">⚒️</button>' : '') + (perso
         ? '<button class="btn btn-sm" data-catact="ajouter" data-k="' + esc(k) + '" title="Ajouter à ' + esc(perso.nom) + '">' +
           (etat.ajoutes[k] ? '✓' + (etat.ajoutes[k] > 1 ? '×' + etat.ajoutes[k] : '') : '📥') + '</button>'
         : '') + '</div>';
@@ -162,5 +164,5 @@ COF.UI.Catalogue = (function () {
     node.innerHTML = h;
   }
 
-  return { init: init, rendre: rendre };
+  return { init: init, rendre: rendre, versItem: versItem };
 })();
