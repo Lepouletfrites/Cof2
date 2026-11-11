@@ -80,11 +80,103 @@ COF.UI.Arene = (function () {
       nom: d.nom, def: d.def,
       appliquer: function (degats) {
         ajusterPv(t, -degats);
-        rafraichirListe();
         var d2 = donnees(t);
+        noterCombat(d2.nom + ' subit ' + degats + ' DM (' + d2.pv + '/' + d2.pvMax + ' PV)' + (d2.pv <= 0 ? ' — à terre !' : '') + '.');
+        rafraichirListe();
         return d2.pv + ' / ' + d2.pvMax + ' PV';
       }
     };
+  }
+
+  /* ---------- Journal du combat (versé dans le récit du Carnet) ----------
+     Les lignes s'accumulent et sont écrites dans la scène en cours à
+     chaque fin de tour, d'enchaînement automatique ou de combat. */
+  var journalCombat = [];
+  function combatAventure() { var c = COF.Carnet && COF.Carnet.actif(); return c && c.combat ? c : null; }
+  function noterCombat(l) { if (combatAventure()) journalCombat.push(l); }
+  function verserJournal() {
+    var c = combatAventure();
+    if (!c || !journalCombat.length) { journalCombat = []; return; }
+    COF.Carnet.ajouterEntree(c, { t: 'note', titre: 'Combat · round ' + s.round, txt: journalCombat.join('\n') });
+    journalCombat = [];
+  }
+
+  /* ---------- Tours automatiques ---------- */
+  function ctxCreature(cb) {
+    var n = Math.floor(cb.nc) || 1;
+    return { carac: {}, niveau: n, deEvo: COF.deEvolutif(n) };
+  }
+  /* Joue le tour d'une créature (ennemie ou alliée) sans fenêtre : jet
+     d'attaque contre la DEF de la cible, DM appliqués en cas de succès. */
+  function jouerAuto(cb) {
+    var dec = COF.Arene.decider(s, cb, donnees);
+    if (dec.type === 'fuite' && cb.x !== undefined) {
+      var menace = s.combattants.filter(function (x) { return COF.Arene.camp(x) !== COF.Arene.camp(cb) && x.x !== undefined; })[0];
+      if (menace) COF.Arene.eloigner(s, cb, menace);
+    }
+    if (dec.type !== 'att' && dec.type !== 'cap') return '🤖 ' + dec.texte;
+    var att = dec.type === 'att' ? cb.att[dec.i]
+      : { n: cb.caps[dec.i].n, mod: (cb.att && cb.att[0]) ? cb.att[0].mod : (Math.floor(cb.nc) || 0), dmg: cb.caps[dec.i].dmg, portee: 20 };
+    var ci = construireInfosCible(dec.cible);
+    if (!ci) return '🤖 ' + dec.texte;
+    /* Distance : s'approcher jusqu'au contact ou à portée avant de frapper. */
+    var depl = '';
+    if (cb.x !== undefined && dec.cible.x !== undefined) {
+      var pc = COF.Arene.porteeCases(att);
+      if (COF.Arene.cases(cb, dec.cible) > pc) {
+        var n = COF.Arene.approcher(s, cb, dec.cible, pc);
+        if (n) depl = ' (s’approche de ' + n * COF.Arene.GRILLE.m + ' m)';
+        if (COF.Arene.cases(cb, dec.cible) > pc) {
+          var lm = (cb.allie ? '🤝 ' : '🐉 ') + cb.nom + ' avance vers ' + ci.nom + depl + ' — encore à ' + COF.Arene.distance(cb, dec.cible) + ' m.';
+          noterCombat(lm);
+          return lm;
+        }
+      }
+    }
+    var t = COF.Dice.test({ mod: att.mod || 0, difficulte: ci.def });
+    var l = (cb.allie ? '🤝 ' : '🐉 ') + cb.nom + depl + ' → ' + ci.nom + ' (' + att.n + ') : ' + t.garde + ' ' + COF.UI.sgn(att.mod || 0) + ' = ' + t.total + ' contre DEF ' + ci.def;
+    if (t.reussite && att.dmg) {
+      var dm = COF.Dice.dommages(att.dmg, ctxCreature(cb), { crit: t.crit });
+      l += ' → ' + (t.crit ? 'critique ! ' : 'touché, ') + dm.total + ' DM';
+      journalCombat.push(l);
+      ci.appliquer(dm.total);
+      return l;
+    }
+    l += t.fumble ? ' → échec critique' : ' → raté';
+    noterCombat(l);
+    return l;
+  }
+  function campVivant(camp) {
+    return s.combattants.some(function (cb) {
+      return COF.Arene.camp(cb) === camp && donnees(cb).vivant && donnees(cb).pv > 0 && !cb.moral;
+    });
+  }
+  /* Enchaîne les tours des créatures et alliés jusqu'au prochain PJ debout. */
+  function jusquaMoi() {
+    if (!s.combattants.length) return;
+    var lignes = [], garde = 0, debutRound = s.round;
+    while (garde++ < 60) {
+      var cur = s.combattants[s.tour];
+      if (!cur) break;
+      if (cur.type === 'pj') { if (donnees(cur).pv > 0 && garde > 1) break; if (donnees(cur).pv > 0 && garde === 1) break; }
+      else if (donnees(cur).pv > 0 && !cur.moral) {
+        var avant = journalCombat.length;
+        var l = jouerAuto(cur);
+        if (journalCombat.length === avant) journalCombat.push(l);
+        lignes.push(l);
+      }
+      if (!campVivant('heros') || !campVivant('monstres')) { COF.Arene.tourSuivant(s); break; }
+      COF.Arene.tourSuivant(s);
+    }
+    COF.Arene.ecrire(s);
+    verserJournal();
+    rafraichirListe();
+    var actif = s.combattants[s.tour], fin = !campVivant('monstres') ? '🏆 Plus aucun adversaire debout.' : (!campVivant('heros') ? '💀 Le héros et ses alliés sont à terre.' : '');
+    COF.UI.ouvrirModale('⏩ Round ' + debutRound + (s.round !== debutRound ? ' → ' + s.round : ''),
+      (lignes.length ? lignes.map(function (x) { return '<div class="cn-lu">' + esc(x) + '</div>'; }).join('') : '<div class="note">' + esc(actif ? 'C’est déjà au tour de ' + actif.nom + '.' : '') + '</div>') +
+      (fin ? '<div class="resultat"><div class="verdict" style="font-size:17px">' + fin + '</div></div>' : '') +
+      (actif && !fin ? '<div class="note" style="margin-top:10px">À vous : <b>' + esc(actif.nom) + '</b> agit.</div>' : '') +
+      (fin && COF.UI.Carnet && combatAventure() ? '<button class="btn btn-plein btn-bloc cn-banniere-btn" style="margin-top:10px" data-cn="fin-combat">🏁 Terminer le combat</button>' : ''));
   }
 
   /* Propose de désigner une cible parmi les autres combattants avant
@@ -98,8 +190,10 @@ COF.UI.Arene = (function () {
     } else {
       autres.forEach(function (t) {
         var d = donnees(t);
+        var att0 = trouver(attaquantId), dist0 = att0 ? COF.Arene.distance(att0, t) : null;
         h += '<div class="ligne"><div class="info"><div class="t">' + esc(d.nom) +
-          (!d.vivant ? ' <span class="puce">supprimé</span>' : '') + '</div>' +
+          (!d.vivant ? ' <span class="puce">supprimé</span>' : '') +
+          (dist0 !== null ? ' <span class="puce">' + (dist0 <= COF.Arene.GRILLE.m ? 'au contact' : dist0 + ' m') + '</span>' : '') + '</div>' +
           (d.vivant ? '<div class="s">DEF ' + d.def + ' · ' + d.pv + '/' + d.pvMax + ' PV</div>' : '') + '</div>' +
           '<div class="actions"><button class="btn btn-or btn-sm" ' + (d.vivant ? '' : 'disabled style="opacity:.5"') +
           ' data-aact="cible-choisie" data-tid="' + t.id + '">Cibler</button></div></div>';
@@ -117,7 +211,7 @@ COF.UI.Arene = (function () {
   }
 
   function htmlTete() {
-    var h = '';
+    var h = COF.UI.Carnet ? COF.UI.Carnet.banniereCombat() : '';
     h += '<div class="carte"><h2>Arène — combat en cours</h2><div class="carte-corps">';
     h += '<div class="stats" style="margin-bottom:10px">' +
       '<div class="stat"><div class="lbl">Round</div><div class="v">' + s.round + '</div></div>' +
@@ -127,7 +221,17 @@ COF.UI.Arene = (function () {
       '<button class="btn btn-or" style="flex:1" data-aact="tour-suivant">▶ Tour suivant</button>' +
       '<button class="btn" style="flex:1" data-aact="trier">🎲 Trier par initiative</button>' +
       '</div>';
+    var actifCb = s.combattants[s.tour];
+    if (s.combattants.some(function (x) { return x.type === 'creature'; })) {
+      h += '<button class="btn btn-plein btn-bloc" style="margin-bottom:8px" data-aact="jusqua-moi">⏩ Jouer jusqu’à mon tour</button>';
+    }
+    if (actifCb && actifCb.type === 'creature' && donnees(actifCb).pv > 0 && !actifCb.moral) {
+      h += '<button class="btn btn-bloc" style="margin-bottom:8px" data-aact="ia" data-id="' + actifCb.id + '">🤖 Jouer seulement le tour de ' +
+        esc(actifCb.nom) + (actifCb.allie ? ' (allié)' : '') + '</button>';
+    }
     h += '<button class="btn btn-bloc" data-aact="vider">🗑️ Vider l\'arène</button>';
+    h += '<div class="note" style="margin-top:8px">🤖 En solo, l’app joue les créatures et vos alliés : choix de la cible selon leur tempérament, ' +
+      'attaque, et test de moral quand elles sont blessées ou que leur chef tombe.</div>';
     h += '</div></div>';
 
     h += '<div class="carte"><h2>Ajouter des combattants</h2><div class="carte-corps">';
@@ -148,12 +252,51 @@ COF.UI.Arene = (function () {
     if (el) el.innerHTML = htmlTete();
   }
 
+  /* ---------- Carte du champ de bataille ---------- */
+  var selCarte = null, carteOuverte = true;
+  function sigle(cb) {
+    var m = String(cb.nom).match(/^(\S)\S*(?:.*?(\d+))?$/);
+    return (m ? m[1].toUpperCase() + (m[2] || '') : '?');
+  }
+  function htmlCarte() {
+    var G = COF.Arene.GRILLE;
+    COF.Arene.placer(s, s.distanceDepart);
+    var actif = s.combattants[s.tour], sel = selCarte ? trouver(selCarte) : null;
+    var h = '<div class="carte pliable' + (carteOuverte ? '' : ' ferme') + '"><h2 data-aact="carte-plier">🗺️ Champ de bataille <small style="text-transform:none;letter-spacing:0;color:var(--text-mute)">· case = ' + G.m + ' m</small></h2><div class="carte-corps">';
+    h += '<div class="ar-grille" style="grid-template-columns:repeat(' + G.l + ',1fr)">';
+    for (var y = 0; y < G.h; y++) for (var x = 0; x < G.l; x++) {
+      var cb = s.combattants.filter(function (c) { return c.x === x && c.y === y; })[0];
+      if (cb) {
+        var d = donnees(cb), cls = 'ar-pion ' + (cb.type === 'pj' ? 'pj' : (cb.allie ? 'allie' : 'ennemi')) +
+          (d.pv <= 0 ? ' ko' : '') + (cb.moral ? ' fuit' : '') + (cb === actif ? ' actif' : '') + (sel === cb ? ' sel' : '');
+        h += '<button class="' + cls + '" data-aact="carte-sel" data-id="' + cb.id + '" title="' + esc(cb.nom) + '">' + esc(sigle(cb)) + '</button>';
+      } else {
+        var dist = sel ? COF.Arene.distance(sel, { x: x, y: y }) : null;
+        h += '<button class="ar-case' + (sel && dist !== null && dist <= COF.Arene.GRILLE.pas * G.m ? ' portee' : '') + '" data-aact="carte-case" data-x="' + x + '" data-y="' + y + '"></button>';
+      }
+    }
+    h += '</div>';
+    if (sel) {
+      var autres = s.combattants.filter(function (c) { return c !== sel; }).map(function (c) {
+        var dm = COF.Arene.distance(sel, c);
+        return esc(c.nom) + ' ' + (dm <= G.m ? '<b>au contact</b>' : dm + ' m');
+      });
+      h += '<div class="note" style="margin-top:6px"><b>' + esc(sel.nom) + '</b> : ' + autres.join(' · ') +
+        '<br>Touchez une case pour le déplacer (cases claires : un mouvement ≈ 10 m).</div>';
+    } else {
+      h += '<div class="note" style="margin-top:6px">Touchez un pion pour voir les distances, puis une case pour le déplacer. ' +
+        '<span style="color:var(--or-clair)">■</span> héros <span style="color:#85bb7f">■</span> alliés <span style="color:var(--sang-clair)">■</span> adversaires.</div>';
+    }
+    return h + '</div></div>';
+  }
+
   function htmlListe() {
     if (!s.combattants.length) {
       return '<div class="carte"><div class="carte-corps"><div class="vide">' +
         'Aucun combattant. Importez une rencontre ou ajoutez-en un.</div></div></div>';
     }
-    var h = '';
+    var h = htmlCarte();
+    COF.Arene.ecrire(s);
     s.combattants.forEach(function (cb, i) {
       var d = donnees(cb);
       var pct = d.pvMax > 0 ? Math.max(0, Math.min(100, (d.pv / d.pvMax) * 100)) : 0;
@@ -165,12 +308,16 @@ COF.UI.Arene = (function () {
 
       h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
       h += '<div class="pj-av" style="width:36px;height:36px;font-size:13px;flex-shrink:0;' +
-        (cb.type === 'pj' ? 'border-color:var(--or)' : '') + '">' + (actif ? '▶' : (cb.type === 'pj' ? '🛡️' : '🐉')) + '</div>';
+        (cb.type === 'pj' || cb.allie ? 'border-color:var(--or)' : '') + '">' + (actif ? '▶' : (cb.type === 'pj' ? '🛡️' : (cb.allie ? '🤝' : '🐉'))) + '</div>';
       h += '<div style="flex:1;min-width:0">' +
         '<div style="font-size:15px;color:var(--text)">' + esc(d.nom) +
         (cb.role === 'chef' ? ' <span class="puce puce-rang">chef</span>' : '') +
         (cb.role === 'lieutenant' ? ' <span class="puce">lieutenant</span>' : '') +
-        (ko ? ' <span class="puce">à terre</span>' : '') + '</div>' +
+        (ko ? ' <span class="puce">à terre</span>' : '') +
+        (cb.allie ? ' <span class="puce" style="border-color:var(--vert);color:#85bb7f">allié</span>' : '') +
+        (cb.moral === 'fuite' ? ' <span class="puce">en fuite</span>' : '') +
+        (cb.moral === 'reddition' ? ' <span class="puce">rendu</span>' : '') +
+        (cb.ia ? ' <span class="puce" style="opacity:.7">' + esc(cb.ia) + '</span>' : '') + '</div>' +
         '<div class="note">DEF ' + d.def + ' · Init ' + d.init +
         (cb.etats.length ? ' · ' + cb.etats.map(function (e) { return etatNom(e); }).join(', ') : '') + '</div></div>';
       h += '<button class="btn btn-sm" data-aact="retirer" data-id="' + cb.id + '">✕</button>';
@@ -199,7 +346,8 @@ COF.UI.Arene = (function () {
       h += '<div style="display:flex;gap:8px;margin-top:10px">' +
         '<button class="btn btn-or" style="flex:2" data-aact="attaquer" data-id="' + cb.id + '">⚔️ Attaquer</button>' +
         '<button class="btn btn-sm" style="flex:1" data-aact="etats" data-id="' + cb.id + '">États</button>' +
-        (cb.type === 'creature' ? '<button class="btn btn-sm" style="flex:1" data-aact="fiche-bete" data-id="' + cb.id + '">Fiche</button>' : '') +
+        (cb.type === 'creature' && !ko && !cb.moral ? '<button class="btn btn-sm" style="flex:1" data-aact="ia" data-id="' + cb.id + '" title="L’app joue ce tour">🤖 Auto</button>' : '') +
+        (cb.type === 'creature' && cb.refId ? '<button class="btn btn-sm" style="flex:1" data-aact="fiche-bete" data-id="' + cb.id + '">Fiche</button>' : '') +
         '</div>';
 
       h += '</div></div>';
@@ -355,11 +503,11 @@ COF.UI.Arene = (function () {
   }
 
   /* ---------- Lanceurs de dés (appelés une fois la cible choisie) ---------- */
-  function lancerCrAtt(cb, i, ci) {
+  function lancerCrAtt(cb, i, ci, note) {
     var a = cb.att[i];
     COF.UI.jet({
       titre: donnees(cb).nom + ' — ' + a.n,
-      sousTitre: (a.portee ? 'portée ' + a.portee + ' m' : '') + (a.note ? ' · ' + a.note : '') +
+      sousTitre: (note ? '🤖 ' + note + ' ' : '') + (a.portee ? 'portée ' + a.portee + ' m' : '') + (a.note ? ' · ' + a.note : '') +
         (ci ? ' · 🎯 ' + ci.nom + ' (DEF ' + ci.def + ')' : ''),
       mod: a.mod, difficulte: ci ? ci.def : null, dmg: a.dmg || null, dmgLabel: 'Dommages',
       cible: ci,
@@ -368,12 +516,12 @@ COF.UI.Arene = (function () {
     });
   }
 
-  function lancerCrCap(cb, i, ci) {
+  function lancerCrCap(cb, i, ci, note) {
     var cap = cb.caps[i];
     var modDefaut = (cb.att && cb.att[0]) ? cb.att[0].mod : (Math.floor(cb.nc) + ((cb.car && cb.car.VOL) ? cb.car.VOL[0] : 0));
     COF.UI.jet({
       titre: donnees(cb).nom + ' — ' + cap.n,
-      sousTitre: cap.d + (ci ? ' · 🎯 ' + ci.nom + ' (DEF ' + ci.def + ')' : ''),
+      sousTitre: (note ? '🤖 ' + note + ' ' : '') + cap.d + (ci ? ' · 🎯 ' + ci.nom + ' (DEF ' + ci.def + ')' : ''),
       mod: modDefaut, difficulte: ci ? ci.def : null, dmg: cap.dmg || null, dmgLabel: 'Dommages',
       cible: ci,
       ctx: { carac: {}, niveau: Math.floor(cb.nc) || 1, deEvo: COF.deEvolutif(Math.floor(cb.nc) || 1) },
@@ -462,7 +610,20 @@ COF.UI.Arene = (function () {
         s.tour = 0;
         COF.Arene.ecrire(s); rafraichirListe();
         break;
-      case 'tour-suivant': COF.Arene.tourSuivant(s); COF.Arene.ecrire(s); rafraichirListe(); break;
+      case 'tour-suivant': verserJournal(); COF.Arene.tourSuivant(s); COF.Arene.ecrire(s); rafraichirListe(); break;
+      case 'jusqua-moi': jusquaMoi(); break;
+      case 'carte-plier': carteOuverte = !carteOuverte; rafraichirListe(); break;
+      case 'carte-sel': selCarte = selCarte === id ? null : id; rafraichirListe(); break;
+      case 'carte-case': {
+        var sc = selCarte ? trouver(selCarte) : null;
+        if (!sc) break;
+        var nx = +node.getAttribute('data-x'), ny = +node.getAttribute('data-y');
+        var dm = COF.Arene.distance(sc, { x: nx, y: ny });
+        sc.x = nx; sc.y = ny;
+        noterCombat(sc.nom + ' se déplace (' + dm + ' m).');
+        COF.Arene.ecrire(s); rafraichirListe();
+        break;
+      }
       case 'vider':
         if (confirm("Vider l'arène et retirer tous les combattants ?")) {
           s = COF.Arene.vider(); COF.Arene.ecrire(s); rendre(cible);
@@ -471,6 +632,18 @@ COF.UI.Arene = (function () {
       case 'etats': if (cb) ouvrirEtats(cb); break;
       case 'toggle-etat': if (cb) { COF.Arene.toggleEtat(cb, node.getAttribute('data-e')); COF.Arene.ecrire(s); ouvrirEtats(cb); rafraichirListe(); } break;
       case 'attaquer': if (cb) modalAttaques(cb); break;
+      case 'ia': {
+        if (!cb) break;
+        var dec = COF.Arene.decider(s, cb, donnees);
+        COF.Arene.ecrire(s);
+        rafraichirListe();
+        if (dec.type === 'att') lancerCrAtt(cb, dec.i, construireInfosCible(dec.cible), dec.texte);
+        else if (dec.type === 'cap') lancerCrCap(cb, dec.i, construireInfosCible(dec.cible), dec.texte);
+        else COF.UI.ouvrirModale('🤖 ' + cb.nom, '<div class="resultat"><div class="verdict" style="font-size:18px">' + esc(dec.texte) + '</div></div>' +
+          '<button class="btn btn-or btn-bloc" data-aact="tour-suivant-modale">▶ Tour suivant</button>');
+        break;
+      }
+      case 'tour-suivant-modale': COF.UI.fermerModale(); COF.Arene.tourSuivant(s); COF.Arene.ecrire(s); rafraichirListe(); break;
       case 'fiche-bete': {
         var cc = cb ? COF.UI.Bestiaire.get(cb.refId) : null;
         if (cc) COF.UI.Bestiaire.fiche(cc);
@@ -530,5 +703,5 @@ COF.UI.Arene = (function () {
     }
   }
 
-  return { init: init, rendre: rendre };
+  return { init: init, rendre: rendre, verserJournal: function () { if (s) verserJournal(); } };
 })();

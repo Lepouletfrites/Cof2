@@ -33,7 +33,7 @@ COF.UI.Lieux = (function () {
       texte: function (id, v) {
         if (id === 'type') return v.nom;
         if (id === 'marchand') return texteTenancier(v);
-        if (id === 'stock') return v.map(function (it) { return (it.magique ? '✨ ' : '') + it.nom + ' (' + it.prix + ' po)'; }).join(' · ');
+        if (id === 'stock') return v.map(function (it) { return (it.magique ? '✨ ' : '') + it.nom + ' (' + it.prix + ' pa)'; }).join(' · ');
         return v;
       },
       vue: COF.UI.creerVueChamps(COF.LieuxCalc.boutique, function (id, v) { return VUES.boutique.texte(id, v); }, 'lact')
@@ -98,7 +98,7 @@ COF.UI.Lieux = (function () {
     }
     stock.forEach(function (s, i) {
       h += '<div class="ligne" style="align-items:flex-start"><div class="info"><div class="t">' + (s.magique ? '✨ ' : '') + esc(s.nom) +
-        ' <span class="puce">' + s.prix.toLocaleString('fr-FR') + ' po</span>' + (s.qte > 1 ? ' <span class="puce">×' + s.qte + '</span>' : '') + '</div>' +
+        ' <span class="puce">' + s.prix.toLocaleString('fr-FR') + ' pa</span>' + (s.qte > 1 ? ' <span class="puce">×' + s.qte + '</span>' : '') + '</div>' +
         (s.source ? '<div class="s" style="color:var(--or)">' + esc(s.source) + (s.niveau ? ' · niveau ' + s.niveau : '') + '</div>' : '') +
         (s.magique && s.item && s.item.note ? '<div class="s">' + esc(s.item.note) + '</div>' : '') + '</div>' +
         '<div class="actions">' + (s.achete ? '<button class="btn btn-sm" disabled style="opacity:.6">✓</button>'
@@ -113,7 +113,7 @@ COF.UI.Lieux = (function () {
     var stock = VUES.boutique.vue.get('stock') || [], s = stock[i], perso = COF.Store.actif();
     achatMsg = '';
     if (!s || !perso || s.achete) return;
-    if (!COF.Artisanat.payer(perso, Math.round(s.prix * 10))) { achatMsg = 'Pas assez d’argent pour « ' + s.nom + ' ».'; return; }
+    if (!COF.Artisanat.payer(perso, Math.round(s.prix))) { achatMsg = 'Pas assez d’argent pour « ' + s.nom + ' ».'; return; }
     COF.Store.ajouterObjet(perso, Object.assign({}, s.item || { nom: s.nom, qte: 1 }, { prix: s.prix }));
     COF.Store.sauver(perso);
     s.achete = true;

@@ -8,7 +8,7 @@ window.COF = window.COF || {};
 COF.LieuxCalc = (function () {
   var alea = COF.alea, piocher = COF.piocher;
 
-  function voyelle(mot) { return /^[aeiouyàâéèêëîïôûAEIOUY]/.test(mot); }
+  function voyelle(mot) { return /^[aeiouyàâéèêëîïôûAEIOUYÀÂÉÈÊËÎÏÔÛ]/.test(mot); }
 
   /* ---------- Petite personne récurrente (tenancier, marchand, notable) ---------- */
   /* Un « travers » (PNJ_TRAVERS) est un adjectif ; une « manie » (PNJ_MANIES) est une
@@ -110,7 +110,7 @@ COF.LieuxCalc = (function () {
           var m = COF.Recompense.tirerObjetLivre(N, genre);
           if (!m || vus[m.nom]) continue;
           vus[m.nom] = 1;
-          var val = Math.max(1, m.item.prix || 1);
+          var val = Math.max(1, m.item.prix || 1) * 10;   /* valeur en po → prix en pa */
           out.push({ nom: m.nom, prix: Math.max(1, Math.round(val * (0.8 + Math.random() * 0.4))), magique: true,
             item: m.item, source: m.source, niveau: m.niveau, qte: m.item.qte || 1 });
         }

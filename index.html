@@ -23,7 +23,8 @@
       <h1 id="titre">COF2 Compagnon</h1>
       <div class="sub" id="sous-titre">Chargement…</div>
     </div>
-    <button class="topbar-btn" onclick="COF.UI.aller('persos')" title="Changer de personnage">👥 Persos</button>
+    <button class="topbar-btn" id="btn-mode" title="Basculer entre le mode aventure (solo) et le mode normal">🎭 Aventure</button>
+    <button class="topbar-btn" id="btn-persos" onclick="COF.UI.aller('persos')" title="Changer de personnage">👥 Persos</button>
   </div>
   <nav class="sous-nav" id="sous-nav"></nav>
 </header>
@@ -36,15 +37,16 @@
   </div>
   <button class="btn btn-plein btn-bloc" id="btn-nouveau">+ Créer un personnage</button>
   <div class="carte" style="margin-top:12px">
-    <h2>Sauvegarde</h2>
+    <h2>Exporter / importer un personnage</h2>
     <div class="carte-corps">
       <div style="display:flex;gap:8px">
         <button class="btn" style="flex:1" id="btn-export">Exporter le perso actif</button>
         <button class="btn" style="flex:1" id="btn-import">Importer</button>
       </div>
-      <div class="note" style="margin-top:10px">Les personnages sont enregistrés dans le navigateur de cet appareil.</div>
+      <div class="note" style="margin-top:10px">Échange d’un seul personnage (texte à copier-coller). Pour tout garder, utilisez la sauvegarde complète ci-dessous.</div>
     </div>
   </div>
+  <div class="carte"><h2>Sauvegarde & réglages</h2><div class="carte-corps" id="reglages"></div></div>
 </section>
 
 <!-- ============ FICHE / VOIES / INVENTAIRE (pôle Héros) ============ -->
@@ -59,6 +61,9 @@
 
 <!-- ============ CARNET D'AVENTURE (pôle Aventure) ============ -->
 <section class="view" id="vue-carnet"></section>
+
+<!-- ============ MARCHÉ ============ -->
+<section class="view" id="vue-marche"></section>
 
 <!-- ============ ARÈNE ============ -->
 <section class="view" id="vue-arene"></section>
@@ -111,13 +116,8 @@
 </section>
 
 <!-- ============ NAVIGATION ============ -->
-<nav class="nav">
-  <button id="nav-heros"><span class="ic">🛡️</span><span class="tx">Héros</span></button>
-  <button id="nav-combat"><span class="ic">⚔️</span><span class="tx">Combat</span></button>
-  <button id="nav-tresors"><span class="ic">💰</span><span class="tx">Trésors</span></button>
-  <button id="nav-aventure"><span class="ic">🗺️</span><span class="tx">Aventure</span></button>
-  <button id="nav-outils"><span class="ic">🎲</span><span class="tx">Dés & règles</span></button>
-</nav>
+<!-- Boutons générés selon le mode (normal / aventure) : voir js/ui/app.js -->
+<nav class="nav"></nav>
 
 <!-- ============ MODALE ============ -->
 <div class="modale" id="modale">
@@ -183,6 +183,9 @@
 <script src="js/core/oracle.js"></script>
 <script src="js/core/carnet.js"></script>
 <script src="js/core/expedition.js"></script>
+<script src="js/core/aventure.js"></script>
+<script src="js/core/sauvegarde.js"></script>
+<script src="js/core/monde.js"></script>
 <script src="js/core/lieux.js"></script>
 <script src="js/core/quetes.js"></script>
 <script src="js/core/voyage.js"></script>
@@ -208,6 +211,9 @@
 <script src="js/ui/butin.js"></script>
 <script src="js/ui/oracle.js"></script>
 <script src="js/ui/carnet.js"></script>
+<script src="js/ui/reglages.js"></script>
+<script src="js/ui/compagnie.js"></script>
+<script src="js/ui/marche.js"></script>
 <script src="js/ui/lieux.js"></script>
 <script src="js/ui/quetes.js"></script>
 <script src="js/ui/voyage.js"></script>

@@ -66,7 +66,13 @@ COF.Expedition = (function () {
     if (finale) s.rencontre = tirerRencontre(x.env, x.niveau, 'difficile', 'auto');
     else if (HOSTILES[idx]) s.rencontre = tirerRencontre(x.env, x.niveau, Math.random() < 0.25 ? 'difficile' : 'ordinaire', HOSTILES[idx]);
     x.salles.push(s);
-    K().ajouterEntree(c, { t: 'note', titre: 'Salle ' + s.n + (finale ? ' (salle finale)' : ''), txt: texteSalle(s) });
+    /* Lumière : une torche dure environ quatre salles. */
+    var resL = ressources(c), torche = '';
+    if (s.n > 1 && (s.n - 1) % 4 === 0) {
+      if (resL.torches > 0) { resL.torches--; torche = '\n🔥 Une torche s’éteint (' + resL.torches + ' restante(s)).'; }
+      else torche = '\n🔥 Plus de torches : obscurité (dé malus aux tests de vue, sauf vision dans le noir).';
+    }
+    K().ajouterEntree(c, { t: 'note', titre: 'Salle ' + s.n + (finale ? ' (salle finale)' : ''), txt: texteSalle(s) + torche });
     return s;
   }
   function texteSalle(s) {
@@ -116,7 +122,11 @@ COF.Expedition = (function () {
       ? 'Sortie de « ' + x.nom + ' » : ' + x.salles.length + ' salle(s) explorée(s), ' + nbV + ' vidée(s).'
       : (motif || 'Voyage interrompu') + ' — ' + x.depart + ' → ' + x.destination + ', jour ' + x.fait + '/' + x.jours + '.') });
     if (x.type === 'donjon' && !c.lieux.some(function (l) { return l.nom === x.nom; })) {
-      K().ajouterListe(c, 'lieux', { nom: x.nom, note: x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.' });
+      if (COF.Monde) {
+        var ld = COF.Monde.obtenirLieu(c, x.nom, COF.Monde.ici(c), '🗝️ ' + x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.');
+        var here = COF.Monde.ici(c);
+        if (here && here.id !== ld.id && !COF.Monde.route(c, here.id, ld.id)) COF.Monde.relier(c, here.id, ld.id, 1, x.env);
+      } else K().ajouterListe(c, 'lieux', { nom: x.nom, note: x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.' });
     }
     c.expedition = null;
   }
@@ -124,9 +134,18 @@ COF.Expedition = (function () {
   /* ================= Voyage ================= */
   function commencerVoyage(c, depart, destination, jours, env, rations) {
     c.expedition = { type: 'voyage', depart: depart || 'Ici', destination: destination || 'Ailleurs', jours: Math.max(1, Math.min(30, jours || 3)),
-      fait: 0, env: env || 'plaine', rations: Math.max(0, rations || 0), niveau: niveauPerso(c), etapes: [], debut: Date.now() };
+      fait: 0, env: env || 'plaine', niveau: niveauPerso(c), etapes: [], debut: Date.now() };
+    if (typeof rations === 'number') ressources(c).rations = Math.max(0, rations);
+    /* Carte du monde : le départ et l'arrivée deviennent des lieux. */
+    if (COF.Monde) {
+      COF.Monde.assurer(c);
+      var ld = COF.Monde.obtenirLieu(c, c.expedition.depart, COF.Monde.ici(c));
+      var la = COF.Monde.obtenirLieu(c, c.expedition.destination, ld);
+      c.expedition.departId = ld.id; c.expedition.destId = la.id;
+      if (!c.position) c.position = ld.id;
+    }
     K().ajouterEntree(c, { t: 'note', titre: 'Voyage', txt: 'Départ de ' + c.expedition.depart + ' vers ' + c.expedition.destination +
-      ' (' + c.expedition.jours + ' jour(s), ' + c.expedition.rations + ' ration(s)).' });
+      ' (' + c.expedition.jours + ' jour(s), ' + ressources(c).rations + ' ration(s)).' });
     return c.expedition;
   }
   function etapeSuivante(c) {
@@ -139,33 +158,132 @@ COF.Expedition = (function () {
     var seuil = c.tension >= 7 ? 2 : 1;
     if (d(6) <= seuil) et.rencontre = tirerRencontre(x.env, x.niveau, 'ordinaire', 'auto');
     else if (d(8) === 1) { et.rencontre = tirerRencontre(x.env, x.niveau, 'facile', 'auto'); if (et.rencontre) et.nuit = true; }
-    if (x.rations > 0) x.rations--; else et.faim = true;
+    var res = ressources(c);
+    if (res.rations > 0) res.rations--; else et.faim = true;
     x.etapes.push(et);
     var lbl = (COF.VOYAGE_CATEGORIES_LABELS || {})[g.categorie] || g.categorie;
     var txt = 'Jour ' + c.jour + ' (' + x.fait + '/' + x.jours + ') — ' + g.meteo + '.\n' + lbl + ' : ' + g.detail + '.' +
       (et.rencontre ? '\n⚔️ ' + (et.nuit ? 'Pendant la nuit : ' : 'Rencontre : ') + et.rencontre.texte + '.' : '') +
-      (et.faim ? '\n🍖 Plus de rations !' : '\n🍖 Rations restantes : ' + x.rations + '.');
+      (et.faim ? '\n🍖 Plus de rations !' : '\n🍖 Rations restantes : ' + res.rations + '.');
     K().ajouterEntree(c, { t: 'note', titre: 'Voyage', txt: txt });
     if (x.fait >= x.jours) {
       K().ajouterEntree(c, { t: 'note', titre: 'Arrivée', txt: 'Arrivée à ' + x.destination + ' au jour ' + c.jour + '.' });
-      if (!c.lieux.some(function (l) { return l.nom === x.destination; })) K().ajouterListe(c, 'lieux', { nom: x.destination, note: 'Atteint le jour ' + c.jour + '.' });
+      if (COF.Monde && x.departId && x.destId) {
+        if (!COF.Monde.route(c, x.departId, x.destId)) COF.Monde.relier(c, x.departId, x.destId, x.fait, x.env);
+        COF.Monde.seRendre(c, x.destId);
+      } else if (!c.lieux.some(function (l) { return l.nom === x.destination; })) K().ajouterListe(c, 'lieux', { nom: x.destination, note: 'Atteint le jour ' + c.jour + '.' });
       x.arrive = true;
     }
     return et;
   }
 
-  /* Envoie une rencontre stockée dans l'Arène (nouveau combat avec le héros). */
+  /* ================= Ressources du héros (par aventure) ================= */
+  function ressources(c) {
+    c.ressources = c.ressources || { rations: 3, torches: 2 };
+    return c.ressources;
+  }
+
+  /* ================= Compagnons d'aventure =================
+     Un PNJ du carnet peut rejoindre le héros. Profil simplifié, calculé
+     sur son niveau et son rôle (approximation maison, modifiable). */
+  var ROLES = {
+    combattant: { nom: 'Combattant', ic: '🗡️', att: 'Arme', dm: function (n) { return '1d8+' + (1 + Math.floor(n / 3)); },
+      pv: function (n) { return 10 + 5 * n; }, def: function (n) { return 13 + Math.floor(n / 2); } },
+    tireur: { nom: 'Tireur', ic: '🏹', att: 'Arc', dm: function (n) { return '1d8+' + Math.floor(n / 3); },
+      pv: function (n) { return 8 + 4 * n; }, def: function (n) { return 12 + Math.floor(n / 2); } },
+    mystique: { nom: 'Mystique', ic: '✨', att: 'Sort', dm: function (n) { return (1 + Math.floor(n / 4)) + 'd6'; },
+      pv: function (n) { return 6 + 3 * n; }, def: function (n) { return 11 + Math.floor(n / 2); } }
+  };
+  function statsAllie(x) {
+    var a = x.compagnon || {}, n = Math.max(1, a.niveau || 1), R = ROLES[a.role] || ROLES.combattant;
+    return { nom: x.nom, niveau: n, role: a.role || 'combattant', pvMax: R.pv(n), def: R.def(n), init: 10 + Math.floor(n / 2),
+      att: [{ n: R.att, mod: 2 + n, dmg: R.dm(n) }] };
+  }
+  function allies(c) { return (c.pnj || []).filter(function (x) { return x.compagnon && x.compagnon.actif; }); }
+
+  /* Envoie une rencontre stockée dans l'Arène : nouveau combat avec le
+     héros, ses compagnons de voie (loup, familier…) et ses alliés. */
   function versArene(c, rencontre) {
     if (!rencontre) return false;
     var s = COF.Arene.vider();
+    s.distanceDepart = rencontre.distanceM || (c.expedition && c.expedition.type === 'donjon' ? 9 : 15);
     rencontre.lots.forEach(function (l) {
       var cr = COF.UI.Bestiaire && COF.UI.Bestiaire.get(l.id);
       if (cr) for (var i = 0; i < l.nb; i++) COF.Arene.ajouterCreature(s, cr, l.role);
     });
     var p = (c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif();
-    if (p) COF.Arene.ajouterPersonnage(s, p);
+    if (p) {
+      COF.Arene.ajouterPersonnage(s, p);
+      (p.compagnons || []).forEach(function (inst) {
+        var tpl = COF.COMPAGNONS && COF.COMPAGNONS[inst.templateId];
+        if (!tpl || !COF.CompagnonCalc) return;
+        var st = COF.CompagnonCalc.stats(tpl, p);
+        var cb = COF.Arene.ajouterCreature(s, { nom: inst.nom || tpl.nom, id: null, pv: st.pvMax, def: st.def, init: st.init, nc: p.niveau || 1,
+          att: st.attaqueMod !== null ? [{ n: 'Attaque', mod: st.attaqueMod, dmg: st.dmg }] : [] }, null);
+        cb.allie = true;
+        if (inst.pv !== null && inst.pv !== undefined) cb.pv = Math.min(cb.pvMax, inst.pv);
+      });
+    }
+    allies(c).forEach(function (x) {
+      var st = statsAllie(x);
+      var cb = COF.Arene.ajouterCreature(s, { nom: x.nom, id: null, pv: st.pvMax, def: st.def, init: st.init, nc: st.niveau, att: st.att }, null);
+      cb.allie = true;
+      if (typeof x.compagnon.pv === 'number') cb.pv = Math.max(0, Math.min(cb.pvMax, x.compagnon.pv));
+    });
+    /* Ordre d'initiative dès le départ */
+    var init = function (cb) {
+      if (cb.type !== 'pj') return cb.init || 0;
+      var pp = COF.Store.get(cb.refId); return pp ? COF.Calc.init(pp) : 0;
+    };
+    s.combattants.sort(function (a, b) { return init(b) - init(a); });
+    s.tour = 0;
     COF.Arene.ecrire(s);
     return true;
+  }
+
+  /* ================= Effets des tests proposés en expédition =================
+     effet : 'fouille' | 'detecter' | 'desamorcer' | 'orienter' | 'chasser'.
+     Renvoie le texte de l'effet (consigné avec le test). */
+  function appliquerTest(c, effet, r) {
+    var x = c.expedition, s = x && x.type === 'donjon' ? salleCourante(x) : null, ok = !!r.reussite;
+    var p = (c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif();
+    if (effet === 'fouille' && s) {
+      if (!ok) { s.fouillee = true; return "Vous ne trouvez rien d'intéressant ici."; }
+      s.fouillee = false; fouiller(c);
+      return 'Fouille réussie : voir le butin de la salle.';
+    }
+    if (effet === 'detecter' && s) {
+      if (ok) { s.piegeRepere = true; return 'Piège repéré : vous pouvez le désamorcer ou le contourner.'; }
+      return declencher(c, s, p);
+    }
+    if (effet === 'desamorcer' && s) {
+      if (ok) { s.piege = false; s.piegeNeutralise = true; return 'Piège neutralisé.'; }
+      return r.fumble || !s.piegeRepere ? declencher(c, s, p) : 'Échec : le mécanisme résiste, mais rien ne se déclenche (vous pouvez réessayer).';
+    }
+    var etV = x && x.type === 'voyage' ? x.etapes[x.etapes.length - 1] : null;
+    if (etV && effet === 'orienter') etV.oriente = true;
+    if (etV && effet === 'chasser') etV.chasse = true;
+    if (effet === 'orienter' && x && x.type === 'voyage') {
+      if (ok) return 'Vous gardez le bon cap.';
+      x.jours++; x.arrive = false; return 'Vous vous égarez : le voyage prend un jour de plus (' + x.jours + ' jours).';
+    }
+    if (effet === 'chasser' && x && x.type === 'voyage') {
+      if (!ok) return 'La chasse ne donne rien aujourd’hui.';
+      var g = d(4); ressources(c).rations += g; return 'Chasse fructueuse : +' + g + ' ration(s) (' + ressources(c).rations + ').';
+    }
+    return null;
+  }
+  /* Piège déclenché : (1 + niveau/4) d6 DM, appliqués aux PV du héros. */
+  function declencher(c, s, p) {
+    var n = 1 + Math.floor((c.expedition.niveau || 1) / 4), tot = 0;
+    for (var i = 0; i < n; i++) tot += d(6);
+    s.piege = false; s.piegeDeclenche = true;
+    if (p) {
+      if (p.pv === null || p.pv === undefined) COF.Store.reinitialiser(p);
+      p.pv = Math.max(0, p.pv - tot); COF.Store.sauver(p);
+      return 'Le piège se déclenche : ' + n + 'd6 = ' + tot + ' DM (' + p.pv + '/' + COF.Calc.pvMax(p) + ' PV).';
+    }
+    return 'Le piège se déclenche : ' + n + 'd6 = ' + tot + ' DM.';
   }
 
   /* ================= Tests guidés ================= */
@@ -234,6 +352,7 @@ COF.Expedition = (function () {
     TAILLES: TAILLES, commencerDonjon: commencerDonjon, salleCourante: salleCourante, etatSalle: etatSalle, salleSuivante: salleSuivante,
     marquerVaincue: marquerVaincue, fouiller: fouiller, prendreButin: prendreButin, quitter: quitter,
     commencerVoyage: commencerVoyage, etapeSuivante: etapeSuivante, versArene: versArene, texteSalle: texteSalle,
+    appliquerTest: appliquerTest, ressources: ressources, ROLES: ROLES, statsAllie: statsAllie, allies: allies,
     ACTIONS: ACTIONS, bonusPour: bonusPour, toutesCompetences: toutesCompetences, difficulteOracle: difficulteOracle,
     consequence: consequence
   };

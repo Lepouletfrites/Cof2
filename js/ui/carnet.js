@@ -28,6 +28,9 @@ COF.UI.Carnet = (function () {
     solo: 'journal', rencontre: 'journal' };
 
   function $(s, r) { return (r || document).querySelector(s); }
+  function maj(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+  var A = COF.Aventure;
+  var gen = { type: 'pnj', peuple: '', genre: '', lieu: 'village', env: '', diff: 'ordinaire', style: 'auto', res: null };
   function noeud() { return $('#vue-carnet'); }
   function perso(c) { return (c && c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif(); }
   function heure(ts) { var d = new Date(ts); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
@@ -37,7 +40,7 @@ COF.UI.Carnet = (function () {
     var n = noeud(); if (!n) return;
     var c = K.actif();
     if (!c) { n.innerHTML = htmlAccueil(); return; }
-    var h = htmlTete(c);
+    var h = htmlTete(c) + htmlRessources(c);
     h += '<div class="cn-onglets">' + [
       ['scene', '🎬', 'Scène', ''], ['expe', c.expedition ? (c.expedition.type === 'donjon' ? '🗝️' : '🧭') : '🗺️', 'Expé.', c.expedition ? '•' : ''],
       ['fils', '🧵', 'Fils', K.filsOuverts(c).length],
@@ -54,6 +57,7 @@ COF.UI.Carnet = (function () {
     var fil = $('#cn-fil');
     if (fil && onglet === 'scene') { var der = fil.lastElementChild; if (der && rendre.defiler) der.scrollIntoView({ block: 'end' }); }
     rendre.defiler = false;
+    if (COF.UI.majTitre) COF.UI.majTitre();
   }
 
   function htmlAccueil() {
@@ -83,6 +87,65 @@ COF.UI.Carnet = (function () {
       '</div>';
   }
 
+  /* ---------- Ressources du héros (bandeau + feuille) ---------- */
+  function etatHeros(p) {
+    if (!p) return null;
+    if (p.pv === null || p.pv === undefined) COF.Store.reinitialiser(p);
+    var Kc = COF.Calc;
+    return { pv: p.pv, pvMax: Kc.pvMax(p), pm: p.pm || 0, pmMax: Kc.pmMax(p), dr: p.dr || 0, drMax: Kc.drMax(p), drType: Kc.drType(p) };
+  }
+  function htmlRessources(c) {
+    var p = perso(c), e = etatHeros(p), r = X.ressources(c);
+    var tuile = function (ic, v, cls) { return '<button data-cn="ressources" class="' + (cls || '') + '"><span>' + ic + '</span><b>' + v + '</b></button>'; };
+    var pct = e ? e.pv / Math.max(1, e.pvMax) : 1;
+    return '<div class="cn-res">' +
+      (e ? tuile('❤️', e.pv + '/' + e.pvMax, pct <= 0.25 ? 'ko' : (pct <= 0.5 ? 'mod' : '')) +
+        (e.pmMax ? tuile('🔮', e.pm + '/' + e.pmMax) : '') + tuile('🎲', 'DR ' + e.dr) : tuile('🛡️', 'Lier un héros')) +
+      tuile('🍖', r.rations, r.rations ? '' : 'ko') + tuile('🔥', r.torches, r.torches ? '' : 'mod') + '</div>';
+  }
+  function sheetRessources() {
+    var c = K.actif(), p = perso(c), e = etatHeros(p), r = X.ressources(c);
+    var h = '';
+    if (e) {
+      h += '<label class="cn-lbl2">' + esc(p.nom) + '</label>' +
+        '<div class="cn-resl"><span>❤️ PV</span><div class="cn-cpt"><button data-cn="res-pv" data-v="-5">−5</button><button data-cn="res-pv" data-v="-1">−</button>' +
+          '<span>' + e.pv + ' <small>/ ' + e.pvMax + '</small></span><button data-cn="res-pv" data-v="1">+</button><button data-cn="res-pv" data-v="5">+5</button></div></div>' +
+        (e.pmMax ? '<div class="cn-resl"><span>🔮 PM</span><div class="cn-cpt"><button data-cn="res-pm" data-v="-1">−</button><span>' + e.pm +
+          ' <small>/ ' + e.pmMax + '</small></span><button data-cn="res-pm" data-v="1">+</button></div></div>' : '') +
+        '<div class="note" style="margin:2px 0 10px">Dés de récupération : ' + e.dr + ' / ' + e.drMax + ' (d' + e.drType + ')</div>';
+    } else h += '<div class="note" style="margin-bottom:10px">Aucun héros lié : ouvrez le menu de l’aventure (titre) pour lier le personnage actif.</div>';
+    h += '<label class="cn-lbl2">Provisions</label>' +
+      '<div class="cn-resl"><span>🍖 Rations</span>' + compteur('r-rations', r.rations, '') + '</div>' +
+      '<div class="cn-resl"><span>🔥 Torches</span>' + compteur('r-torches', r.torches, '') + '</div>';
+    if (e) h += '<button class="btn btn-bloc cn-gros ok" data-cn="recup-rapide">⏸️ Récupération rapide<small>30 min · 1 DR : 1d' + e.drType + ' + ½ niveau PV</small></button>' +
+      '<button class="btn btn-bloc cn-gros" data-cn="recup-nuit">🌙 Nuit de repos<small>+1 DR, PM restaurés, états effacés · jour +1 · 1 ration</small></button>';
+    ouvrir('🎒 Ressources', h, { type: 'ressources' });
+  }
+
+  /* ---------- Tableau « Aventure en cours » (avant une nouvelle scène) ---------- */
+  function htmlTableau(c) {
+    var x = c.expedition, al = X.allies(c), p = perso(c);
+    var compVoie = p ? (p.compagnons || []).map(function (i) { return i.nom; }) : [];
+    var h = COF.UI.Reglages ? COF.UI.Reglages.rappelHTML() : '';
+    h += '<div class="carte"><h2>🧭 Aventure en cours</h2><div class="carte-corps">';
+    h += '<div class="cn-l"><span>📅</span><div>Jour ' + c.jour + ' · tension ' + c.tension + (c.tension >= 7 ? ' — l’histoire s’emballe' : (c.tension <= 3 ? ' — le héros contrôle la situation' : '')) + '</div></div>';
+    if (x) h += '<div class="cn-l"><span>' + (x.type === 'donjon' ? '🗝️' : '🧭') + '</span><div>' + (x.type === 'donjon'
+      ? 'Exploration de <b>' + esc(x.nom) + '</b> — salle ' + x.salles.length + '/' + x.nbSalles
+      : 'Voyage vers <b>' + esc(x.destination) + '</b> — jour ' + x.fait + '/' + x.jours) +
+      ' <a href="#" data-cn="onglet" data-v="expe">reprendre</a></div></div>';
+    if (al.length || compVoie.length) h += '<div class="cn-l"><span>🤝</span><div>' + esc(compVoie.concat(al.map(function (a) { return a.nom; })).join(', ')) + '</div></div>';
+    var fo = K.filsOuverts(c);
+    h += '<div class="cn-l"><span>🧵</span><div>' + (fo.length ? fo.slice(0, 4).map(function (f) { return esc(f.nom); }).join(' · ') + (fo.length > 4 ? ' …' : '') : 'Aucun fil ouvert') + '</div></div>';
+    h += '<div class="cn-actions cn-raccourcis">' + [
+      ['oracle', '🔮', 'Oracle'], ['test', '🎲', 'Test'], ['rencontre', '⚔️', 'Rencontre'],
+      ['inspirer', '✨', 'Inspirer'], ['generer', '🧰', 'Générer'], ['onglet|expe', '🗺️', 'Expédition']
+    ].map(function (a) {
+      var p2 = a[0].split('|');
+      return '<button data-cn="' + p2[0] + '"' + (p2[1] ? ' data-v="' + p2[1] + '"' : '') + '><span class="ic">' + a[1] + '</span><span class="tx">' + a[2] + '</span></button>';
+    }).join('') + '</div>';
+    return h + '</div></div>';
+  }
+
   /* ---------- Onglet Scène ---------- */
   function bandeauTest(t) {
     if (!t) return '';
@@ -104,7 +167,17 @@ COF.UI.Carnet = (function () {
         (e.evt ? '<div class="cn-evt">🔀 ' + esc(e.evt.texte) + '</div>' : '');
     } else if (e.t === 'jet') {
       corps = '<div class="cn-meta">🎲 Test</div><div class="cn-verdict ' + (e.reussite ? 'ok' : 'ko') + '">' + esc(e.txt) + '</div>' +
+        (e.effet ? '<div class="cn-evt">➜ ' + esc(e.effet) + '</div>' : '') +
         (e.csq ? '<div class="cn-evt">' + esc(e.csq) + '</div>' : '');
+    } else if (e.t === 'rencontre') {
+      var rc = e.r || {}, cc = K.actif(), enCours = cc && cc.rencontre && cc.rencontre.id === rc.id && !rc.fin;
+      corps = '<div class="cn-meta">⚔️ Rencontre · ' + esc(rc.difficulte || '') + '</div>' +
+        '<div class="cn-verdict ' + ({ hostile: 'ko', mefiant: 'mod', neutre: 'ok', amical: 'ok' }[rc.reaction] || '') + '" style="font-size:16px">' + esc(rc.texte) + '</div>' +
+        '<div class="cn-txt" style="font-size:14px">' + esc(maj(rc.distance)) + '. ' + esc(rc.reactionTexte) + (rc.surprise ? ' ' + esc(rc.surprise) : '') + '</div>' +
+        (enCours ? '<div class="cn-grille cn-g2b" style="margin-top:8px"><button data-cn="combat-rencontre" class="ko">⚔️ Combattre</button>' +
+          COF.Aventure.approches(rc).map(function (ap) {
+            return '<button data-cn="approche" data-v="' + ap.id + '">' + esc(ap.nom) + '<small>' + ap.carac + ' ' + ap.diff + '</small></button>';
+          }).join('') + '</div>' : (rc.fin ? '<div class="cn-meta" style="margin-top:4px">✓ ' + esc(rc.fin) + '</div>' : ''));
     } else {
       var ic = { evt: '🔀 Événement', muse: '✨ Muse', detail: '🖐️ Détail', note: '📌 ' + (e.titre || 'Note') }[e.t] || '📌';
       corps = '<div class="cn-meta">' + esc(ic) + '</div><div class="cn-txt">' + esc(e.txt).replace(/\n/g, '<br>') + '</div>';
@@ -116,6 +189,7 @@ COF.UI.Carnet = (function () {
   function htmlScene(c) {
     var s = K.sceneCourante(c), h = '';
     if (!s) {
+      h += htmlTableau(c);
       var der = c.scenes[c.scenes.length - 1];
       if (der) h += '<div class="note cn-rappel">Scène précédente : <b>' + esc(der.titre) + '</b>' + (der.resume ? ' — ' + esc(der.resume) : '') + '</div>';
       var fo = K.filsOuverts(c);
@@ -135,8 +209,8 @@ COF.UI.Carnet = (function () {
       '<textarea id="cn-texte" rows="2" placeholder="Que se passe-t-il ?"></textarea>' +
       '<button class="btn btn-plein" data-cn="ecrire" aria-label="Ajouter au récit">➤</button></div>';
     h += '<div class="cn-actions">' +
-      [['oracle', '🔮', 'Oracle'], ['test', '🎲', 'Test'], ['evt', '🔀', 'Événement'],
-       ['muse', '✨', 'Muse'], ['detail', '🖐️', 'Détail'], ['clore', '🏁', 'Clore']].map(function (a) {
+      [['oracle', '🔮', 'Oracle'], ['test', '🎲', 'Test'], ['rencontre', '⚔️', 'Rencontre'],
+       ['inspirer', '✨', 'Inspirer'], ['generer', '🧰', 'Générer'], ['clore', '🏁', 'Clore']].map(function (a) {
         return '<button data-cn="' + a[0] + '"><span class="ic">' + a[1] + '</span><span class="tx">' + a[2] + '</span></button>';
       }).join('') + '</div></div>';
     return h;
@@ -148,8 +222,68 @@ COF.UI.Carnet = (function () {
     pnj: { titre: 'Personnages & factions', ph: 'Baron Aldric, la Guilde des ombres…', vide: 'Aucun PNJ pour l’instant.', gen: ['pnj', '👤 Générer un PNJ'] },
     lieux: { titre: 'Lieux', ph: 'Village de Brumeval…', vide: 'Aucun lieu noté.', gen: ['lieux', '🏘️ Générer un lieu'] }
   };
+  /* ---------- 🗺️ Carte du monde (onglet Lieux) ---------- */
+  var monde = { deplacer: null, cible: null, jours: 2, env: 'plaine' };
+  function htmlCarteMonde(c) {
+    var M = COF.Monde; M.assurer(c);
+    var envIc = {}; (COF.ENVIRONNEMENTS || []).forEach(function (e) { envIc[e.id] = e.ic; });
+    var h = '<div class="carte"><h2>🗺️ Carte' + (M.ici(c) ? ' <small style="text-transform:none;letter-spacing:0;color:var(--text-mute)">· vous êtes à ' + esc(M.ici(c).nom) + '</small>' : '') + '</h2><div class="carte-corps" style="padding:8px">';
+    if (!c.lieux.length) return h + '<div class="vide">Ajoutez un lieu (ou partez en voyage) pour commencer la carte.</div></div></div>';
+    h += '<svg class="cn-monde' + (monde.deplacer ? ' placer' : '') + '" viewBox="0 0 ' + M.L + ' ' + M.H + '" data-cn="monde-fond">';
+    (c.routes || []).forEach(function (r) {
+      var a = M.lieu(c, r.a), b = M.lieu(c, r.b); if (!a || !b) return;
+      var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      h += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" class="rt"/>' +
+        '<text x="' + mx + '" y="' + (my - 1.2) + '" class="rtl">' + (envIc[r.env] || '') + ' ' + r.jours + ' j</text>';
+    });
+    c.lieux.forEach(function (l) {
+      var ici = l.id === c.position, dep = monde.deplacer === l.id;
+      h += '<g data-cn="monde-lieu" data-id="' + l.id + '" class="lieu' + (ici ? ' ici' : '') + (dep ? ' dep' : '') + '">' +
+        '<circle cx="' + l.x + '" cy="' + l.y + '" r="5.5" class="zone"/>' +
+        '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + (ici ? 2.6 : 2) + '" class="pt"/>' +
+        (ici ? '<text x="' + l.x + '" y="' + (l.y - 3.4) + '" class="pin">📍</text>' : '') +
+        '<text x="' + l.x + '" y="' + (l.y + 5.4) + '" class="nm">' + esc(l.nom.length > 18 ? l.nom.slice(0, 17) + '…' : l.nom) + '</text></g>';
+    });
+    h += '</svg>';
+    h += '<div class="note" style="margin-top:4px">' + (monde.deplacer ? '✋ Touchez la carte pour placer <b>' + esc((M.lieu(c, monde.deplacer) || {}).nom || '') + '</b>.'
+      : 'Touchez un lieu pour vous y rendre, le relier à un autre ou le déplacer. Les voyages terminés tracent leurs routes.') + '</div>';
+    return h + '</div></div>';
+  }
+  function sheetLieu(id) {
+    var c = K.actif(), M = COF.Monde, l = M.lieu(c, id); if (!l) return;
+    var ici = M.ici(c), vois = M.voisins(c, id), routeIci = ici && ici.id !== id ? M.route(c, ici.id, id) : null;
+    var h = (l.note ? '<div class="note" style="margin-bottom:10px;white-space:pre-line">' + esc(l.note.length > 300 ? l.note.slice(0, 300) + '…' : l.note) + '</div>' : '');
+    if (routeIci) h += '<button class="btn btn-plein btn-bloc" data-cn="monde-voyager" data-id="' + id + '">🧭 Voyager jusqu’ici (' + routeIci.jours + ' j depuis ' + esc(ici.nom) + ')</button>';
+    h += '<div class="cn-grille" style="margin-top:8px">' +
+      (c.position === id ? '<button disabled>📍 Vous êtes ici</button>' : '<button data-cn="monde-ici" data-id="' + id + '">📍 Je suis ici</button>') +
+      '<button data-cn="monde-deplacer" data-id="' + id + '">✋ Déplacer sur la carte</button></div>';
+    if (vois.length) h += '<label class="cn-lbl2" style="margin-top:12px">Routes</label>' + vois.map(function (v) {
+      return '<div class="cn-resl"><span>' + esc(v.lieu.nom) + ' · ' + v.route.jours + ' j</span><button class="btn btn-sm" data-cn="monde-delier" data-id="' + v.route.id + '" data-l="' + id + '">✕</button></div>';
+    }).join('');
+    var autres = c.lieux.filter(function (x) { return x.id !== id; });
+    if (autres.length) {
+      h += '<label class="cn-lbl2" style="margin-top:12px">🔗 Relier à…</label><div class="cn-mini">' + autres.map(function (x) {
+        return '<span class="chip' + (monde.cible === x.id ? ' on' : '') + '" data-cn="monde-cible" data-id="' + x.id + '" data-l="' + id + '">' + esc(x.nom) + '</span>';
+      }).join('') + '</div>';
+      if (monde.cible) {
+        h += '<div class="grille2" style="align-items:center"><div class="note">Durée</div>' + compteur('monde-jours', monde.jours, 'jour(s)') + '</div>' +
+          '<div class="cn-mini" style="margin-top:6px">' + (COF.ENVIRONNEMENTS || []).map(function (e) {
+            return '<span class="chip' + (monde.env === e.id ? ' on' : '') + '" data-cn="monde-env" data-v="' + e.id + '" data-l="' + id + '">' + e.ic + ' ' + esc(e.nom) + '</span>';
+          }).join('') + '</div>' +
+          '<button class="btn btn-bloc btn-or" data-cn="monde-relier" data-l="' + id + '">🔗 Tracer la route</button>';
+      }
+    }
+    h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="editer" data-l="lieux" data-id="' + id + '">✏️ Nom et notes</button>';
+    ouvrir('📍 ' + l.nom, h, { type: 'lieu', id: id });
+  }
+
   function htmlListe(c, l) {
     var L = LISTES[l], items = c[l].slice();
+    if (l === 'lieux' && COF.Monde) return htmlCarteMonde(c) + htmlListeBase(c, l, L, items);
+    if (l === 'pnj' && COF.UI.Compagnie) return COF.UI.Compagnie.html(c) + htmlListeBase(c, l, L, items);
+    return htmlListeBase(c, l, L, items);
+  }
+  function htmlListeBase(c, l, L, items) {
     if (l === 'fils') items.sort(function (a, b) { return (b.ouvert ? 1 : 0) - (a.ouvert ? 1 : 0); });
     var h = '<div class="carte"><h2>' + esc(L.titre) + '</h2><div class="carte-corps">' +
       '<div class="cn-ajout"><input id="cn-nouveau" placeholder="' + esc(L.ph) + '"><button class="btn btn-plein" data-cn="ajouter" data-l="' + l + '" aria-label="Ajouter">＋</button></div>';
@@ -158,7 +292,8 @@ COF.UI.Carnet = (function () {
       var att = l === 'pnj' ? ATTITUDES.filter(function (a) { return a[0] === x.attitude; })[0] || ATTITUDES[1] : null;
       h += '<div class="cn-item' + (l === 'fils' && !x.ouvert ? ' ferme' : '') + '" data-cn="editer" data-l="' + l + '" data-id="' + x.id + '">' +
         '<div class="info"><div class="t">' + (l === 'fils' && !x.ouvert ? '✓ ' : '') + esc(x.nom) +
-          (att ? ' <span class="puce" style="border-color:' + att[1] + ';color:' + att[1] + '">' + esc(att[0]) + '</span>' : '') + '</div>' +
+          (att ? ' <span class="puce" style="border-color:' + att[1] + ';color:' + att[1] + '">' + esc(att[0]) + '</span>' : '') +
+          (x.compagnon && x.compagnon.actif ? ' <span class="puce" style="border-color:var(--or);color:var(--or-clair)">🤝 ' + esc((X.ROLES[x.compagnon.role] || {}).nom || 'compagnon') + ' niv. ' + x.compagnon.niveau + '</span>' : '') + '</div>' +
           (x.note ? '<div class="s">' + esc(x.note.length > 140 ? x.note.slice(0, 140) + '…' : x.note) + '</div>' : '') + '</div>' +
         (l === 'fils' ? '<button class="btn btn-sm" data-cn="basculer" data-id="' + x.id + '" aria-label="' + (x.ouvert ? 'Résoudre' : 'Rouvrir') + '">' + (x.ouvert ? '✓' : '↺') + '</button>' : '') +
         '</div>';
@@ -187,7 +322,7 @@ COF.UI.Carnet = (function () {
   function htmlExpedition(c) {
     var x = c.expedition, h = '';
     if (!x) {
-      var dernierLieu = c.lieux[0] ? c.lieux[0].nom : '';
+      var dernierLieu = COF.Monde && COF.Monde.ici(c) ? COF.Monde.ici(c).nom : (c.lieux[0] ? c.lieux[0].nom : '');
       h += '<div class="carte"><h2>🗝️ Explorer un donjon</h2><div class="carte-corps">' +
         '<div class="champ"><label>Nom du lieu</label><input id="cn-x-nom" value="' + esc(expe.nom) + '" placeholder="Les cryptes de Brumeval"></div>' +
         '<label class="cn-lbl2">Taille</label><div class="cn-grille cn-g3">' + [['petit', 'Petit', 5], ['moyen', 'Moyen', 8], ['grand', 'Grand', 12]].map(function (t) {
@@ -195,11 +330,16 @@ COF.UI.Carnet = (function () {
         }).join('') + '</div>' +
         '<label class="cn-lbl2" style="margin-top:10px">Environnement des créatures</label>' + puceEnv(expe.env, 'env') +
         '<button class="btn btn-plein btn-bloc" data-cn="expe-donjon">🕯️ Entrer</button></div></div>';
+      var icic = COF.Monde ? COF.Monde.ici(c) : null, vv = icic ? COF.Monde.voisins(c, icic.id) : [];
       h += '<div class="carte"><h2>🧭 Partir en voyage</h2><div class="carte-corps">' +
+        (vv.length ? '<label class="cn-lbl2">Routes connues depuis ' + esc(icic.nom) + '</label><div class="cn-liste-gen" style="margin-bottom:12px">' + vv.map(function (v) {
+          return '<button data-cn="monde-voyager" data-id="' + v.lieu.id + '"><span class="ic">🧭</span><span><b>' + esc(v.lieu.nom) + '</b><small>' + v.route.jours + ' jour(s) · ' +
+            esc(((COF.ENVIRONNEMENTS || []).filter(function (e) { return e.id === v.route.env; })[0] || {}).nom || '') + '</small></span></button>';
+        }).join('') + '</div><label class="cn-lbl2">Ou vers une nouvelle destination</label>' : '') +
         '<div class="grille2"><div class="champ"><label>Départ</label><input id="cn-x-dep" value="' + esc(expe.depart || dernierLieu) + '" placeholder="Brumeval"></div>' +
         '<div class="champ"><label>Destination</label><input id="cn-x-dest" value="' + esc(expe.destination) + '" placeholder="Osgild"></div></div>' +
         '<div class="grille2"><div class="champ"><label>Durée</label>' + compteur('jours', expe.jours, 'jour(s)') + '</div>' +
-        '<div class="champ"><label>Rations</label>' + compteur('rations', expe.rations, '') + '</div></div>' +
+        '<div class="champ"><label>Rations emportées</label>' + compteur('r-rations', X.ressources(c).rations, '') + '</div></div>' +
         '<label class="cn-lbl2">Terrain</label>' + puceEnv(expe.envV, 'envV') +
         '<button class="btn btn-plein btn-bloc" data-cn="expe-voyage">🧭 Prendre la route</button></div></div>';
       return h;
@@ -219,15 +359,21 @@ COF.UI.Carnet = (function () {
           [['🏛️', ch.forme], ['🕸️', ch.etat], ['👁️', ch.occupant], ['✨', ch.particularite], ['🚪', ch.sortie]].map(function (l) {
             return '<div class="cn-l"><span>' + l[0] + '</span><div>' + esc(l[1]) + '</div></div>';
           }).join('') +
-          (s.piege ? '<div class="cn-menace piege"><div class="t">⚠️ Piège</div><div class="s">' + esc(ch.piege) + '</div>' +
-            '<div class="cn-grille" style="margin-top:8px"><button data-cn="expe-test" data-a="Détecter le piège" data-c="PER" data-d="15">🔍 Détecter (PER)</button>' +
-            '<button data-cn="expe-test" data-a="Désamorcer le piège" data-c="AGI" data-d="15">🛠️ Désamorcer (AGI)</button></div></div>' : '') +
+          (s.piege ? '<div class="cn-menace piege"><div class="t">⚠️ Piège' + (s.piegeRepere ? ' repéré' : ' possible') + '</div><div class="s">' +
+            esc(s.piegeRepere ? ch.piege : 'Quelque chose cloche dans cette salle… Mieux vaut vérifier avant d’avancer.') + '</div>' +
+            '<div class="cn-grille" style="margin-top:8px">' +
+              (s.piegeRepere ? '' : '<button data-cn="expe-test" data-e="detecter" data-a="Détecter le piège" data-c="PER" data-d="15">🔍 Détecter (PER 15)</button>') +
+              '<button data-cn="expe-test" data-e="desamorcer" data-a="Désamorcer le piège" data-c="AGI" data-d="' + (s.piegeRepere ? 15 : 18) + '">🛠️ Désamorcer (AGI ' + (s.piegeRepere ? 15 : 18) + ')</button></div></div>'
+            : (s.piegeNeutralise ? '<div class="cn-menace ok"><div class="s">✓ Piège neutralisé.</div></div>'
+              : (s.piegeDeclenche ? '<div class="cn-menace"><div class="s">💥 Le piège s’est déclenché : ' + esc(ch.piege) + '</div></div>' : ''))) +
           boiteRencontre(s.rencontre, 'salle', s.vaincue) +
           (s.butin ? '<div class="cn-menace ok"><div class="t">💰 Butin</div><div class="s">' + esc(texteButin(s.butin)) + '</div>' +
             (s.butinPris ? '<div class="note" style="margin-top:6px">✓ Ajouté à la fiche</div>' : '<button class="btn btn-bloc" style="margin-top:8px" data-cn="expe-prendre">📥 Prendre le butin</button>') + '</div>' : '') +
-          '<div class="cn-grille" style="margin-top:10px">' +
-            (s.fouillee ? '<button disabled>✓ Fouillée</button>' : '<button data-cn="expe-fouiller">💰 Fouiller</button>') +
-            '<button data-cn="expe-test" data-a="Fouiller la salle" data-c="PER" data-d="12">🔎 Test de fouille</button></div>' +
+          (s.fouillee ? (s.butin ? '' : '<div class="note" style="margin-top:10px">Salle fouillée : rien de plus à trouver.</div>')
+            : '<div class="cn-grille" style="margin-top:10px">' +
+              '<button data-cn="expe-test" data-e="fouille" data-a="Fouiller la salle" data-c="PER" data-d="12">🔎 Fouiller (PER 12)</button>' +
+              '<button data-cn="expe-fouiller">💰 Fouille rapide</button></div>' +
+              '<div class="note" style="margin-top:4px">Le test de fouille trouve ce qui est caché ; la fouille rapide ne demande pas de jet.</div>') +
           '</div></div>';
       }
       h += s && s.finale ? '<button class="btn btn-plein btn-bloc" data-cn="expe-quitter">🏁 Terminer l’exploration</button>'
@@ -238,15 +384,17 @@ COF.UI.Carnet = (function () {
     var et = x.etapes[x.etapes.length - 1], pct = Math.round(100 * x.fait / x.jours);
     h += '<div class="carte"><h2>🧭 ' + esc(x.depart) + ' → ' + esc(x.destination) + '<span class="h2-action" data-cn="expe-quitter">Arrêter</span></h2><div class="carte-corps">' +
       '<div class="barre"><span style="width:' + pct + '%;background:linear-gradient(90deg,#8a6d18,var(--or-clair))"></span></div>' +
-      '<div class="cn-voyage-l"><span>Jour ' + x.fait + ' / ' + x.jours + '</span><span>🍖 ' + compteur('ration-v', x.rations, '') + '</span></div></div></div>';
+      '<div class="cn-voyage-l"><span>Jour ' + x.fait + ' / ' + x.jours + '</span><span>🍖 ' + compteur('ration-v', X.ressources(c).rations, '') + '</span></div></div></div>';
     if (et) {
       h += '<div class="carte"><h2>Jour ' + et.jour + '</h2><div class="carte-corps">' +
         '<div class="cn-l"><span>🌦️</span><div>' + esc(et.meteo) + '</div></div>' +
         '<div class="cn-l"><span>🧭</span><div><b>' + esc((COF.VOYAGE_CATEGORIES_LABELS || {})[et.categorie] || et.categorie) + '</b> — ' + esc(et.detail) + '</div></div>' +
         (et.faim ? '<div class="cn-l"><span>🍖</span><div style="color:var(--sang-clair)">Plus de rations : il faut chasser, cueillir ou acheter.</div></div>' : '') +
         (et.rencontre ? (et.nuit ? '<div class="note" style="margin-top:6px">🌙 Pendant la nuit…</div>' : '') + boiteRencontre(et.rencontre, 'etape', et.vaincue) : '') +
-        '<div class="cn-grille" style="margin-top:10px"><button data-cn="expe-test" data-a="S’orienter" data-c="PER" data-d="12">🧭 S’orienter</button>' +
-          '<button data-cn="expe-test" data-a="Chasser / cueillir" data-c="PER" data-d="15">🏹 Chasser</button></div>' +
+        (et.oriente && et.chasse ? '' : '<div class="cn-grille" style="margin-top:10px">' +
+          (et.oriente ? '<button disabled>✓ Orientation</button>' : '<button data-cn="expe-test" data-e="orienter" data-a="S’orienter" data-c="PER" data-d="10">🧭 S’orienter (PER 10)</button>') +
+          (et.chasse ? '<button disabled>✓ Chasse</button>' : '<button data-cn="expe-test" data-e="chasser" data-a="Chasser / cueillir" data-c="PER" data-d="15">🏹 Chasser (PER 15)</button>') + '</div>' +
+          '<div class="note" style="margin-top:4px">Raté, l’orientation coûte un jour ; réussie, la chasse rapporte des rations.</div>') +
         '</div></div>';
     }
     h += x.arrive ? '<button class="btn btn-plein btn-bloc" data-cn="expe-quitter" data-v="arrive">🏁 Arrivé à ' + esc(x.destination) + '</button>'
@@ -298,7 +446,7 @@ COF.UI.Carnet = (function () {
   /* preset : { action, carac, diff } pour un test proposé par l'app (piège…) */
   function sheetTest(preset) {
     var c = K.actif(), p = perso(c);
-    if (preset) { jet.action = preset.action || ''; jet.carac = preset.carac || jet.carac; jet.diff = preset.diff || jet.diff; jet.comps = {}; jet.oracle = null; }
+    if (preset) { jet.action = preset.action || ''; jet.carac = preset.carac || jet.carac; jet.diff = preset.diff || jet.diff; jet.comps = {}; jet.oracle = null; jet.effet = preset.effet || null; }
     var caracs = COF.RULES ? COF.RULES.caracs : [{ id: 'FOR' }, { id: 'AGI' }, { id: 'CON' }, { id: 'PER' }, { id: 'CHA' }, { id: 'INT' }, { id: 'VOL' }];
     var comps = X.toutesCompetences(p);
     var h = '<div class="champ"><label>Action</label><input id="cn-jet-action" value="' + esc(jet.action) + '" placeholder="Crocheter la serrure…"></div>' +
@@ -332,19 +480,37 @@ COF.UI.Carnet = (function () {
       '<button class="btn btn-bloc cn-gros ko" data-cn="clore-ko">⚠️ La situation lui échappe<small>tension +1</small></button>' +
       '<div class="cn-grille" style="margin-top:10px"><button data-cn="jour" data-v="1">☀️ Jour suivant</button><button data-cn="aller" data-v="solo">🕰️ Passage du temps</button></div>', { type: 'clore' });
   }
-  function sheetEditer(l, id) {
+  /* brouillon : état en cours d'édition (pour re-rendre la feuille sans perdre la saisie) */
+  function sheetEditer(l, id, brouillon) {
     var c = K.actif(), x = c[l].filter(function (y) { return y.id === id; })[0];
     if (!x) return;
-    var h = '<div class="champ"><label>Nom</label><input id="cn-e-nom" value="' + esc(x.nom) + '"></div>' +
-      '<div class="champ"><label>Notes</label><textarea id="cn-e-note" rows="5">' + esc(x.note || '') + '</textarea></div>';
+    var b = brouillon || { nom: x.nom, note: x.note || '', attitude: x.attitude, ouvert: x.ouvert,
+      comp: Object.assign({ actif: false, role: 'combattant', niveau: Math.max(1, (perso(c) || {}).niveau || 1) }, x.compagnon || {}) };
+    var h = '<div class="champ"><label>Nom</label><input id="cn-e-nom" value="' + esc(b.nom) + '"></div>' +
+      '<div class="champ"><label>Notes</label><textarea id="cn-e-note" rows="4">' + esc(b.note) + '</textarea></div>';
     if (l === 'pnj') h += '<label class="cn-lbl2">Attitude</label><div class="cn-grille cn-g4">' + ATTITUDES.map(function (a) {
-      return '<button data-cn="attitude" data-v="' + a[0] + '" class="' + (x.attitude === a[0] ? 'on' : '') + '">' + esc(a[0]) + '</button>';
+      return '<button data-cn="attitude" data-v="' + a[0] + '" class="' + (b.attitude === a[0] ? 'on' : '') + '">' + esc(a[0]) + '</button>';
     }).join('') + '</div>';
-    if (l === 'fils') h += '<div class="cn-grille"><button data-cn="fil-etat" data-v="1" class="' + (x.ouvert ? 'on' : '') + '">Ouvert</button>' +
-      '<button data-cn="fil-etat" data-v="0" class="' + (!x.ouvert ? 'on' : '') + '">Résolu</button></div>';
+    if (l === 'pnj') {
+      h += '<label class="cn-lbl2" style="margin-top:12px">🤝 Compagnon du héros</label><div class="cn-grille">' +
+        '<button data-cn="comp-actif" data-v="0" class="' + (!b.comp.actif ? 'on' : '') + '">Non</button>' +
+        '<button data-cn="comp-actif" data-v="1" class="' + (b.comp.actif ? 'on' : '') + '">Rejoint le héros</button></div>';
+      if (b.comp.actif) {
+        var st = X.statsAllie({ nom: b.nom, compagnon: b.comp });
+        h += '<div class="cn-grille cn-g3" style="margin-top:6px">' + Object.keys(X.ROLES).map(function (k) {
+          var R = X.ROLES[k];
+          return '<button data-cn="comp-role" data-v="' + k + '" class="' + (b.comp.role === k ? 'on' : '') + '">' + R.ic + ' ' + R.nom + '</button>';
+        }).join('') + '</div>' +
+          '<div class="grille2" style="margin-top:8px;align-items:center"><div class="note">Niveau</div>' + compteur('comp-niv', b.comp.niveau, '') + '</div>' +
+          '<div class="note" style="margin-top:6px">PV ' + st.pvMax + ' · DEF ' + st.def + ' · Init. ' + st.init + ' · ' + st.att[0].n + ' ' + sgn(st.att[0].mod) + ' (DM ' + st.att[0].dmg + ')' +
+          '<br>Profil simplifié : il rejoint le héros dans l’Arène et peut être joué par l’app (🤖).</div>';
+      }
+    }
+    if (l === 'fils') h += '<div class="cn-grille"><button data-cn="fil-etat" data-v="1" class="' + (b.ouvert ? 'on' : '') + '">Ouvert</button>' +
+      '<button data-cn="fil-etat" data-v="0" class="' + (!b.ouvert ? 'on' : '') + '">Résolu</button></div>';
     h += '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="enregistrer">Enregistrer</button>' +
       '<div class="cn-grille" style="margin-top:8px"><button data-cn="mentionner">📌 Noter dans la scène</button><button data-cn="retirer" class="ko">🗑️ Supprimer</button></div>';
-    ouvrir(LISTES[l].titre, h, { type: 'editer', l: l, id: id, attitude: x.attitude, ouvert: x.ouvert });
+    ouvrir(LISTES[l].titre, h, { type: 'editer', l: l, id: id, attitude: b.attitude, ouvert: b.ouvert, comp: b.comp });
   }
   function sheetMenu() {
     var c = K.actif(), l = K.tous(), p = COF.Store.actif();
@@ -359,8 +525,118 @@ COF.UI.Carnet = (function () {
       }).join('');
     }
     h += '<div class="champ" style="margin-top:12px"><label>Nouvelle aventure</label><div class="cn-ajout"><input id="cn-m-new" placeholder="Titre…"><button class="btn btn-plein" data-cn="creer-menu">＋</button></div></div>' +
-      '<button class="btn btn-bloc btn-sang" style="margin-top:6px" data-cn="supprimer-camp">🗑️ Supprimer cette aventure</button>';
+      '<div class="cn-grille" style="margin-top:6px"><button data-rg="sauver">💾 Tout sauvegarder</button><button data-rg="ouvrir">⚙️ Réglages</button></div>' +
+      '<button class="btn btn-bloc btn-sang" style="margin-top:10px" data-cn="supprimer-camp">🗑️ Supprimer cette aventure</button>';
     ouvrir('📖 Aventure', h, { type: 'menu' });
+  }
+
+  /* ---------- ⚔️ Rencontre (dans le récit) ---------- */
+  function chipsEnv(sel) {
+    return '<div class="cn-mini">' + (COF.ENVIRONNEMENTS || []).map(function (e) {
+      return '<span class="chip' + (sel === e.id ? ' on' : '') + '" data-cn="gen-opt" data-k="env" data-v="' + e.id + '">' + e.ic + ' ' + esc(e.nom) + '</span>';
+    }).join('') + '</div>';
+  }
+  function sheetRencontre() {
+    var c = K.actif();
+    if (!gen.env) gen.env = A.envCourant(c);
+    var nbA = A.nbAllies(c);
+    var h = '<div class="note" style="margin-bottom:8px">Calibrée pour ' + (perso(c) ? esc(perso(c).nom) + ' (niv. ' + perso(c).niveau + ')' : 'le héros') +
+      (nbA ? ' et ' + nbA + ' allié(s)' : '') + '. Tension ' + c.tension + ' : plus elle est haute, plus les créatures sont hostiles.</div>' +
+      '<label class="cn-lbl2">Environnement</label>' + chipsEnv(gen.env) +
+      '<label class="cn-lbl2">Difficulté</label><div class="cn-grille cn-g4">' + COF.Rencontre.DIFFICULTES.map(function (dd) {
+        return '<button data-cn="gen-opt" data-k="diff" data-v="' + dd.id + '" class="' + (gen.diff === dd.id ? 'on' : '') + '">' + esc(dd.nom) + '</button>';
+      }).join('') + '</div>' +
+      '<label class="cn-lbl2" style="margin-top:10px">Composition</label><div class="cn-grille cn-g3">' +
+        [['auto', 'Au hasard'], ['solo', 'Seul'], ['bande', 'Bande'], ['meute', 'Meute'], ['mixte', 'Mélangé']].map(function (s) {
+          return '<button data-cn="gen-opt" data-k="style" data-v="' + s[0] + '" class="' + (gen.style === s[0] ? 'on' : '') + '">' + s[1] + '</button>';
+        }).join('') + '</div>' +
+      '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="rencontre-go">⚔️ Que rencontre le héros ?</button>';
+    ouvrir('⚔️ Rencontre', h, { type: 'rencontre' });
+  }
+
+  /* ---------- ✨ Inspirer : une touche d'imprévu, ajoutée d'un geste ---------- */
+  var INSPIRATIONS = [
+    ['evt', '🔀', 'Événement', 'touche vos fils et PNJ'], ['rebond', '🎭', 'Rebondissement', 'relance une scène qui patine'],
+    ['faction', '♟️', 'Tour de faction', 'ce qui se passe hors champ'], ['rumeur', '👂', 'Rumeur', 'ce qui se murmure'],
+    ['muse', '✨', 'Muse', 'deux mots à interpréter'], ['detail', '🖐️', 'Détail', 'vue, son, odeur, toucher'],
+    ['route', '🧭', 'En chemin', 'un incident de route'], ['temps', '🕰️', 'Le temps passe', 'durée, météo, répit']
+  ];
+  function sheetInspirer() {
+    ouvrir('✨ Inspirer', '<div class="cn-liste-gen">' + INSPIRATIONS.map(function (x) {
+      return '<button data-cn="inspi" data-v="' + x[0] + '"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span></button>';
+    }).join('') + '</div><div class="note" style="margin-top:8px">Le résultat s’ajoute directement au récit.</div>', { type: 'inspirer' });
+  }
+
+  /* ---------- 🧰 Générer : PNJ, lieux, accroches… avec options ---------- */
+  var GENERATEURS = [
+    ['pnj', '👤', 'Personnage'], ['lieu', '🏘️', 'Lieu'], ['quete', '📜', 'Accroche de quête'], ['marchand', '🪙', 'Marchandage'],
+    ['salle', '🗝️', 'Salle'], ['butin', '💰', 'Butin']
+  ];
+  function sheetGenerer() {
+    var c = K.actif(), h = '<div class="cn-grille cn-g3">' + GENERATEURS.map(function (g) {
+      return '<button data-cn="gen-type" data-v="' + g[0] + '" class="' + (gen.type === g[0] ? 'on' : '') + '">' + g[1] + '<small>' + g[2] + '</small></button>';
+    }).join('') + '</div>';
+    /* options propres au générateur choisi */
+    if (gen.type === 'pnj') {
+      h += '<label class="cn-lbl2" style="margin-top:10px">Peuple</label><div class="cn-mini">' +
+        [['', '🎲 Au hasard']].concat((COF.PnjCalc.PEUPLES || []).map(function (p) { return [p, maj((COF.PEUPLES[p] || {}).nom || p)]; })).map(function (p) {
+          return '<span class="chip' + (gen.peuple === p[0] ? ' on' : '') + '" data-cn="gen-opt" data-k="peuple" data-v="' + p[0] + '">' + esc(p[1]) + '</span>';
+        }).join('') + '</div>' +
+        '<div class="cn-grille cn-g3"><button data-cn="gen-opt" data-k="genre" data-v="" class="' + (!gen.genre ? 'on' : '') + '">Au hasard</button>' +
+        '<button data-cn="gen-opt" data-k="genre" data-v="masculin" class="' + (gen.genre === 'masculin' ? 'on' : '') + '">Homme</button>' +
+        '<button data-cn="gen-opt" data-k="genre" data-v="féminin" class="' + (gen.genre === 'féminin' ? 'on' : '') + '">Femme</button></div>';
+    } else if (gen.type === 'lieu') {
+      h += '<div class="cn-grille cn-g3" style="margin-top:10px">' + [['village', '🏘️ Localité'], ['taverne', '🍺 Taverne'], ['boutique', '🛒 Boutique']].map(function (l) {
+        return '<button data-cn="gen-opt" data-k="lieu" data-v="' + l[0] + '" class="' + (gen.lieu === l[0] ? 'on' : '') + '">' + l[1] + '</button>';
+      }).join('') + '</div>';
+    } else if (gen.type === 'butin') {
+      h += '<div class="cn-grille cn-g3" style="margin-top:10px">' + [['fouille', '🔍 Fouille'], ['coffre', '🗝️ Coffre'], ['riche', '👑 Trésor']].map(function (l) {
+        return '<button data-cn="gen-opt" data-k="lieu" data-v="' + l[0] + '" class="' + (gen.lieu === l[0] ? 'on' : '') + '">' + l[1] + '</button>';
+      }).join('') + '</div>';
+    }
+    h += '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="gen-go">🎲 Générer</button>';
+    var r = gen.res;
+    if (r) {
+      h += '<div class="cn-apercu"><div class="cn-meta">' + esc(r.titre) + '</div>' +
+        (r.nom ? '<input id="cn-g-nom" value="' + esc(r.nom) + '">' : '') +
+        '<textarea id="cn-g-txt" rows="6">' + esc(r.texte) + '</textarea></div>' +
+        '<div class="cn-grille" style="margin-top:8px"><button data-cn="gen-noter">📌 Dans le récit</button>' +
+        (r.liste ? '<button data-cn="gen-garder" class="on">💾 ' + { pnj: 'Ajouter aux PNJ', lieux: 'Ajouter aux lieux', fils: 'Ouvrir un fil' }[r.liste] + '</button>'
+          : (r.butin ? '<button data-cn="gen-butin" class="on">📥 Prendre le butin</button>' : '')) + '</div>';
+    }
+    ouvrir('🧰 Générer', h, { type: 'generer' });
+  }
+  function lancerGenerateur(c) {
+    if (gen.type === 'pnj') gen.res = A.pnj({ peuple: gen.peuple, genre: gen.genre });
+    else if (gen.type === 'lieu') gen.res = A.lieu(['village', 'taverne', 'boutique'].indexOf(gen.lieu) >= 0 ? gen.lieu : 'village');
+    else if (gen.type === 'quete') gen.res = A.quete();
+    else if (gen.type === 'marchand') gen.res = A.marchand();
+    else if (gen.type === 'salle') gen.res = A.salle();
+    else if (gen.type === 'butin') {
+      var mode = ['fouille', 'coffre', 'riche'].indexOf(gen.lieu) >= 0 ? gen.lieu : 'fouille';
+      var o = { niveau: (perso(c) || {}).niveau || 1, env: A.envCourant(c), richesse: mode === 'riche' ? 'riche' : 'standard' };
+      var b = mode === 'fouille' ? COF.Recompense.genererFouille(o) : COF.Recompense.genererCoffre(o);
+      gen.res = { gen: 'butin', titre: mode === 'fouille' ? 'Trouvaille' : 'Trésor', texte: A.texteButin(b), butin: b };
+    }
+  }
+
+  /* ---------- Combat de l'aventure : bandeau dans l'Arène + bilan ---------- */
+  function banniereCombat() {
+    var c = K.actif();
+    if (!c || !c.combat) return '';
+    var p = perso(c), e = etatHeros(p);
+    var pv = e ? '<span class="cn-pvh' + (e.pv <= e.pvMax / 4 ? ' ko' : (e.pv <= e.pvMax / 2 ? ' mod' : '')) + '">❤️ ' + e.pv + '/' + e.pvMax +
+      (e.pmMax ? ' · 🔮 ' + e.pm + '/' + e.pmMax : '') + '</span>' : '';
+    return '<div class="cn-banniere"><div><b>📖 ' + esc(c.titre) + '</b><small>' + esc(c.combat.texte || 'Combat en cours') + '</small>' + pv + '</div>' +
+      '<button class="btn btn-plein" data-cn="fin-combat">🏁 Terminer</button></div>';
+  }
+  function sheetFinCombat() {
+    var b = A.bilanArene();
+    var h = '<div class="note" style="margin-bottom:10px">Adversaires : ' + b.total + ' — ' + b.ko + ' à terre, ' + b.fuite + ' en fuite, ' + b.rendu + ' rendu(s), ' + b.debout + ' encore debout.</div>' +
+      '<button class="btn btn-bloc cn-gros ok" data-cn="issue" data-v="victoire">🏆 Victoire<small>butin de la rencontre, tension −1</small></button>' +
+      '<button class="btn btn-bloc cn-gros" data-cn="issue" data-v="fuite">🏃 Le héros s’échappe<small>pas de butin</small></button>' +
+      '<button class="btn btn-bloc cn-gros ko" data-cn="issue" data-v="defaite">💀 Le héros tombe<small>tension +1, l’oracle dira ce qu’il advient</small></button>';
+    ouvrir('🏁 Fin du combat', h, { type: 'fin-combat' });
   }
 
   /* ---------- Bouton flottant 📌 depuis les générateurs ---------- */
@@ -416,6 +692,22 @@ COF.UI.Carnet = (function () {
     document.body.appendChild(t); setTimeout(function () { t.classList.add('out'); }, 1400); setTimeout(function () { t.remove(); }, 1900);
   }
   function apresEntree() { rendre.defiler = true; rendre(); }
+  /* Clôt la rencontre en cours (entrée du récit comprise). */
+  function finRencontre(c, texte) {
+    if (!c.rencontre) return;
+    var id = c.rencontre.id;
+    c.scenes.forEach(function (s) { s.entrees.forEach(function (e) { if (e.t === 'rencontre' && e.r && e.r.id === id) e.r.fin = texte; }); });
+    c.rencontre = null;
+    K.sauver(c);
+  }
+  /* Lance un combat dans l'Arène depuis le récit (héros + alliés). */
+  function lancerCombat(c, r, source) {
+    X.versArene(c, r);   /* le combat du récit remplace ce qui traînait dans l'Arène */
+    c.combat = { source: source, texte: r.texte, r: r, debut: Date.now() };
+    K.ajouterEntree(c, { t: 'note', titre: 'Combat', txt: 'Combat engagé : ' + r.texte + '.' });
+    fermer();
+    COF.UI.aller('arene');
+  }
 
   function action(act, node) {
     var c = K.actif(), v = node.getAttribute('data-v');
@@ -429,16 +721,18 @@ COF.UI.Carnet = (function () {
       case 'oracle': sheetOracle(); return;
       case 'likelihood': oracleL = v; document.querySelectorAll('#cn-sheet [data-cn="likelihood"]').forEach(function (b) { b.classList.toggle('on', b === node); }); return;
       case 'demander': K.oracle(c, oracleL, val('cn-q')); fermer(); apresEntree(); return;
-      case 'test': jet.action = ''; jet.comps = {}; jet.oracle = null; sheetTest(); return;
+      case 'test': jet.action = ''; jet.comps = {}; jet.oracle = null; jet.effet = null; sheetTest(); return;
+      case 'relancer-test': sheetTest(); return;
+      case 'fermer': fermer(); apresEntree(); return;
       case 'jet-carac': memoAction(); jet.carac = v; sheetTest(); return;
       case 'jet-diff': memoAction(); jet.diff = +v; jet.oracle = null; sheetTest(); return;
       case 'jet-bonus': memoAction(); jet.bonus = !jet.bonus; sheetTest(); return;
       case 'jet-malus': memoAction(); jet.malus = !jet.malus; sheetTest(); return;
       case 'jet-comp': { memoAction(); var ic = node.getAttribute('data-i'); jet.comps[ic] = !jet.comps[ic]; sheetTest(); return; }
       case 'jet-action': {
-        var A = X.ACTIONS[+node.getAttribute('data-i')];
-        jet.action = A[0]; jet.carac = A[1]; jet.comps = {};
-        X.toutesCompetences(perso(c)).forEach(function (x, i) { if (String(x.nom).toLowerCase().indexOf(A[2]) >= 0) jet.comps[i] = true; });
+        var AC = X.ACTIONS[+node.getAttribute('data-i')];
+        jet.action = AC[0]; jet.carac = AC[1]; jet.comps = {};
+        X.toutesCompetences(perso(c)).forEach(function (x, i) { if (String(x.nom).toLowerCase().indexOf(AC[2]) >= 0) jet.comps[i] = true; });
         sheetTest(); return;
       }
       case 'jet-oracle': { memoAction(); var dO = X.difficulteOracle(c.tension); jet.diff = dO.diff; jet.oracle = dO.nom + ' (' + dO.diff + ')'; sheetTest(); return; }
@@ -451,8 +745,28 @@ COF.UI.Carnet = (function () {
         var txt = (a ? a + ' — ' : '') + jet.carac + ' ' + sgn(mc) + (noms.length ? ' ' + noms.join(' ') : '') + ' : ' + r.des.join('/') +
           (r.des.length > 1 ? ' (garde ' + r.garde + ')' : '') + ' ' + sgn(mod) +
           ' = ' + r.total + ' contre ' + jet.diff + ' → ' + (r.crit ? 'réussite critique !' : (r.fumble ? 'échec critique !' : (r.reussite ? 'réussite' : 'échec')));
-        K.ajouterEntree(c, { t: 'jet', txt: txt, reussite: !!r.reussite, csq: X.consequence(r) });
-        fermer(); apresEntree(); return;
+        var eff = null, combatPossible = false;
+        if (jet.effet && /^appr-/.test(jet.effet) && c.rencontre) {
+          var ra = A.resoudreApproche(c.rencontre, jet.effet.slice(5), !!r.reussite);
+          eff = ra.texte; combatPossible = ra.combat;
+          if (!ra.combat) finRencontre(c, eff);
+        } else if (jet.effet) eff = X.appliquerTest(c, jet.effet, r);
+        var csq = eff && !r.crit && !r.fumble ? null : X.consequence(r);
+        K.ajouterEntree(c, { t: 'jet', txt: txt, reussite: !!r.reussite, csq: csq, effet: eff });
+        rendre();
+        /* Le résultat s'affiche dans la feuille : on le voit quel que soit l'onglet. */
+        ouvrir('🎲 ' + (a || 'Test'), '<div class="resultat ' + (r.crit ? 'crit' : (r.fumble ? 'fumble' : '')) + '">' +
+          '<div class="grand">' + r.total + '</div>' +
+          '<div class="detail">d20 : ' + r.des.join(' / ') + (r.des.length > 1 ? ' (garde ' + r.garde + ')' : '') + ' ' + sgn(mod) + ' · difficulté ' + jet.diff + '</div>' +
+          '<div class="verdict ' + (r.reussite ? 'ok' : 'ko') + '" style="font-size:20px">' +
+            (r.crit ? 'Réussite critique !' : (r.fumble ? 'Échec critique !' : (r.reussite ? 'Réussite' : 'Échec'))) + '</div></div>' +
+          (eff ? '<div class="cn-menace ' + (r.reussite ? 'ok' : '') + '"><div class="s">' + esc(eff) + '</div></div>' : '') +
+          (csq ? '<div class="cn-menace' + (r.crit ? ' ok' : '') + '" style="margin-top:8px"><div class="s">' + esc(csq) + '</div></div>' : '') +
+          (combatPossible ? '<button class="btn btn-bloc cn-gros ko" data-cn="combat-rencontre">⚔️ Combattre</button>' : '') +
+          '<div class="cn-grille" style="margin-top:12px"><button data-cn="relancer-test">↻ Autre test</button>' +
+          '<button data-cn="fermer" class="on">OK</button></div>' +
+          '<div class="note" style="margin-top:8px">Noté dans la scène en cours.</div>', { type: 'resultat' });
+        return;
       }
       case 'evt': { var e = K.evenementHistoire(c); K.ajouterEntree(c, { t: 'evt', txt: e.texte }); apresEntree(); return; }
       case 'muse': { var m = COF.Oracle.inspiration(); K.ajouterEntree(c, { t: 'muse', txt: m.mot1 + ' × ' + m.mot2 }); apresEntree(); return; }
@@ -470,9 +784,16 @@ COF.UI.Carnet = (function () {
       case 'editer': sheetEditer(node.getAttribute('data-l'), node.getAttribute('data-id')); return;
       case 'attitude': sheet.attitude = v; document.querySelectorAll('#cn-sheet [data-cn="attitude"]').forEach(function (b) { b.classList.toggle('on', b === node); }); return;
       case 'fil-etat': sheet.ouvert = v === '1'; document.querySelectorAll('#cn-sheet [data-cn="fil-etat"]').forEach(function (b) { b.classList.toggle('on', b === node); }); return;
+      case 'comp-actif': case 'comp-role': case 'comp-niv': {
+        var bc = sheet.comp;
+        if (act === 'comp-actif') bc.actif = v === '1';
+        if (act === 'comp-role') bc.role = v;
+        sheetEditer(sheet.l, sheet.id, { nom: val('cn-e-nom'), note: val('cn-e-note'), attitude: bc.actif && sheet.attitude === 'neutre' ? 'allié' : sheet.attitude, ouvert: sheet.ouvert, comp: bc });
+        return;
+      }
       case 'enregistrer': {
         var ch = { nom: val('cn-e-nom') || '?', note: val('cn-e-note') };
-        if (sheet.l === 'pnj') ch.attitude = sheet.attitude;
+        if (sheet.l === 'pnj') { ch.attitude = sheet.attitude; ch.compagnon = sheet.comp && sheet.comp.actif ? sheet.comp : null; }
         if (sheet.l === 'fils') ch.ouvert = sheet.ouvert;
         K.majListe(c, sheet.l, sheet.id, ch); fermer(); rendre(); return;
       }
@@ -506,13 +827,23 @@ COF.UI.Carnet = (function () {
       case 'expe-env': memoExpe(); expe[node.getAttribute('data-k')] = v; rendre(); return;
       case 'cpt': {
         var k = node.getAttribute('data-k'), dv = +v;
-        if (k === 'ration-v') { c.expedition.rations = Math.max(0, c.expedition.rations + dv); K.sauver(c); }
+        if (k === 'monde-jours') { monde.jours = Math.max(1, Math.min(60, monde.jours + dv)); if (sheet && sheet.type === 'lieu') sheetLieu(sheet.id); return; }
+        if (k === 'comp-niv') {
+          sheet.comp.niveau = Math.max(1, Math.min(20, sheet.comp.niveau + dv));
+          sheetEditer(sheet.l, sheet.id, { nom: val('cn-e-nom'), note: val('cn-e-note'), attitude: sheet.attitude, ouvert: sheet.ouvert, comp: sheet.comp });
+          return;
+        }
+        if (k === 'ration-v' || k === 'r-rations' || k === 'r-torches') {
+          var cle = k === 'r-torches' ? 'torches' : 'rations', rs = X.ressources(c);
+          rs[cle] = Math.max(0, rs[cle] + dv); K.sauver(c);
+          if (sheet && sheet.type === 'ressources') { rendre(); sheetRessources(); return; }
+        }
         else { memoExpe(); expe[k] = Math.max(k === 'jours' ? 1 : 0, Math.min(30, expe[k] + dv)); }
         rendre(); return;
       }
       case 'expe-donjon': memoExpe(); X.commencerDonjon(c, expe.nom || 'Donjon', expe.taille, expe.env); X.salleSuivante(c); K.sauver(c); rendre(); return;
       case 'expe-salle': X.salleSuivante(c); K.sauver(c); rendre(); window.scrollTo(0, 0); return;
-      case 'expe-voyage': memoExpe(); X.commencerVoyage(c, expe.depart, expe.destination, expe.jours, expe.envV, expe.rations); K.sauver(c); rendre(); return;
+      case 'expe-voyage': memoExpe(); X.commencerVoyage(c, expe.depart, expe.destination, expe.jours, expe.envV); K.sauver(c); rendre(); return;
       case 'expe-jour': X.etapeSuivante(c); K.sauver(c); rendre(); return;
       case 'expe-fouiller': X.fouiller(c); K.sauver(c); rendre(); return;
       case 'expe-prendre': {
@@ -526,18 +857,170 @@ COF.UI.Carnet = (function () {
         K.sauver(c); rendre(); return;
       }
       case 'expe-combat': {
-        var x2 = c.expedition, rc = node.getAttribute('data-k') === 'salle' ? X.salleCourante(x2).rencontre : x2.etapes[x2.etapes.length - 1].rencontre;
-        var enCours = COF.Arene.lire().combattants.length;
-        if (enCours && !confirm('Remplacer le combat en cours dans l’Arène ?')) return;
-        X.versArene(c, rc);
-        K.ajouterEntree(c, { t: 'note', titre: 'Combat', txt: 'Combat engagé : ' + rc.texte + '.' });
-        COF.UI.aller('arene'); return;
+        var x2 = c.expedition, src = node.getAttribute('data-k') === 'salle' ? 'salle' : 'etape';
+        var rc = src === 'salle' ? X.salleCourante(x2).rencontre : x2.etapes[x2.etapes.length - 1].rencontre;
+        lancerCombat(c, Object.assign({ env: x2.env, niveau: x2.niveau }, rc), src);
+        return;
       }
-      case 'expe-test': sheetTest({ action: node.getAttribute('data-a'), carac: node.getAttribute('data-c'), diff: +node.getAttribute('data-d') }); return;
+      /* ----- Rencontres et combat ----- */
+      case 'rencontre': gen.env = A.envCourant(c); sheetRencontre(); return;
+      case 'gen-opt': {
+        gen[node.getAttribute('data-k')] = v;
+        if (sheet && sheet.type === 'rencontre') sheetRencontre(); else sheetGenerer();
+        return;
+      }
+      case 'rencontre-go': {
+        var rr = A.rencontre(c, { env: gen.env, difficulte: gen.diff, style: gen.style });
+        if (rr.erreur) { flash(rr.erreur); return; }
+        c.rencontre = rr;
+        K.ajouterEntree(c, { t: 'rencontre', r: rr, txt: rr.texte + ' — ' + rr.distance + '. ' + rr.reactionTexte + (rr.surprise ? ' ' + rr.surprise : '') });
+        fermer(); onglet = 'scene'; apresEntree(); return;
+      }
+      case 'approche': {
+        var ap = A.approches(c.rencontre).filter(function (x) { return x.id === v; })[0];
+        if (ap) sheetTest({ action: ap.action, carac: ap.carac, diff: ap.diff, effet: 'appr-' + ap.id });
+        return;
+      }
+      case 'combat-rencontre': if (c.rencontre) lancerCombat(c, c.rencontre, 'rencontre'); return;
+      case 'fin-combat': if (COF.UI.Arene.verserJournal) COF.UI.Arene.verserJournal(); sheetFinCombat(); return;
+      case 'issue': {
+        var cb0 = c.combat; if (!cb0) return;
+        A.syncAllies(c);
+        if (v === 'victoire') {
+          var bt = A.butinDe(cb0.r);
+          c.tension = Math.max(1, c.tension - 1);
+          if (cb0.source === 'salle' && c.expedition) { var sv = X.salleCourante(c.expedition); if (sv) sv.vaincue = true; }
+          if (cb0.source === 'etape' && c.expedition) { var ev = c.expedition.etapes[c.expedition.etapes.length - 1]; if (ev) ev.vaincue = true; }
+          finRencontre(c, 'Victoire');
+          K.ajouterEntree(c, { t: 'note', titre: 'Victoire', txt: 'Le combat est gagné (' + cb0.texte + ').\nButin : ' + A.texteButin(bt) });
+          c.combat = null; c.butinEnAttente = bt; K.sauver(c);
+          ouvrir('🏆 Victoire', '<div class="cn-menace ok"><div class="t">💰 Butin</div><div class="s">' + esc(A.texteButin(bt)) + '</div></div>' +
+            '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="prendre-combat">📥 Prendre le butin</button>' +
+            '<button class="btn btn-bloc" style="margin-top:8px" data-cn="retour-recit">📖 Retour au récit</button>', { type: 'victoire' });
+          return;
+        }
+        if (v === 'fuite') {
+          finRencontre(c, 'Le héros s’est échappé');
+          K.ajouterEntree(c, { t: 'note', titre: 'Fuite', txt: 'Le héros parvient à s’échapper du combat.' });
+        } else {
+          c.tension = Math.min(9, c.tension + 1);
+          var sort = COF.piocher(['capturé et emmené ailleurs', 'laissé pour mort (1 PV), dépouillé de sa bourse', 'sauvé in extremis par un tiers (un PNJ ? un inconnu ?)',
+            'abandonné : les ennemis ont eu ce qu’ils voulaient', 'réveillé plus tard, blessé, dans un lieu inconnu']);
+          finRencontre(c, 'Défaite');
+          K.ajouterEntree(c, { t: 'evt', txt: 'Le héros tombe… L’oracle suggère qu’il est ' + sort + '.' });
+        }
+        c.combat = null; K.sauver(c); fermer(); onglet = 'scene'; COF.UI.aller('carnet'); return;
+      }
+      case 'prendre-combat': {
+        var hp = perso(c);
+        if (hp && c.butinEnAttente) { A.encaisser(hp, c.butinEnAttente); flash('Butin ajouté à ' + hp.nom); }
+        c.butinEnAttente = null; K.sauver(c); fermer(); onglet = 'scene'; COF.UI.aller('carnet'); return;
+      }
+      case 'retour-recit': fermer(); onglet = 'scene'; COF.UI.aller('carnet'); return;
+      /* ----- Inspirer ----- */
+      case 'inspirer': sheetInspirer(); return;
+      case 'inspi': {
+        var en;
+        if (v === 'evt') en = { t: 'evt', txt: K.evenementHistoire(c).texte };
+        else if (v === 'muse') { var mu = COF.Oracle.inspiration(); en = { t: 'muse', txt: mu.mot1 + ' × ' + mu.mot2 }; }
+        else if (v === 'detail') en = { t: 'detail', txt: COF.Oracle.detailSensoriel(null).detail };
+        else {
+          var g = { rebond: A.rebondissement, faction: A.faction, rumeur: A.rumeur, route: function () { return A.routeEvt(c); }, temps: A.temps }[v]();
+          en = { t: v === 'rebond' ? 'evt' : 'note', titre: g.titre, txt: g.texte };
+        }
+        K.ajouterEntree(c, en); fermer(); onglet = 'scene'; apresEntree(); return;
+      }
+      /* ----- Générer ----- */
+      case 'generer': sheetGenerer(); return;
+      case 'gen-type': gen.type = v; gen.res = null; gen.lieu = v === 'butin' ? 'fouille' : 'village'; sheetGenerer(); return;
+      case 'gen-go': lancerGenerateur(c); sheetGenerer(); return;
+      case 'gen-noter': {
+        var gn = val('cn-g-nom'), gt = val('cn-g-txt');
+        K.ajouterEntree(c, { t: 'note', titre: gen.res.titre, txt: (gn ? gn + '\n' : '') + gt });
+        gen.res = null; fermer(); onglet = 'scene'; apresEntree(); return;
+      }
+      case 'gen-garder': {
+        var nm2 = val('cn-g-nom') || gen.res.titre, tx2 = val('cn-g-txt'), li = gen.res.liste;
+        var obj = { nom: nm2, note: tx2 }; if (li === 'pnj' && gen.res.attitude) obj.attitude = gen.res.attitude;
+        K.ajouterListe(c, li, obj);
+        K.ajouterEntree(c, { t: 'note', titre: { pnj: 'Nouveau PNJ', lieux: 'Nouveau lieu', fils: 'Nouveau fil' }[li], txt: nm2 });
+        flash('💾 ' + nm2); gen.res = null; sheetGenerer(); return;
+      }
+      case 'gen-butin': {
+        var hb = perso(c); if (!hb) { flash('Aucun héros lié'); return; }
+        A.encaisser(hb, gen.res.butin);
+        K.ajouterEntree(c, { t: 'note', titre: gen.res.titre, txt: gen.res.texte });
+        flash('Butin ajouté'); gen.res = null; fermer(); rendre(); return;
+      }
+      case 'expe-test': {
+        var ef = node.getAttribute('data-e');
+        sheetTest({ action: node.getAttribute('data-a'), carac: node.getAttribute('data-c'), diff: +node.getAttribute('data-d'), effet: ef });
+        return;
+      }
       case 'expe-quitter': {
         if (!c.expedition) return;
         if (!(v === 'arrive' || (c.expedition.type === 'donjon' && (X.salleCourante(c.expedition) || {}).finale)) && !confirm('Mettre fin à l’expédition ?')) return;
         X.quitter(c, v === 'arrive' ? 'Voyage terminé' : null); K.sauver(c); rendre(); return;
+      }
+      /* ----- Carte du monde ----- */
+      case 'monde-lieu': {
+        var idl = node.getAttribute('data-id');
+        if (monde.deplacer) { monde.deplacer = null; rendre(); return; }
+        monde.cible = null; sheetLieu(idl); return;
+      }
+      case 'monde-fond': {
+        if (!monde.deplacer) return;
+        var lm = COF.Monde.lieu(c, monde.deplacer);
+        if (lm) { lm.x = Math.max(5, Math.min(95, +node.getAttribute('data-x'))); lm.y = Math.max(5, Math.min(59, +node.getAttribute('data-y'))); K.sauver(c); }
+        monde.deplacer = null; rendre(); return;
+      }
+      case 'monde-deplacer': monde.deplacer = node.getAttribute('data-id'); fermer(); onglet = 'lieux'; rendre(); return;
+      case 'monde-ici': {
+        COF.Monde.seRendre(c, node.getAttribute('data-id')); K.sauver(c);
+        K.ajouterEntree(c, { t: 'note', titre: 'Lieu', txt: 'Le héros est à ' + COF.Monde.ici(c).nom + '.' });
+        fermer(); rendre(); return;
+      }
+      case 'monde-cible': monde.cible = node.getAttribute('data-id'); var rr0 = COF.Monde.route(c, node.getAttribute('data-l'), monde.cible); if (rr0) { monde.jours = rr0.jours; monde.env = rr0.env; } sheetLieu(node.getAttribute('data-l')); return;
+      case 'monde-env': monde.env = v; sheetLieu(node.getAttribute('data-l')); return;
+      case 'monde-relier': {
+        COF.Monde.relier(c, node.getAttribute('data-l'), monde.cible, monde.jours, monde.env); K.sauver(c);
+        var lid = node.getAttribute('data-l'); monde.cible = null; rendre(); sheetLieu(lid); return;
+      }
+      case 'monde-delier': COF.Monde.delier(c, node.getAttribute('data-id')); K.sauver(c); rendre(); sheetLieu(node.getAttribute('data-l')); return;
+      case 'monde-voyager': {
+        if (c.expedition) { flash('Terminez d’abord l’expédition en cours'); return; }
+        var ici0 = COF.Monde.ici(c), dest = COF.Monde.lieu(c, node.getAttribute('data-id')), rt = COF.Monde.route(c, ici0.id, dest.id);
+        X.commencerVoyage(c, ici0.nom, dest.nom, rt.jours, rt.env); K.sauver(c);
+        fermer(); onglet = 'expe'; rendre(); return;
+      }
+      /* ----- Ressources ----- */
+      case 'ressources': if (!perso(c) && !COF.Store.actif()) { flash('Aucun personnage'); } sheetRessources(); return;
+      case 'res-pv': case 'res-pm': {
+        var ph = perso(c); if (!ph) return; etatHeros(ph);
+        if (act === 'res-pv') ph.pv = Math.max(0, Math.min(COF.Calc.pvMax(ph), ph.pv + (+v)));
+        else ph.pm = Math.max(0, Math.min(COF.Calc.pmMax(ph), (ph.pm || 0) + (+v)));
+        COF.Store.sauver(ph); rendre(); sheetRessources(); return;
+      }
+      case 'recup-rapide': {
+        var pr = perso(c), er = etatHeros(pr); if (!pr) return;
+        if (er.dr <= 0) { flash('Plus de dé de récupération'); return; }
+        pr.dr--;
+        var jr = COF.Dice.dommages('1d' + er.drType, COF.Calc.ctx(pr), {}), gain = jr.total + Math.floor((pr.niveau || 1) / 2);
+        pr.pv = Math.min(er.pvMax, pr.pv + gain); COF.Store.sauver(pr);
+        K.ajouterEntree(c, { t: 'note', titre: 'Repos', txt: 'Récupération rapide : +' + gain + ' PV (' + pr.pv + '/' + er.pvMax + '), ' + pr.dr + ' DR restant(s).' });
+        rendre(); sheetRessources(); flash('+' + gain + ' PV'); return;
+      }
+      case 'recup-nuit': {
+        var pn = perso(c), en = etatHeros(pn), rs2 = X.ressources(c); if (!pn) return;
+        pn.dr = Math.min(en.drMax, (pn.dr || 0) + 1); pn.pm = en.pmMax; pn.dmTemp = 0; pn.etats = [];
+        COF.Store.sauver(pn);
+        c.jour++;
+        var faim = rs2.rations <= 0; if (!faim) rs2.rations--;
+        var partis = COF.UI.Compagnie ? COF.UI.Compagnie.nuit(c) : [];
+        if (partis.length) K.ajouterEntree(c, { t: 'evt', txt: 'Au réveil, ' + partis.join(' et ') + ' a disparu : sa loyauté était trop faible.' });
+        K.ajouterEntree(c, { t: 'note', titre: 'Nuit', txt: 'Nuit de repos — jour ' + c.jour + ' : +1 DR (' + pn.dr + '/' + en.drMax + '), PM restaurés.' +
+          (faim ? ' Pas de ration : le héros a faim.' : ' Rations : ' + rs2.rations + '.') });
+        rendre(); fermer(); flash('🌙 Jour ' + c.jour); return;
       }
       case 'fab': sheetFab(); return;
       case 'fab-dest': sheet.dest = v; document.querySelectorAll('#cn-sheet [data-cn="fab-dest"]').forEach(function (b) { b.classList.toggle('on', b === node); }); return;
@@ -557,8 +1040,14 @@ COF.UI.Carnet = (function () {
     document.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-cn]') : null;
       if (!t) return;
-      if (!(t.closest('#vue-carnet') || t.closest('#cn-sheet') || t.id === 'cn-fab')) return;
+      if (!(t.closest('#vue-carnet') || t.closest('#modale') || t.closest('.cn-banniere') || t.id === 'cn-fab')) return;
       e.preventDefault();
+      if (t.getAttribute('data-cn') === 'monde-fond') {
+        /* position touchée sur la carte → coordonnées 0-100 × 0-64 */
+        var rc = t.getBoundingClientRect();
+        t.setAttribute('data-x', Math.round((e.clientX - rc.left) / rc.width * COF.Monde.L));
+        t.setAttribute('data-y', Math.round((e.clientY - rc.top) / rc.height * COF.Monde.H));
+      }
       action(t.getAttribute('data-cn'), t);
     });
     /* Entrée = envoyer (Maj+Entrée = retour à la ligne) dans le composeur,
@@ -572,5 +1061,14 @@ COF.UI.Carnet = (function () {
     });
   }
 
-  return { init: init, rendre: rendre, majFab: majFab };
+  /* Glisser du doigt : onglet suivant (+1) ou précédent (−1). */
+  var ORDRE = ['scene', 'expe', 'fils', 'pnj', 'lieux', 'journal'];
+  function glisser(sens) {
+    if (!K.actif()) return;
+    var i = ORDRE.indexOf(onglet) + sens;
+    if (i < 0 || i >= ORDRE.length) return;
+    onglet = ORDRE[i]; rendre(); window.scrollTo(0, 0);
+  }
+
+  return { init: init, rendre: rendre, majFab: majFab, banniereCombat: banniereCombat, glisser: glisser, ouvrirOnglet: function (o) { onglet = o; } };
 })();

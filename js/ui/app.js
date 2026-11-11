@@ -37,31 +37,77 @@ COF.UI = COF.UI || {};
      Outils   : dés libres et aide-mémoire des règles
      Chaque sous-onglet indique la section HTML qui l'affiche (« vue »). Les
      générateurs partagent la section #vue-generateurs.                    */
-  var VUES = ['persos', 'fiche', 'artisanat', 'arene', 'bestiaire', 'carnet', 'generateurs', 'des', 'plus'];
+  var VUES = ['persos', 'fiche', 'artisanat', 'arene', 'bestiaire', 'carnet', 'marche', 'generateurs', 'des', 'plus'];
 
-  var POLES = [
-    { id: 'heros', subs: [
+  /* Deux modes de navigation :
+       normal   : boîte à outils complète (fiche, combat, trésors, monde, dés) ;
+       aventure : jeu en solo immersif, tout part du Carnet (récit, combat,
+                  héros, outils) sans jamais devoir sortir du mode.        */
+  var POLES_NORMAL = [
+    { id: 'heros', ic: '🛡️', tx: 'Héros', subs: [
       ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'],
       ['artisanat', '⚒️ Artisanat', 'artisanat'], ['persos', '👥 Personnages', 'persos']] },
-    { id: 'combat', subs: [
+    { id: 'combat', ic: '⚔️', tx: 'Combat', subs: [
       ['arene', '⚔️ Arène', 'arene'], ['rencontre', '🎯 Rencontre', 'generateurs'], ['bestiaire', '🐉 Bestiaire', 'bestiaire']] },
-    { id: 'tresors', subs: [
-      ['butin', '💰 Butin', 'generateurs'], ['objmagie', '🪄 Objets magiques', 'generateurs'],
+    { id: 'tresors', ic: '💰', tx: 'Trésors', subs: [
+      ['marche', '🛒 Marché', 'marche'], ['butin', '💰 Butin', 'generateurs'], ['objmagie', '🪄 Objets magiques', 'generateurs'],
       ['catalogue', '📚 Catalogue du Compagnon', 'generateurs'], ['objprestige', '👑 Objet prestigieux', 'generateurs']] },
-    { id: 'aventure', subs: [
-      ['carnet', '📖 Carnet', 'carnet'], ['oracle', '🔮 Oracle', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'],
-      ['intrigue', '🎭 Intrigue', 'generateurs'], ['lieux', '🏘️ Lieux', 'generateurs'], ['voyage', '🧭 Voyage', 'generateurs'],
-      ['donjon', '🗝️ Donjon', 'generateurs'], ['solo', '🕰️ Vie & temps', 'generateurs']] },
-    { id: 'outils', subs: [
+    { id: 'monde', ic: '🗺️', tx: 'Monde', subs: [
+      ['pnj', '👤 PNJ', 'generateurs'], ['lieux', '🏘️ Lieux', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'],
+      ['intrigue', '🎭 Intrigue', 'generateurs'], ['voyage', '🧭 Voyage', 'generateurs'], ['donjon', '🗝️ Donjon', 'generateurs'],
+      ['solo', '🕰️ Vie & temps', 'generateurs'], ['oracle', '🔮 Oracle', 'generateurs']] },
+    { id: 'outils', ic: '🎲', tx: 'Dés & règles', subs: [
       ['des', '🎲 Dés', 'des'], ['regles', '📖 Règles', 'plus']] }
   ];
-  var SUBS = {};
-  POLES.forEach(function (p) {
-    p.subs.forEach(function (s) { SUBS[s[0]] = { id: s[0], nom: s[1], vue: s[2], pole: p.id }; });
-  });
+  var POLES_AVENTURE = [
+    { id: 'recit', ic: '📖', tx: 'Récit', subs: [['carnet', '📖 Récit', 'carnet']] },
+    { id: 'combat', ic: '⚔️', tx: 'Combat', subs: [['arene', '⚔️ Combat', 'arene'], ['bestiaire', '🐉 Bestiaire', 'bestiaire']] },
+    { id: 'heros', ic: '🛡️', tx: 'Héros', subs: [
+      ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'], ['artisanat', '⚒️ Artisanat', 'artisanat']] },
+    { id: 'marche', ic: '🛒', tx: 'Marché', subs: [['marche', '🛒 Marché', 'marche']] },
+    { id: 'outils', ic: '🧰', tx: 'Outils', subs: [
+      ['oracle', '🔮 Oracle', 'generateurs'], ['rencontre', '🎯 Rencontres', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'],
+      ['lieux', '🏘️ Lieux', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'], ['intrigue', '🎭 Intrigue', 'generateurs'],
+      ['voyage', '🧭 Voyage', 'generateurs'], ['donjon', '🗝️ Donjon', 'generateurs'], ['solo', '🕰️ Vie & temps', 'generateurs'],
+      ['butin', '💰 Butin', 'generateurs'], ['objmagie', '🪄 Objets magiques', 'generateurs'], ['catalogue', '📚 Catalogue', 'generateurs'],
+      ['des', '🎲 Dés', 'des'], ['regles', '📖 Règles', 'plus']] }
+  ];
+  function lireMode() { try { return localStorage.getItem('cof2.mode') === 'aventure' ? 'aventure' : 'normal'; } catch (e) { return 'normal'; } }
+  var MODE = lireMode();
+  var POLES, SUBS, dernierSous;
+  var DERNIERS = {
+    normal: { heros: 'fiche', combat: 'arene', tresors: 'butin', monde: 'pnj', outils: 'des' },
+    aventure: { recit: 'carnet', combat: 'arene', heros: 'fiche', marche: 'marche', outils: 'oracle' }
+  };
+  function subsDe(poles) {
+    var o = {};
+    poles.forEach(function (p) { p.subs.forEach(function (s) { o[s[0]] = { id: s[0], nom: s[1], vue: s[2], pole: p.id }; }); });
+    return o;
+  }
+  var SUBS_NORMAL = subsDe(POLES_NORMAL), SUBS_AVENTURE = subsDe(POLES_AVENTURE);
+  function appliquerMode() {
+    POLES = MODE === 'aventure' ? POLES_AVENTURE : POLES_NORMAL;
+    SUBS = MODE === 'aventure' ? SUBS_AVENTURE : SUBS_NORMAL;
+    dernierSous = DERNIERS[MODE];
+    document.body.classList.toggle('mode-aventure', MODE === 'aventure');
+    var nav = $('.nav');
+    if (nav) nav.innerHTML = POLES.map(function (p) {
+      return '<button id="nav-' + p.id + '" data-pole="' + p.id + '"><span class="ic">' + p.ic + '</span><span class="tx">' + esc(p.tx) + '</span></button>';
+    }).join('');
+    var bm = $('#btn-mode');
+    if (bm) bm.innerHTML = MODE === 'aventure' ? '🧰 Normal' : '🎭 Aventure';
+    var bp = $('#btn-persos');
+    if (bp) bp.style.display = MODE === 'aventure' ? 'none' : '';
+  }
+  function changerMode(m) {
+    MODE = m === 'aventure' ? 'aventure' : 'normal';
+    try { localStorage.setItem('cof2.mode', MODE); } catch (e) {}
+    appliquerMode();
+  }
+  COF.UI.mode = function () { return MODE; };
+  COF.UI.changerMode = function (m) { changerMode(m); aller(m === 'aventure' ? 'carnet' : 'fiche'); };
   /* Anciens noms de vues, encore utilisés par certains liens. */
-  var ALIAS = { generateurs: 'rencontre', plus: 'regles' };
-  var dernierSous = { heros: 'fiche', combat: 'arene', tresors: 'butin', aventure: 'carnet', outils: 'des' };
+  var ALIAS = { generateurs: 'rencontre', plus: 'regles', aventure: 'carnet' };
 
   function rendreFicheOnglets() {
     var corps = $('#vue-fiche-corps'), voies = $('#vue-voies'), objets = $('#vue-objets');
@@ -78,6 +124,7 @@ COF.UI = COF.UI || {};
   function rendreSousNav(pole) {
     var p = POLES.filter(function (x) { return x.id === pole; })[0];
     var n = $('#sous-nav');
+    if (p.subs.length < 2) { n.innerHTML = ''; return; }
     n.innerHTML = p.subs.map(function (s) {
       return '<button data-sousnav="' + s[0] + '" class="' + (dernierSous[pole] === s[0] ? 'on' : '') + '">' + esc(s[1]) + '</button>';
     }).join('');
@@ -90,6 +137,13 @@ COF.UI = COF.UI || {};
   function aller(cible) {
     cible = ALIAS[cible] || cible;
     if (dernierSous[cible] && !SUBS[cible]) cible = dernierSous[cible];
+    /* Destination propre à l'autre mode : le Carnet fait entrer en mode
+       aventure ; les écrans réservés au mode normal (personnages,
+       objet prestigieux) en font sortir. */
+    if (!SUBS[cible]) {
+      if (SUBS_AVENTURE[cible] && MODE === 'normal') changerMode('aventure');
+      else if (SUBS_NORMAL[cible] && MODE === 'aventure') changerMode('normal');
+    }
     var sub = SUBS[cible] || SUBS.fiche;
     dernierSous[sub.pole] = sub.id;
 
@@ -106,12 +160,13 @@ COF.UI = COF.UI || {};
 
     if (sub.vue === 'fiche') rendreFicheOnglets();
     else if (sub.vue === 'arene') COF.UI.Arene.rendre($('#vue-arene'));
-    else if (sub.vue === 'persos') COF.UI.Persos.rendre();
+    else if (sub.vue === 'persos') { COF.UI.Persos.rendre(); COF.UI.Reglages.rendre(); }
     else if (sub.vue === 'artisanat') COF.UI.Artisanat.rendre();
     else if (sub.vue === 'bestiaire') COF.UI.Bestiaire.rendre();
     else if (sub.vue === 'generateurs') COF.UI.Generateurs.afficher(sub.id);
     else if (sub.vue === 'des') COF.UI.rendreJournal();
     else if (sub.vue === 'carnet') COF.UI.Carnet.rendre();
+    else if (sub.vue === 'marche') COF.UI.Marche.rendre();
     if (COF.UI.Carnet) COF.UI.Carnet.majFab();
     majTitre();
   }
@@ -120,6 +175,12 @@ COF.UI = COF.UI || {};
   function majTitre() {
     var p = COF.Store.actif();
     var t = $('#titre'), s = $('#sous-titre');
+    var c = MODE === 'aventure' && COF.Carnet ? COF.Carnet.actif() : null;
+    if (MODE === 'aventure') {
+      t.textContent = c ? '🎭 ' + c.titre : '🎭 Mode aventure';
+      s.textContent = c ? (p ? p.nom + ' · niv. ' + p.niveau + ' · ' : '') + 'jour ' + c.jour + ' · tension ' + c.tension : 'Jeu en solo';
+      return;
+    }
     if (!p) { t.textContent = 'COF2 Compagnon'; s.textContent = 'Aucun personnage'; return; }
     var pr = COF.PROFILS[p.profil], pe = COF.PEUPLES[p.peuple];
     t.textContent = p.nom;
@@ -538,10 +599,13 @@ COF.UI = COF.UI || {};
 
   /* ---------- Démarrage ---------- */
   function init() {
-    POLES.forEach(function (p) {
-      var b = $('#nav-' + p.id);
-      if (b) b.addEventListener('click', function () { aller(p.id); });
+    appliquerMode();
+    $('.nav').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-pole]') : null;
+      if (b) aller(b.getAttribute('data-pole'));
     });
+    var bm = $('#btn-mode');
+    if (bm) bm.addEventListener('click', function () { COF.UI.changerMode(MODE === 'aventure' ? 'normal' : 'aventure'); });
     $('#modale-fermer').addEventListener('click', fermerModale);
     $('#modale').addEventListener('click', function (e) {
       if (e.target.id === 'modale') fermerModale();
@@ -557,13 +621,17 @@ COF.UI = COF.UI || {};
     COF.UI.Objets.init();
     COF.UI.Artisanat.init();
     COF.UI.Carnet.init();
+    COF.UI.Reglages.init();
+    COF.UI.Compagnie.init();
+    COF.UI.Marche.init();
     COF.UI.Arene.init();
     COF.UI.Bestiaire.init();
     COF.UI.Generateurs.init();
     COF.UI.Des.init();
     COF.UI.Plus.init();
 
-    aller(COF.Store.actif() ? 'fiche' : 'persos');
+    if (MODE === 'aventure' && COF.Store.actif()) aller('carnet');
+    else { if (MODE === 'aventure') changerMode('normal'); aller(COF.Store.actif() ? 'fiche' : 'persos'); }
   }
 
   document.addEventListener('DOMContentLoaded', init);

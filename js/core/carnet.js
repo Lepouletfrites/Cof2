@@ -153,7 +153,7 @@ COF.Carnet = (function () {
     if (e.t === 'oracle') return '🔮 ' + (e.question ? '« ' + e.question + ' » ' : '') + '(' + e.likelihood + ') → ' + e.txt +
       (e.evt ? '\n   🔀 ' + e.evt.texte : '');
     if (e.t === 'evt') return '🔀 ' + e.txt;
-    if (e.t === 'jet') return '🎲 ' + e.txt + (e.csq ? '\n   ' + e.csq : '');
+    if (e.t === 'jet') return '🎲 ' + e.txt + (e.effet ? '\n   ➜ ' + e.effet : '') + (e.csq ? '\n   ' + e.csq : '');
     if (e.t === 'muse') return '✨ ' + e.txt;
     if (e.t === 'detail') return '🖐️ ' + e.txt;
     return '📌 ' + (e.titre ? e.titre + ' — ' : '') + e.txt;

@@ -39,6 +39,7 @@ COF.UI.Pnj = (function () {
     if (id === 'peuple') return NOMS_PEUPLE[valeur] || valeur;
     if (id === 'metier') return valeur.nom + ' (' + valeur.cat + ')';
     if (id === 'divinite') return valeur.nom + ', ' + valeur.domaine;
+    if ((id === 'taille' || id === 'corpulence') && pnj && pnj.genre === 'féminin') return COF.PnjCalc.feminiser(String(valeur));
     return String(valeur);
   }
 

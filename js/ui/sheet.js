@@ -48,6 +48,7 @@ COF.UI.Fiche = (function () {
     h += blocSorts();
     h += blocCapacites();
     h += blocCompagnons();
+    if (COF.UI.Compagnie) h += COF.UI.Compagnie.htmlFiche(C);
     h += blocCompetences();
     h += blocEquipement(pr);
     h += blocAjustements();
