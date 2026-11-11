@@ -319,7 +319,7 @@ COF.CATALOGUE_COMPAGNON.push(
         4: [['Potion d’intelligence', "+3 en INT et aux effets des sorts de magicien pendant 1 h."]],
         5: ['Accélération', 'Respiration aquatique', 'Vol'] } },
     { v: 'Voie des flasques en verre', mat: 'forge', profil: 'ensorceleur', listes: {
-        1: ['Murmure dans le vent', 'Détection de l’invisible', 'Image décalée'],
+        1: ['Murmures dans le vent', 'Détection de l’invisible', 'Image décalée'],
         2: [['Potion de mana d’ensorceleur', "Un ensorceleur récupère 1d8 PM (1 par minute) ; un autre lanceur, la moitié."]],
         3: ['Sous tension', 'Télékinésie', 'Clairvoyance'],
         4: [['Potion de charisme', "+3 en CHA et aux effets des sorts d'ensorceleur pendant 1 h."]],
@@ -343,16 +343,38 @@ COF.CATALOGUE_COMPAGNON.push(
         4: [['Potion de force impie', "+3 en FOR pendant 1 h."]],
         5: ['Aspect du démon', 'Manteau d’ombre', ['Ossification', "Pendant 12 h (1d4° DM en la buvant) : RD 3 contre le tranchant et le contondant, dé bonus en intimidation, dé malus pour séduire."]] } }
   ];
+  /* Retrouve le sort dans les voies du profil (ou de tous les profils) pour
+     reprendre sa description complète au lieu d'un simple renvoi. */
+  function norm(s) { return String(s).toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  var ID_PROFIL = { 'magicien': 'magicien', 'ensorceleur': 'ensorceleur', 'prêtre': 'pretre', 'druide': 'druide', 'sorcier': 'sorcier' };
+  function sortDe(profil, nom) {
+    var P = COF.PROFILS || {}, cible = norm(nom), ids = [ID_PROFIL[profil]].concat(Object.keys(P));
+    for (var i = 0; i < ids.length; i++) {
+      var pr = P[ids[i]]; if (!pr || !pr.voies) continue;
+      for (var j = 0; j < pr.voies.length; j++) {
+        var caps = pr.voies[j].caps || [];
+        for (var k = 0; k < caps.length; k++) {
+          if (norm(caps[k].n) === cible) return { cap: caps[k], voie: pr.voies[j].nom, profil: pr.nom };
+        }
+      }
+    }
+    return null;
+  }
   flasques.forEach(function (f) {
     paliers.forEach(function (p) {
       (f.listes[p.r] || []).forEach(function (x) {
-        var nom = Array.isArray(x) ? x[0] : x;
-        var desc = Array.isArray(x) ? x[1] : "Mêmes effets que le sort de " + f.profil + " « " + nom + " », pour le seul buveur.";
+        var nom = Array.isArray(x) ? x[0] : x, desc;
+        if (Array.isArray(x)) desc = x[1];
+        else {
+          var s = sortDe(f.profil, nom);
+          desc = s ? s.cap.d + " (Sort « " + nom + " », " + s.voie + " du " + s.profil.toLowerCase() + ", rang " + s.cap.r + " ; affecte le seul buveur.)"
+                   : "Mêmes effets que le sort de " + f.profil + " « " + nom + " », pour le seul buveur.";
+        }
         COF.CATALOGUE_COMPAGNON.push({
           g: 'potions', v: f.v, r: p.r, t: 'objet',
           n: (/^(Potion|Eau)/.test(nom) ? nom : 'Potion : ' + nom),
           niv: p.niv, prix: p.prix, tests: 'alchimie ' + p.alch + ', ' + f.mat + ' ' + p.aut + ', lapidage ' + p.aut, nm: 0,
-          potion: true, d: desc
+          potion: true, d: desc, sort: /^(Potion|Eau)/.test(nom) ? null : nom
         });
       });
     });

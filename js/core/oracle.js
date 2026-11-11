@@ -56,9 +56,14 @@ COF.Oracle = (function () {
   /* Oracle oui/non : jet de d100 comparé au seuil de vraisemblance
      choisi, avec six nuances de réponse. Sur un double (11, 22, 33…),
      un événement aléatoire vient en plus perturber la scène. */
-  function repondre(likelihoodId) {
+  /* opts.tension (1-9, 5 = neutre) : une histoire tendue rend le « oui »
+     plus probable (± 4 % par cran) et les événements plus fréquents
+     (un double ne déclenche un événement que si son chiffre ≤ tension). */
+  function repondre(likelihoodId, opts) {
+    opts = opts || {};
     var L = likelihood(likelihoodId);
-    var t = L.seuil;
+    var tension = opts.tension || null;
+    var t = tension ? Math.max(3, Math.min(97, L.seuil + (tension - 5) * 4)) : L.seuil;
     var r = 1 + alea(100);
 
     var extremeOui = Math.max(1, Math.round(t * 0.15));
@@ -74,7 +79,8 @@ COF.Oracle = (function () {
     else if (r <= 100 - extremeNon) nuance = 'non';
     else nuance = 'non_et';
 
-    var evt = (r % 11 === 0) ? evenement() : null;
+    var double = r % 11 === 0 && r < 100;
+    var evt = double && (!tension || (r / 11) <= tension) ? evenement() : null;
 
     return {
       roll: r, seuil: t, likelihood: L,
@@ -84,8 +90,15 @@ COF.Oracle = (function () {
   }
 
   /* Test de scène : la scène prévue se déroule-t-elle comme imaginé ? */
-  function testScene() {
+  function testScene(tension) {
     var r = 1 + alea(10);
+    /* Avec une tension (1-9) : un d10 inférieur à la tension dévie la
+       scène (40 % à 5, 80 % à 9) — impair : modifiée, pair : interrompue. */
+    if (tension) {
+      if (r < tension) return r % 2 ? { resultat: 'modifiee', label: 'Modifiée', evenement: evenement(), roll: r }
+        : { resultat: 'interrompue', label: 'Interrompue', evenement: evenement(), roll: r };
+      return { resultat: 'normale', label: 'Comme prévu', evenement: null, roll: r };
+    }
     if (r <= 1) return { resultat: 'interrompue', label: 'Interrompue', evenement: evenement() };
     if (r <= 3) return { resultat: 'modifiee', label: 'Modifiée', evenement: evenement() };
     return { resultat: 'normale', label: 'Comme prévu', evenement: null };

@@ -12,7 +12,9 @@ COF.UI.Butin = (function () {
   var $ = COF.UI.$, $$ = COF.UI.$$, esc = COF.UI.esc;
 
   var MODE = 'rencontre';   // 'rencontre' | 'fouille' | 'coffre'
-  var P = { env: 'foret', niveau: 1, richesse: 'standard' };
+  var P = { env: 'foret', niveau: null, richesse: 'standard' };
+  /* Le niveau du groupe suit le personnage actif tant qu'on ne l'a pas réglé. */
+  function niveauDefaut() { var p = COF.Store.actif(); return p ? (p.niveau || 1) : 1; }
   var butin = null;
   var cible = null;
 
@@ -28,13 +30,12 @@ COF.UI.Butin = (function () {
       if (!t.closest('#vue-generateurs')) return;
       actions('richesse', t);
     });
-    var p = COF.Store.actif();
-    if (p) P.niveau = p.niveau || 1;
   }
 
   /* ---------- Rendu ---------- */
   function rendre(node) {
     cible = node;
+    if (!P.manuel) P.niveau = niveauDefaut();
     var h = '';
     h += '<div class="carte"><h2>Générateur de butin</h2><div class="carte-corps">';
     h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-mute);margin-bottom:5px">Source</div>';
@@ -108,7 +109,9 @@ COF.UI.Butin = (function () {
     return '<div class="carte" style="margin-top:12px;border-color:var(--or)"><div class="carte-corps">' +
       '<div class="ligne" style="padding:0">' +
       '<div class="info"><div class="t" style="color:var(--or-clair);font-size:16px;margin-bottom:4px">✨ ' +
-        esc(m.nom) + '</div><div class="s">' + esc(m.desc) + '</div></div>' +
+        esc(m.nom) + '</div>' +
+        (m.source ? '<div class="s" style="color:var(--or);margin-bottom:2px">' + esc(m.source) + (m.niveau ? ' · niveau ' + m.niveau : '') + '</div>' : '') +
+        '<div class="s">' + esc(m.desc) + '</div></div>' +
       '<div class="actions">' + btnAjouter(cle === 'magique' ? 'loot-magique' : 'loot-magique2', undefined, m.ajoute, perso) + '</div>' +
       '</div></div></div>';
   }
@@ -190,7 +193,7 @@ COF.UI.Butin = (function () {
   function marquerMagique(l, cle, perso) {
     var m = l[cle];
     if (!m || m.ajoute) return;
-    COF.Store.ajouterObjet(perso, {
+    COF.Store.ajouterObjet(perso, m.item ? Object.assign({}, m.item, { nom: '✨ ' + m.item.nom }) : {
       nom: '✨ ' + m.nom, qte: 1, note: m.desc, dm: m.dm, armeType: m.armeType,
       def: m.def, slot: m.def ? 'armure' : undefined
     });
@@ -207,8 +210,8 @@ COF.UI.Butin = (function () {
     switch (act) {
       case 'mode': MODE = node.getAttribute('data-v'); butin = null; rendre(cible); break;
       case 'env': P.env = node.getAttribute('data-v'); rendre(cible); break;
-      case 'niv+': P.niveau = Math.min(20, P.niveau + 1); rendre(cible); break;
-      case 'niv-': P.niveau = Math.max(1, P.niveau - 1); rendre(cible); break;
+      case 'niv+': P.niveau = Math.min(20, P.niveau + 1); P.manuel = true; rendre(cible); break;
+      case 'niv-': P.niveau = Math.max(1, P.niveau - 1); P.manuel = true; rendre(cible); break;
       case 'richesse': P.richesse = node.value; break;
       case 'generer': {
         if (MODE === 'rencontre') {

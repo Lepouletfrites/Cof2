@@ -37,7 +37,7 @@ COF.UI = COF.UI || {};
      Outils   : dés libres et aide-mémoire des règles
      Chaque sous-onglet indique la section HTML qui l'affiche (« vue »). Les
      générateurs partagent la section #vue-generateurs.                    */
-  var VUES = ['persos', 'fiche', 'artisanat', 'arene', 'bestiaire', 'generateurs', 'des', 'plus'];
+  var VUES = ['persos', 'fiche', 'artisanat', 'arene', 'bestiaire', 'carnet', 'generateurs', 'des', 'plus'];
 
   var POLES = [
     { id: 'heros', subs: [
@@ -49,7 +49,7 @@ COF.UI = COF.UI || {};
       ['butin', '💰 Butin', 'generateurs'], ['objmagie', '🪄 Objets magiques', 'generateurs'],
       ['catalogue', '📚 Catalogue du Compagnon', 'generateurs'], ['objprestige', '👑 Objet prestigieux', 'generateurs']] },
     { id: 'aventure', subs: [
-      ['oracle', '🔮 Oracle', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'],
+      ['carnet', '📖 Carnet', 'carnet'], ['oracle', '🔮 Oracle', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'],
       ['intrigue', '🎭 Intrigue', 'generateurs'], ['lieux', '🏘️ Lieux', 'generateurs'], ['voyage', '🧭 Voyage', 'generateurs'],
       ['donjon', '🗝️ Donjon', 'generateurs'], ['solo', '🕰️ Vie & temps', 'generateurs']] },
     { id: 'outils', subs: [
@@ -61,7 +61,7 @@ COF.UI = COF.UI || {};
   });
   /* Anciens noms de vues, encore utilisés par certains liens. */
   var ALIAS = { generateurs: 'rencontre', plus: 'regles' };
-  var dernierSous = { heros: 'fiche', combat: 'arene', tresors: 'butin', aventure: 'oracle', outils: 'des' };
+  var dernierSous = { heros: 'fiche', combat: 'arene', tresors: 'butin', aventure: 'carnet', outils: 'des' };
 
   function rendreFicheOnglets() {
     var corps = $('#vue-fiche-corps'), voies = $('#vue-voies'), objets = $('#vue-objets');
@@ -111,6 +111,8 @@ COF.UI = COF.UI || {};
     else if (sub.vue === 'bestiaire') COF.UI.Bestiaire.rendre();
     else if (sub.vue === 'generateurs') COF.UI.Generateurs.afficher(sub.id);
     else if (sub.vue === 'des') COF.UI.rendreJournal();
+    else if (sub.vue === 'carnet') COF.UI.Carnet.rendre();
+    if (COF.UI.Carnet) COF.UI.Carnet.majFab();
     majTitre();
   }
   COF.UI.aller = aller;
@@ -554,6 +556,7 @@ COF.UI = COF.UI || {};
     COF.UI.Voies.init();
     COF.UI.Objets.init();
     COF.UI.Artisanat.init();
+    COF.UI.Carnet.init();
     COF.UI.Arene.init();
     COF.UI.Bestiaire.init();
     COF.UI.Generateurs.init();

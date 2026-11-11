@@ -57,50 +57,9 @@ COF.BUTIN_COMPOSANTS = [
   { gabarit: 'Une mèche de {nom}, chargée de puissance résiduelle', prix: 9 }
 ];
 
-/* Objets magiques : trois paliers de puissance, à débloquer selon
-   le niveau du groupe. Table maison, sans prétention d'exhaustivité —
-   pensée comme une source d'inspiration rapide pour le MJ. */
-COF.OBJETS_MAGIQUES = [
-  /* --- mineurs (niveaux 1-5) --- */
-  { tier: 'mineur', nom: 'Potion de soins supérieure', desc: 'Rend 2d8+4 PV. Usage unique.' },
-  { tier: 'mineur', nom: 'Arme +1', desc: '+1 aux jets d\'attaque et de dégâts.', arme: true },
-  { tier: 'mineur', nom: 'Armure +1', desc: 'Un équipement discrètement renforcé. +1 à la DEF qu\'il confère.', armure: true },
-  { tier: 'mineur', nom: 'Anneau de protection mineur', desc: '+1 à la DEF, cumulable avec l\'armure.' },
-  { tier: 'mineur', nom: 'Amulette contre le poison', desc: 'Une fois par jour, relance un jet de sauvegarde raté contre le poison.' },
-  { tier: 'mineur', nom: 'Cape d\'ombre', desc: 'Une fois par jour, +10 à un test de discrétion.' },
-  { tier: 'mineur', nom: 'Bottes de silence', desc: 'Les pas du porteur ne font aucun bruit sur les surfaces naturelles.' },
-  { tier: 'mineur', nom: 'Grimoire de poche', desc: 'Contient un sort mineur au choix, utilisable une fois par jour comme un parchemin.' },
-  { tier: 'mineur', nom: 'Sifflet du fidèle compagnon', desc: 'Appelle un animal familier ou une monture à moins de 1 km, une fois par jour.' },
-  { tier: 'mineur', nom: 'Pierre de lumière', desc: 'Émet une lumière vive dans un rayon de 10 m sur commande mentale, sans limite d\'usage.' },
-  { tier: 'mineur', nom: 'Gants du grimpeur', desc: '+10 aux tests d\'escalade.' },
-  { tier: 'mineur', nom: 'Parchemin de sort (niveau 1-2)', desc: 'Un sort au choix du MJ, utilisable une fois puis consumé.' },
-  { tier: 'mineur', nom: 'Talisman de vigueur', desc: '+1d6 PV temporaires au lever du jour, non cumulable.' },
-  { tier: 'mineur', nom: 'Corde animée', desc: 'Sur ordre, s\'enroule ou se déroule seule sur 15 m.' },
-
-  /* --- majeurs (niveaux 6-11) --- */
-  { tier: 'majeur', nom: 'Arme +2 flamboyante', desc: '+2 aux jets d\'attaque et de dégâts ; une fois par combat, inflige 2d6 DM de feu supplémentaires.', arme: true },
-  { tier: 'majeur', nom: 'Armure +2 du bastion', desc: '+2 à la DEF qu\'elle confère ; une fois par jour, absorbe entièrement une attaque critique.', armure: true },
-  { tier: 'majeur', nom: 'Anneau de résistance élémentaire', desc: 'Résistance à un type de dégâts élémentaire au choix (réduit de moitié).' },
-  { tier: 'majeur', nom: 'Amulette de clairvoyance', desc: 'Le porteur ne peut être pris par surprise et ignore l\'invisibilité à 10 m.' },
-  { tier: 'majeur', nom: 'Cape du déplacement', desc: 'Une fois par combat, téléportation instantanée à 20 m en ligne de vue.' },
-  { tier: 'majeur', nom: 'Bâton d\'enchanteur', desc: 'Contient 5 charges ; chaque charge relance un jet de sort raté.' },
-  { tier: 'majeur', nom: 'Heaume du commandement', desc: 'Une fois par jour, octroie +1d6 aux DM à tous les alliés à 10 m pendant un round.' },
-  { tier: 'majeur', nom: 'Bottes ailées', desc: 'Vol à vitesse de marche pendant 10 minutes par jour, cumulables.' },
-  { tier: 'majeur', nom: 'Miroir de renvoi', desc: 'Une fois par jour, renvoie un sort d\'attaque ciblé contre son lanceur.' },
-  { tier: 'majeur', nom: 'Carquois sans fond', desc: 'Produit un trait ou une flèche ordinaire à chaque tirage, à volonté.' },
-  { tier: 'majeur', nom: 'Pierre de rappel', desc: "Une fois activée, invoque une porte de retour vers un lieu lié, une fois par semaine." },
-  { tier: 'majeur', nom: 'Collier des langues', desc: 'Comprend et parle toute langue parlée entendue depuis plus d\'un round.' },
-
-  /* --- légendaires (niveaux 12+) --- */
-  { tier: 'legendaire', nom: 'Arme +3 sensible', desc: '+3 aux jets d\'attaque et de dégâts ; possède une volonté propre et un pouvoir unique déterminé par le MJ.', arme: true },
-  { tier: 'legendaire', nom: 'Armure +3 immaculée', desc: '+3 à la DEF ; immunité totale à un type de dégâts au choix du MJ.', armure: true },
-  { tier: 'legendaire', nom: 'Couronne du monarque déchu', desc: 'Une fois par jour, charme toute créature intelligente qui échoue à un jet de sauvegarde de Volonté.' },
-  { tier: 'legendaire', nom: 'Grimoire des arcanes perdues', desc: 'Contient trois sorts de rang 5+ utilisables une fois chacun par semaine.' },
-  { tier: 'legendaire', nom: 'Anneau des trois souhaits', desc: 'Trois usages, à vie. Chaque souhait a un prix déterminé par le MJ.' },
-  { tier: 'legendaire', nom: 'Faux de la moisson finale', desc: 'Sur un critique, la cible doit réussir un jet de sauvegarde de Constitution ou mourir sur-le-champ.' },
-  { tier: 'legendaire', nom: "Cœur de dragon serti", desc: 'Une fois par jour, souffle élémentaire au choix (6d8 DM, zone de 15 m, sauvegarde pour moitié).' },
-  { tier: 'legendaire', nom: 'Manteau des étoiles filantes', desc: 'Vol illimité et invisibilité une fois par jour pendant 1 minute.' }
-];
+/* Les objets magiques du butin viennent des règles du Compagnon : armes
+   des voies de recettes (COF.ArmeMagiqueCalc) et objets du catalogue
+   (COF.CATALOGUE_COMPAGNON). Voir js/core/recompense.js. */
 
 /* Paliers de richesse génériques, utilisés par la fouille et le coffre
    (indépendamment de toute rencontre) pour moduler la quantité de butin. */

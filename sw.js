@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v34';
+var CACHE_VERSION = 'cof2-v38';
 
 var FICHIERS = [
   './',
@@ -63,12 +63,15 @@ var FICHIERS = [
   'js/core/recompense.js',
   'js/core/arene.js',
   'js/core/oracle.js',
+  'js/core/carnet.js',
+  'js/core/expedition.js',
   'js/core/lieux.js',
   'js/core/quetes.js',
   'js/core/voyage.js',
   'js/core/donjon.js',
   'js/core/objets-magiques.js',
   'js/core/arme-magique.js',
+  'js/core/armure-magique.js',
   'js/core/artisanat.js',
   'js/core/objet-prestigieux.js',
   'js/core/intrigue.js',
@@ -87,12 +90,14 @@ var FICHIERS = [
   'js/ui/arene.js',
   'js/ui/butin.js',
   'js/ui/oracle.js',
+  'js/ui/carnet.js',
   'js/ui/lieux.js',
   'js/ui/quetes.js',
   'js/ui/voyage.js',
   'js/ui/donjon.js',
   'js/ui/objets-magiques.js',
   'js/ui/arme-magique.js',
+  'js/ui/armure-magique.js',
   'js/ui/catalogue.js',
   'js/ui/artisanat.js',
   'js/ui/objet-prestigieux.js',

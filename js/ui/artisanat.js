@@ -101,6 +101,7 @@ COF.UI.Artisanat = (function () {
       /* objet */
       else if (id === 'art-o-cle') { at.objet = { cle: t.value, variante: 0 }; }
       else if (id === 'art-o-var') { at.objet.variante = parseInt(t.value, 10) || 0; }
+      else if (id === 'art-o-doses') { at.objet.doses = parseInt(t.value, 10) || 1; }
       else return;
       if (!/^art-(peuple|extra)$/.test(id) && !t.classList.contains('art-syn')) reset();
       rendre();
@@ -111,7 +112,7 @@ COF.UI.Artisanat = (function () {
     if (at.type === 'arme') return { type: 'arme', arme: at.arme };
     if (at.type === 'armure') return { type: 'armure', famille: at.armure.famille, piece: at.armure.piece, bonus: at.armure.bonus, props: at.armure.props };
     if (!at.objet.cle) return null;
-    return { type: 'objet', cle: at.objet.cle, variante: at.objet.variante };
+    return { type: 'objet', cle: at.objet.cle, variante: at.objet.variante, doses: at.objet.doses || 1 };
   }
   function analyse() { var p = projet(); return p ? A.analyser(C, p) : null; }
 
@@ -253,6 +254,13 @@ COF.UI.Artisanat = (function () {
       h += '<div class="champ"><label>Version</label><select id="art-o-var">' + opts(vs.map(function (v) {
         return [v.i, 'Version ' + (v.i + 1) + ' — niveau ' + v.niveau + ', ' + v.prix.toLocaleString('fr-FR') + ' pa'];
       }), at.objet.variante) + '</select></div>';
+    }
+    if (ob && ob.potion) {
+      h += '<div class="champ"><label>Nombre de doses</label><select id="art-o-doses">' + opts([1, 2, 3, 4, 5, 6].map(function (n) {
+        return [n, n + (n === 1 ? ' dose (100 %)' : ' doses (' + (n === 2 ? 180 : 250 + 50 * (n - 3)) + ' %)')];
+      }), at.objet.doses || 1) + '</select>' +
+        (ob.sort ? '<div class="aide">Si vous savez lancer le sort « ' + esc(ob.sort) + ' », le coût est divisé par 2 et le test d’alchimie réduit de 5 (appliqué automatiquement).</div>' : '') +
+        '</div>';
     }
     if (ob) h += '<div class="note">' + esc(ob.d) + '</div>';
     return h;

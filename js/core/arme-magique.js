@@ -122,9 +122,14 @@ COF.ArmeMagiqueCalc = (function () {
 
   /* ---------- Nom ---------- */
   var FEMININ = /^(Épée|Dague|Hache|Hachette|Masse|Lance|Arbalète|Pétoire|Rapière|Vivelame|Pique|Fronde)/;
+  /* Une arme de qualité n'est pas magique : nom simple. Les adjectifs
+     sombres (« Maudite », « Brisée »…) sont réservés aux armes maudites. */
   function nomPour(o) {
     var a = arme(o.arme) || { nom: 'Arme' };
-    return COF.ObjetsMagiquesCalc.nomMagique(a.nom, FEMININ.test(a.nom));
+    if (!(o.bonus >= 1) && !aProp(o, 'maudite')) {
+      return a.nom + (o.qualite === 'misericorde' && o.arme === 'dague' ? ' miséricorde' : ' de qualité');
+    }
+    return COF.ObjetsMagiquesCalc.nomMagique(a.nom, FEMININ.test(a.nom), false, !!(o.maudit || aProp(o, 'maudite')));
   }
 
   /* ---------- Choix aléatoire d'une option de propriété ---------- */
@@ -176,8 +181,8 @@ COF.ArmeMagiqueCalc = (function () {
         }
       }
     }
+    o.maudit = (o.bonus >= 1 && Math.random() < 0.1) ? piocher(COF.OM_MALEDICTIONS) : null;
     o.nom = nomPour(o);
-    o.maudit = Math.random() < 0.1 ? piocher(COF.OM_MALEDICTIONS) : null;
     o.origine = COF.ObjetsMagiquesCalc.genererOrigine();
     return o;
   }

@@ -30,6 +30,7 @@ COF.UI.Generateurs = (function () {
     COF.UI.Donjon.init();
     COF.UI.ObjetsMagiques.init();
     COF.UI.ArmeMagique.init();
+    COF.UI.ArmureMagique.init();
     COF.UI.Catalogue.init();
     COF.UI.ObjetPrestigieux.init();
     COF.UI.Intrigue.init();

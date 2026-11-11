@@ -50,7 +50,9 @@ COF.UI.ArmeMagique = (function () {
       else if (id === 'am-base') {
         if (t.value === 'q' || t.value === 'm') { o.bonus = 0; o.qualite = t.value === 'm' ? 'misericorde' : 'standard'; }
         else o.bonus = parseInt(t.value, 10);
+        var etaitMagique = /de qualité$| miséricorde$/.test(o.nom || '') === false;
         nettoyer();
+        if (etaitMagique !== (o.bonus >= 1)) o.nom = K.nomPour(o);
       }
       else if (id === 'am-nom') { o.nom = t.value; o.ajoute = false; return; }
       else if (t.classList.contains('am-chk') && p) {
@@ -76,8 +78,8 @@ COF.UI.ArmeMagique = (function () {
       var act = t.getAttribute('data-amact');
       if (act === 'tirage') tirer();
       else if (act === 'nom') { o.nom = K.nomPour(o); o.ajoute = false; }
-      else if (act === 'maudit') { o.maudit = COF.piocher(COF.OM_MALEDICTIONS); o.ajoute = false; }
-      else if (act === 'sain') { o.maudit = null; o.ajoute = false; }
+      else if (act === 'maudit') { o.maudit = COF.piocher(COF.OM_MALEDICTIONS); o.nom = K.nomPour(o); o.ajoute = false; }
+      else if (act === 'sain') { o.maudit = null; o.nom = K.nomPour(o); o.ajoute = false; }
       else if (act === 'origine') { o.origine = COF.ObjetsMagiquesCalc.genererOrigine(); o.ajoute = false; }
       else if (act === 'niv-perso') { niveauMax = niveauParDefaut(); }
       else if (act === 'ajouter') {

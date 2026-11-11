@@ -79,21 +79,8 @@ COF.UI.ObjetsMagiques = (function () {
     },
     /* Vue dédiée (atelier des voies de recettes) : js/ui/arme-magique.js */
     arme: { titre: 'Arme magique', dediee: true },
-    armure: {
-      titre: 'Armure / bouclier magique', bouton: '↻ Nouvelle armure',
-      champs: [['palier', 'Palier'], ['base', 'Type'], ['proprietes', 'Propriétés'], ['maudit', 'Malédiction'], ['origine', 'Origine']],
-      texte: function (id, v) {
-        if (id === 'palier') return v.nom + ' (+' + v.bonus + ')';
-        if (id === 'base') return v.nom + ' — ' + sgnLocal(v.def) + ' DEF de base (' + (v.slot === 'bouclier' ? 'bouclier' : 'armure') + ')';
-        if (id === 'proprietes') return texteProprietes(v);
-        if (id === 'maudit') return v ? v : 'Aucune — objet sain';
-        if (id === 'origine') return texteOrigine(v);
-        return v;
-      },
-      titreObjet: function (o) { return o.nom || 'Armure magique'; },
-      valeur: function (o) { return Calc.valeurGenerique(Calc.niveauMagieArmure(o)); },
-      peutUtiliser: function () { return false; }
-    },
+    /* Vue dédiée (voies de recettes d'armures) : js/ui/armure-magique.js */
+    armure: { titre: 'Armure / bouclier magique', dediee: true },
     pouvoir: {
       titre: 'Objet de pouvoir', bouton: '↻ Nouvel objet',
       champs: [['rang', 'Rang du pouvoir'], ['capacite', 'Pouvoir'], ['origine', 'Origine']],
@@ -219,8 +206,9 @@ COF.UI.ObjetsMagiques = (function () {
       }).join('') + '</div></div></div>';
 
     if (v.dediee) {
-      node.innerHTML = h + '<div id="om-arme"></div>';
-      COF.UI.ArmeMagique.rendre(node.querySelector('#om-arme'));
+      var idVue = MODE === 'armure' ? 'om-armure' : 'om-arme';
+      node.innerHTML = h + '<div id="' + idVue + '"></div>';
+      (MODE === 'armure' ? COF.UI.ArmureMagique : COF.UI.ArmeMagique).rendre(node.querySelector('#' + idVue));
       return;
     }
     v.vue.assurer();

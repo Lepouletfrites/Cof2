@@ -136,6 +136,23 @@ COF.Artisanat = (function () {
   function objetCatalogue(cle) {
     return (COF.CATALOGUE_COMPAGNON || []).filter(function (o) { return o.v + '|' + o.n === cle; })[0] || null;
   }
+  /* Le personnage connaît-il (et sait-il lancer) le sort nommé ? */
+  function normNom(s) { return String(s).toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function connaitSort(p, nom) {
+    if (!p || !p.voies) return false;
+    var n = normNom(nom);
+    return COF.Calc.capacites(p).some(function (c) { return c.cap.s && normNom(c.cap.n) === n; });
+  }
+
+  /* Objet du catalogue prêt pour la fiche, dans la variante v (de nb). */
+  function itemObjet(ob, v, nb) {
+    var it = COF.UI.Catalogue.versItem(ob);
+    if (nb > 1 && ob.def) it.def = /Bracelets/.test(ob.n) ? v.i + 2 : v.i + 1;
+    if (nb > 1 && ob.arme && ob.arme.bonusAuto) it.bonus = v.i + 1;
+    if (nb > 1 && /^Anneau de protection|^Anneau de mana|^Sceptre de magie/.test(ob.n)) it.nom = ob.n + ' +' + (v.i + 1);
+    if (v && v.prix) it.prix = Math.round(v.prix / 10);
+    return it;
+  }
   var DAGUES = ['poison', 'invisible', 'assassin', 'maudite'];
 
   function analyser(p, proj) {
@@ -157,52 +174,46 @@ COF.Artisanat = (function () {
       });
       r.item = AM().versItem(o);
     } else if (proj.type === 'armure') {
-      var fa = armureFam(proj.famille), pi = piece(proj.piece), b = proj.bonus || 0;
-      if (b >= 1) {
-        var i = b - 1;
-        r.niveau = COF.AR_BASE.niveau[i]; r.prix = COF.AR_BASE.prix[i]; r.nm = b;
-        r.lignesTests.push(Object.keys(fa.tests).map(function (t) {
-          var v = fa.tests[t][i];
-          if (t === 'façonnage' && proj.piece === 'cotte') v += 2;
-          if (t === 'façonnage' && proj.piece === 'plaquecomp') v += 3;
-          if (t === 'forge' && proj.piece === 'cuir') return '';
-          return t + ' ' + v;
-        }).filter(Boolean).join(', '));
-        exige(fa.voie, 2, fa.nom + ' magique +' + b);
-      } else {
-        r.prix = proj.piece === 'plaquecomp' ? 200 : fa.qualite.prix;
-        r.lignesTests.push(proj.piece === 'plaquecomp' ? 'forge 20, façonnage 18' : (proj.piece === 'cotte' ? 'forge 20, façonnage 17' : fa.qualite.tests));
-        r.effets.push('Qualité : ' + fa.qualite.texte);
-        exige(fa.voie, 1, fa.nom + ' de qualité');
-      }
-      var nivMin = 0;
+      var fa = armureFam(proj.famille), b = proj.bonus || 0;
+      var oa = { famille: proj.famille, piece: proj.piece, bonus: b, props: proj.props || [] };
+      var ca = COF.ArmureMagiqueCalc.calcul(oa);
+      r.niveau = ca.niveau; r.prix = ca.prix; r.nm = ca.nm; r.lignesTests = ca.tests.slice(); r.effets = ca.effets.slice();
+      exige(fa.voie, b >= 1 ? 2 : 1, fa.nom + (b >= 1 ? ' magique +' + b : ' de qualité'));
       (proj.props || []).forEach(function (pc) {
-        var pp = fa.props.filter(function (x) { return x.id === pc.id; })[0];
-        if (!pp) return;
-        r.niveau += pp.niv; r.prix += pp.prix; r.nm += pp.nm;
-        r.lignesTests.push(pp.nom + ' : ' + pp.tests);
-        r.effets.push(pp.nom + (pc.choix ? ' (' + pc.choix + ')' : '') + (pp.texte ? ' : ' + pp.texte : ''));
-        exige(fa.voie, pp.rang, pp.nom);
+        var pp = COF.ArmureMagiqueCalc.prop(oa, pc.id);
+        if (pp) exige(fa.voie, pp.rang, pp.nom);
       });
-      r.niveau = Math.max(r.niveau, nivMin);
-      var def = (pi.def || 0) + b;
+      var pi = piece(proj.piece);
       r.nom = proj.nom || (pi.nom + (b ? ' +' + b : ' de qualité'));
-      if (b) r.effets.unshift('DEF ' + COF.UI.sgn(def) + ' (' + pi.nom + ' ' + COF.UI.sgn(pi.def) + ', bonus magique ' + COF.UI.sgn(b) + ').');
-      r.item = { nom: r.nom, qte: 1, prix: Math.round(r.prix / 10), def: def, slot: fa.slot,
-        note: r.effets.join(' ') + ' Niveau de magie ' + r.nm + ' · ' + fa.voie + '.' };
+      oa.nom = r.nom;
+      r.item = COF.ArmureMagiqueCalc.versItem(oa);
     } else {
       var ob = objetCatalogue(proj.cle);
       if (!ob) return null;
       var vs = variantes(ob), v = vs[Math.min(proj.variante || 0, vs.length - 1)] || { niveau: 1, prix: 0, tests: ob.tests, i: 0 };
-      r.niveau = v.niveau; r.prix = v.prix; r.nm = ob.nm; r.lignesTests.push(v.tests); r.effets.push(ob.d);
+      r.niveau = v.niveau; r.prix = v.prix; r.nm = ob.nm; r.effets.push(ob.d);
+      var testsObj = v.tests;
       r.nom = ob.n + (vs.length > 1 ? ' (' + (v.i + 1) + '/' + vs.length + ')' : '');
       exige(ob.v, ob.r, ob.n);
-      var it = COF.UI.Catalogue.versItem(ob);
-      if (vs.length > 1 && ob.def) it.def = /Bracelets/.test(ob.n) ? v.i + 2 : v.i + 1;
-      if (vs.length > 1 && ob.arme && ob.arme.bonusAuto) it.bonus = v.i + 1;
-      if (vs.length > 1 && /^Anneau de protection|^Anneau de mana|^Sceptre de magie/.test(ob.n)) it.nom = ob.n + ' +' + (v.i + 1);
-      it.prix = Math.round(v.prix / 10);
-      r.item = it;
+      r.item = itemObjet(ob, v, vs.length);
+      if (ob.potion) {
+        /* Doses : 2 → 180 %, 3 → 250 %, +50 % par dose suivante. */
+        var doses = Math.max(1, Math.min(10, proj.doses || 1));
+        var mult = doses === 1 ? 1 : (doses === 2 ? 1.8 : 2.5 + 0.5 * (doses - 3));
+        r.prix = Math.round(r.prix * mult);
+        r.doses = doses;
+        if (doses > 1) r.effets.push(doses + ' doses : ' + Math.round(mult * 100) + ' % du prix d’une dose.');
+        /* Un lanceur qui connaît le sort reproduit : coût ÷ 2, alchimie -5. */
+        r.connaitSort = !!(ob.sort && connaitSort(p, ob.sort));
+        if (r.connaitSort) {
+          r.prix = Math.round(r.prix / 2);
+          testsObj = testsObj.replace(/alchimie (\d+)/, function (_, d) { return 'alchimie ' + (+d - 5); });
+          r.effets.push('Vous connaissez le sort « ' + ob.sort + ' » : coût divisé par 2 et test d’alchimie -5.');
+        }
+        r.item.qte = doses;
+        r.item.prix = Math.round(v.prix / 10);
+      }
+      r.lignesTests.push(testsObj);
     }
 
     r.tests = lireTests(r.lignesTests).map(function (t) {
@@ -264,7 +275,7 @@ COF.Artisanat = (function () {
   return {
     COMPS: COMPS, etat: etat, competence: competence, competences: competences, budget: budget,
     rangRecette: rangRecette, rangArtisan: rangArtisan, voiesRecettes: voiesRecettes, lireTests: lireTests,
-    variantes: variantes, analyser: analyser, lancer: lancer, payer: payer, objetCatalogue: objetCatalogue,
+    variantes: variantes, itemObjet: itemObjet, analyser: analyser, lancer: lancer, payer: payer, objetCatalogue: objetCatalogue,
     armureFam: armureFam, piece: piece
   };
 })();

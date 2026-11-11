@@ -41,8 +41,16 @@ COF.ObjetsMagiquesCalc = (function () {
      nom composé, « [Type] de/du/des [Épithète] », ou « [Type] [Adjectif] ». Le patron
      adjectif est exclu pour un type au nom pluriel (Gants, Bottes...) : les tables
      d'adjectifs ne s'accordent pas au pluriel, et « Gants Maudit » serait fautif. */
-  function nomMagique(nomType, feminin, pluriel) {
+  /* Adjectifs « sombres » : réservés aux objets réellement maudits quand
+     l'appelant le précise (sombre === false les exclut). */
+  var ADJ_SOMBRES = /^(Maudit|Brisé|Déchu|Impie|Funeste)/;
+  function nomMagique(nomType, feminin, pluriel, sombre) {
     var style = piocher(pluriel ? ['compose', 'epithete'] : ['compose', 'epithete', 'adjectif']);
+    if (sombre === true && !pluriel) style = 'adjectif';
+    if (style === 'adjectif' && typeof sombre === 'boolean') {
+      var adjs = (feminin ? COF.OM_ADJ_F : COF.OM_ADJ_M).filter(function (a) { return ADJ_SOMBRES.test(a) === sombre; });
+      return nomType + ' ' + piocher(adjs);
+    }
     if (style === 'compose') return piocher(COF.OM_NOM_PREFIXES) + piocher(COF.OM_NOM_SUFFIXES);
     if (style === 'epithete') {
       var ep = piocher(COF.OM_EPITHETES);

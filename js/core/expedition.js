@@ -1,0 +1,240 @@
+/* ============================================================
+   COF2 Compagnon — Expéditions du Carnet d'aventure (jeu en solo)
+   Deux modes, une expédition en cours à la fois par aventure :
+     🗝️ Donjon : une suite de salles enregistrées (architecture,
+        état, occupants, piège, particularité, sorties), avec leur
+        statut (en cours / explorée / vidée), une rencontre tirée au
+        niveau du héros quand des occupants hostiles sont présents,
+        la fouille et une salle finale plus dangereuse.
+     🧭 Voyage : un trajet découpé en jours — météo, événement de
+        route, rencontre possible (plus fréquente si la tension est
+        haute), rations décomptées, arrivée ajoutée aux lieux.
+   Tout est consigné dans la scène en cours du carnet.
+   + Tests guidés : difficulté estimée par l'oracle, conséquences
+     d'un échec et avantages d'une réussite critique.
+   ============================================================ */
+window.COF = window.COF || {};
+
+COF.Expedition = (function () {
+  var piocher = COF.piocher, K = function () { return COF.Carnet; };
+  function d(n) { return 1 + Math.floor(Math.random() * n); }
+
+  /* Occupants hostiles (indices de COF.DONJON_OCCUPANTS) → composition */
+  var HOSTILES = { 1: 'solo', 2: 'bande', 4: 'solo', 5: 'bande', 6: 'solo', 8: 'solo', 9: 'meute' };
+  function indexOccupant(txt) { return (COF.DONJON_OCCUPANTS || []).indexOf(txt); }
+  function estPiege(txt) { return !/^Aucun piège/.test(txt || ''); }
+
+  function niveauPerso(c) {
+    var p = (c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif();
+    return p ? (p.niveau || 1) : 1;
+  }
+
+  /* Rencontre stockée légère (ids du bestiaire) + texte. */
+  function tirerRencontre(env, niveau, difficulte, style) {
+    var r = COF.Rencontre.generer({ env: env, nbPJ: 1, niveau: niveau, difficulte: difficulte || 'ordinaire', style: style || 'auto' });
+    if (!r || r.erreur) return null;
+    return { lots: r.lots.map(function (l) { return { id: l.c.id, nom: l.c.nom, nb: l.nb, role: l.role || null }; }),
+      texte: r.lots.map(function (l) { return l.nb + ' × ' + l.c.nom + (l.role ? ' (' + l.role + ')' : ''); }).join(', '),
+      difficulte: difficulte || 'ordinaire' };
+  }
+
+  /* ================= Donjon ================= */
+  var TAILLES = { petit: 5, moyen: 8, grand: 12 };
+  function commencerDonjon(c, nom, taille, env) {
+    c.expedition = { type: 'donjon', nom: nom || 'Donjon', taille: TAILLES[taille] ? taille : 'moyen', nbSalles: TAILLES[taille] || 8,
+      env: env || 'ruines', niveau: niveauPerso(c), salles: [], fini: false, debut: Date.now() };
+    K().ajouterEntree(c, { t: 'note', titre: 'Expédition', txt: 'Entrée dans « ' + c.expedition.nom + ' » (' + c.expedition.nbSalles + ' salles environ).' });
+    return c.expedition;
+  }
+  /* La salle courante est la dernière visitée. État d'une salle pour le
+     plan : courante, vidée (menace écartée ou absente) ou explorée. */
+  function salleCourante(x) { return x && x.salles ? x.salles[x.salles.length - 1] || null : null; }
+  function etatSalle(x, s) {
+    if (s === salleCourante(x)) return 'courante';
+    return !s.rencontre || s.vaincue ? 'videe' : 'exploree';
+  }
+  function salleSuivante(c) {
+    var x = c.expedition; if (!x || x.type !== 'donjon') return null;
+    var finale = x.salles.length + 1 >= x.nbSalles;
+    var ch = COF.DonjonCalc.genererTout({}, {});
+    /* La table brute place un piège presque partout : en expédition, on
+       n'en garde qu'environ un sur trois pour garder le rythme. */
+    if (estPiege(ch.piege) && Math.random() < 0.6) ch.piege = COF.DONJON_PIEGES[0];
+    var s = { n: x.salles.length + 1, champs: ch, finale: finale, piege: estPiege(ch.piege), fouillee: false };
+    var idx = indexOccupant(ch.occupant);
+    /* La salle finale abrite toujours une menace, plus difficile. */
+    if (finale) s.rencontre = tirerRencontre(x.env, x.niveau, 'difficile', 'auto');
+    else if (HOSTILES[idx]) s.rencontre = tirerRencontre(x.env, x.niveau, Math.random() < 0.25 ? 'difficile' : 'ordinaire', HOSTILES[idx]);
+    x.salles.push(s);
+    K().ajouterEntree(c, { t: 'note', titre: 'Salle ' + s.n + (finale ? ' (salle finale)' : ''), txt: texteSalle(s) });
+    return s;
+  }
+  function texteSalle(s) {
+    var ch = s.champs;
+    return ch.forme + '. ' + ch.etat + '.\nOccupants : ' + ch.occupant + (s.rencontre ? ' → ' + s.rencontre.texte : '') +
+      '.\nPiège : ' + ch.piege + '.\n' + ch.particularite + '.\nSorties : ' + ch.sortie + '.';
+  }
+  function marquerVaincue(c) {
+    var s = salleCourante(c.expedition); if (!s) return;
+    s.vaincue = true;
+    K().ajouterEntree(c, { t: 'note', titre: 'Salle ' + s.n, txt: 'Menace écartée' + (s.rencontre ? ' : ' + s.rencontre.texte : '') + '.' });
+  }
+  function fouiller(c) {
+    var x = c.expedition, s = salleCourante(x); if (!s || s.fouillee) return null;
+    s.fouillee = true;
+    var b = s.finale || (s.rencontre && s.vaincue && Math.random() < 0.5)
+      ? COF.Recompense.genererCoffre({ niveau: x.niveau, richesse: s.finale ? 'riche' : 'standard', env: x.env })
+      : COF.Recompense.genererFouille({ niveau: x.niveau, richesse: 'standard', env: x.env });
+    var morceaux = [b.po + ' po, ' + b.pa + ' pa, ' + b.pc + ' pc'];
+    (b.objets || []).forEach(function (o) { morceaux.push(o.nom); });
+    (b.tresors || []).forEach(function (t) { morceaux.push(t.nom + ' (' + t.prix + ' po)'); });
+    if (b.magique) morceaux.push('✨ ' + b.magique.nom);
+    if (b.magique2) morceaux.push('✨ ' + b.magique2.nom);
+    s.butin = b;
+    K().ajouterEntree(c, { t: 'note', titre: 'Fouille salle ' + s.n, txt: morceaux.join(' · ') });
+    return b;
+  }
+  /* Ajoute le butin de la salle courante au héros (pièces + objets). */
+  function prendreButin(c, p) {
+    var s = salleCourante(c.expedition); if (!s || !s.butin || s.butinPris || !p) return false;
+    var b = s.butin;
+    p.bourse = p.bourse || { po: 0, pa: 0, pc: 0 };
+    p.bourse.po = (p.bourse.po || 0) + b.po; p.bourse.pa = (p.bourse.pa || 0) + b.pa; p.bourse.pc = (p.bourse.pc || 0) + b.pc;
+    (b.objets || []).forEach(function (o) { COF.Store.ajouterObjet(p, { nom: o.nom, qte: 1, prix: o.prix || 0, note: o.note || null }); });
+    (b.tresors || []).forEach(function (t) { COF.Store.ajouterObjet(p, { nom: t.nom, qte: 1, prix: t.prix || 0 }); });
+    [b.magique, b.magique2].forEach(function (m) {
+      if (m) COF.Store.ajouterObjet(p, m.item ? Object.assign({}, m.item, { nom: '✨ ' + m.item.nom }) : { nom: '✨ ' + m.nom, qte: 1, note: m.desc });
+    });
+    COF.Store.sauver(p);
+    s.butinPris = true;
+    return true;
+  }
+  function quitter(c, motif) {
+    var x = c.expedition; if (!x) return;
+    var nbV = (x.salles || []).filter(function (s) { return !s.rencontre || s.vaincue; }).length;
+    K().ajouterEntree(c, { t: 'note', titre: 'Expédition', txt: (x.type === 'donjon'
+      ? 'Sortie de « ' + x.nom + ' » : ' + x.salles.length + ' salle(s) explorée(s), ' + nbV + ' vidée(s).'
+      : (motif || 'Voyage interrompu') + ' — ' + x.depart + ' → ' + x.destination + ', jour ' + x.fait + '/' + x.jours + '.') });
+    if (x.type === 'donjon' && !c.lieux.some(function (l) { return l.nom === x.nom; })) {
+      K().ajouterListe(c, 'lieux', { nom: x.nom, note: x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.' });
+    }
+    c.expedition = null;
+  }
+
+  /* ================= Voyage ================= */
+  function commencerVoyage(c, depart, destination, jours, env, rations) {
+    c.expedition = { type: 'voyage', depart: depart || 'Ici', destination: destination || 'Ailleurs', jours: Math.max(1, Math.min(30, jours || 3)),
+      fait: 0, env: env || 'plaine', rations: Math.max(0, rations || 0), niveau: niveauPerso(c), etapes: [], debut: Date.now() };
+    K().ajouterEntree(c, { t: 'note', titre: 'Voyage', txt: 'Départ de ' + c.expedition.depart + ' vers ' + c.expedition.destination +
+      ' (' + c.expedition.jours + ' jour(s), ' + c.expedition.rations + ' ration(s)).' });
+    return c.expedition;
+  }
+  function etapeSuivante(c) {
+    var x = c.expedition; if (!x || x.type !== 'voyage') return null;
+    x.fait++; c.jour++;
+    var env = (COF.ENVIRONNEMENTS || []).filter(function (e) { return e.id === x.env; })[0];
+    var g = COF.VoyageCalc.genererTout({ lieu: true }, { lieu: env });
+    var et = { jour: x.fait, meteo: g.meteo, categorie: g.categorie, detail: g.detail };
+    /* Rencontre : 1 sur d6 (1-2 si tension ≥ 7), et la nuit 1 sur d8. */
+    var seuil = c.tension >= 7 ? 2 : 1;
+    if (d(6) <= seuil) et.rencontre = tirerRencontre(x.env, x.niveau, 'ordinaire', 'auto');
+    else if (d(8) === 1) { et.rencontre = tirerRencontre(x.env, x.niveau, 'facile', 'auto'); if (et.rencontre) et.nuit = true; }
+    if (x.rations > 0) x.rations--; else et.faim = true;
+    x.etapes.push(et);
+    var lbl = (COF.VOYAGE_CATEGORIES_LABELS || {})[g.categorie] || g.categorie;
+    var txt = 'Jour ' + c.jour + ' (' + x.fait + '/' + x.jours + ') — ' + g.meteo + '.\n' + lbl + ' : ' + g.detail + '.' +
+      (et.rencontre ? '\n⚔️ ' + (et.nuit ? 'Pendant la nuit : ' : 'Rencontre : ') + et.rencontre.texte + '.' : '') +
+      (et.faim ? '\n🍖 Plus de rations !' : '\n🍖 Rations restantes : ' + x.rations + '.');
+    K().ajouterEntree(c, { t: 'note', titre: 'Voyage', txt: txt });
+    if (x.fait >= x.jours) {
+      K().ajouterEntree(c, { t: 'note', titre: 'Arrivée', txt: 'Arrivée à ' + x.destination + ' au jour ' + c.jour + '.' });
+      if (!c.lieux.some(function (l) { return l.nom === x.destination; })) K().ajouterListe(c, 'lieux', { nom: x.destination, note: 'Atteint le jour ' + c.jour + '.' });
+      x.arrive = true;
+    }
+    return et;
+  }
+
+  /* Envoie une rencontre stockée dans l'Arène (nouveau combat avec le héros). */
+  function versArene(c, rencontre) {
+    if (!rencontre) return false;
+    var s = COF.Arene.vider();
+    rencontre.lots.forEach(function (l) {
+      var cr = COF.UI.Bestiaire && COF.UI.Bestiaire.get(l.id);
+      if (cr) for (var i = 0; i < l.nb; i++) COF.Arene.ajouterCreature(s, cr, l.role);
+    });
+    var p = (c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif();
+    if (p) COF.Arene.ajouterPersonnage(s, p);
+    COF.Arene.ecrire(s);
+    return true;
+  }
+
+  /* ================= Tests guidés ================= */
+  var ACTIONS = [
+    ['Escalader', 'FOR', 'escalade'], ['Nager', 'FOR', 'natation'], ['Forcer / enfoncer', 'FOR', 'force'],
+    ['Crocheter', 'AGI', 'crochet'], ['Discrétion', 'AGI', 'discrétion'], ['Acrobatie', 'AGI', 'acrobatie'],
+    ['Endurer', 'CON', 'endurance'], ['Résister au poison', 'CON', 'poison'],
+    ['Repérer / fouiller', 'PER', 'perception'], ['Pister', 'PER', 'pist'], ['Survie', 'PER', 'survie'],
+    ['Persuader', 'CHA', 'persuasion'], ['Intimider', 'CHA', 'intimid'], ['Mentir / bluffer', 'CHA', 'bluff'],
+    ['Se souvenir / savoir', 'INT', 'connaissance'], ['Déchiffrer', 'INT', 'déchiffr'], ['Soigner', 'INT', 'soin'],
+    ['Résister à la peur', 'VOL', 'peur'], ['Se concentrer', 'VOL', 'concentration']
+  ];
+  /* Bonus de compétence des voies du héros qui concernent l'action. */
+  function bonusPour(p, motCle) {
+    if (!p || !motCle) return [];
+    var m = motCle.toLowerCase();
+    return COF.Calc.competences(p).filter(function (x) {
+      return x.valeur && String(x.nom).toLowerCase().indexOf(m) >= 0;
+    });
+  }
+  function toutesCompetences(p) {
+    return p ? COF.Calc.competences(p).filter(function (x) { return x.valeur; }) : [];
+  }
+  /* L'oracle estime la difficulté (la tension rend les choses plus dures). */
+  var PALIERS = [[10, 'Facile'], [12, 'Simple'], [15, 'Moyenne'], [15, 'Moyenne'], [18, 'Ardue'], [20, 'Difficile']];
+  function difficulteOracle(tension) {
+    var i = d(6) - 1 + (tension >= 7 ? 1 : 0) - (tension <= 3 ? 1 : 0);
+    i = Math.max(0, Math.min(PALIERS.length - 1, i));
+    var r = PALIERS[i];
+    if (tension >= 9 && i === PALIERS.length - 1) r = [25, 'Héroïque'];
+    return { diff: r[0], nom: r[1] };
+  }
+  var CONSEQUENCES = [
+    "Ça prend bien plus longtemps que prévu (une heure perdue, ou un tour de jeu).",
+    "Du bruit : quelqu'un ou quelque chose a entendu.",
+    "Petite blessure : 1d4° DM.",
+    "Un outil, une arme ou une pièce d'équipement est abîmé.",
+    "Vous y arrivez, mais à un prix : choisissez une perte (temps, objet, PV, réputation).",
+    "La situation s'aggrave : un nouveau danger apparaît.",
+    "Un PNJ remarque l'échec et s'en souviendra.",
+    "La voie est fermée : il faudra trouver une autre approche.",
+    "Vous pouvez réessayer, mais avec un dé malus.",
+    "Fatigue : dé malus au prochain test physique.",
+    "Vous laissez une trace derrière vous.",
+    "Vous vous retrouvez en mauvaise posture (position exposée, encerclé, coincé)."
+  ];
+  var CONSEQUENCES_GRAVES = [
+    "Échec cuisant : 2d4° DM ou un état préjudiciable (au choix du contexte).",
+    "Catastrophe : l'opposition est alertée et passe à l'action.",
+    "L'objet ou le passage est détruit : plus de seconde chance.",
+    "Vous perdez quelque chose d'important (objet, allié, information)."
+  ];
+  var AVANTAGES = [
+    "Dé bonus au prochain test lié.", "Vous apprenez quelque chose de plus que prévu.",
+    "Ça va beaucoup plus vite que prévu.", "Vous gagnez l'initiative sur la suite.",
+    "Un PNJ est impressionné : son attitude s'améliore.", "Vous repérez une opportunité inattendue."
+  ];
+  function consequence(r) {
+    if (r.crit) return '⭐ ' + piocher(AVANTAGES);
+    if (r.fumble) return '💥 ' + piocher(CONSEQUENCES_GRAVES);
+    if (!r.reussite) return '⚠️ ' + piocher(CONSEQUENCES);
+    return null;
+  }
+
+  return {
+    TAILLES: TAILLES, commencerDonjon: commencerDonjon, salleCourante: salleCourante, etatSalle: etatSalle, salleSuivante: salleSuivante,
+    marquerVaincue: marquerVaincue, fouiller: fouiller, prendreButin: prendreButin, quitter: quitter,
+    commencerVoyage: commencerVoyage, etapeSuivante: etapeSuivante, versArene: versArene, texteSalle: texteSalle,
+    ACTIONS: ACTIONS, bonusPour: bonusPour, toutesCompetences: toutesCompetences, difficulteOracle: difficulteOracle,
+    consequence: consequence
+  };
+})();

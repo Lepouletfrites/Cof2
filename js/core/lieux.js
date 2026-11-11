@@ -80,15 +80,41 @@ COF.LieuxCalc = (function () {
       BOUCLIERS: COF.BOUCLIERS, MATERIEL: COF.MATERIEL, MONTURES: COF.MONTURES,
       BUTIN_COMPOSANTS: COF.BUTIN_COMPOSANTS, BUTIN_TRESORS: COF.BUTIN_TRESORS };
     var pool = [];
-    (type.stocks || []).forEach(function (t) { pool = pool.concat(tables[t] || []); });
-    pool = pool.filter(function (x) { return (x.prix || 0) > 0; });
+    (type.stocks || []).forEach(function (t) {
+      pool = pool.concat((tables[t] || []).map(function (x) { return { x: x, table: t }; }));
+    });
+    pool = pool.filter(function (e) { return (e.x.prix || 0) > 0; });
     var n = 3 + alea(3);
     var out = [];
     for (var i = 0; i < n && pool.length; i++) {
-      var it = piocher(pool);
+      var e = piocher(pool), it = e.x;
       var nom = it.gabarit ? it.gabarit.replace('{nom}', piocher(COMPOSANT_SOURCES)) : it.nom;
       var prix = Math.max(1, Math.round(it.prix * (0.8 + Math.random() * 0.6) * 10) / 10);
-      out.push({ nom: nom, prix: prix });
+      /* entrée prête pour la fiche (armes et armures directement équipables) */
+      var item = { nom: nom, qte: 1, prix: prix, note: it.note || null };
+      if (e.table === 'ARMES_CONTACT' || e.table === 'ARMES_DISTANCE') {
+        item.dm = it.dm; item.armeType = e.table === 'ARMES_DISTANCE' ? 'distance' : 'contact'; item.noFor = !!it.noFor;
+      } else if (e.table === 'ARMURES') { item.def = it.def; item.slot = 'armure'; }
+      else if (e.table === 'BOUCLIERS') { item.def = it.def; item.slot = 'bouclier'; }
+      out.push({ nom: nom, prix: prix, item: item });
+    }
+    /* Marchandise magique : objets du Compagnon (armes et armures à voies,
+       catalogue, potions) dont le niveau requis ne dépasse pas celui du
+       personnage actif (5 sans personnage). Prix = valeur ± 20 %. */
+    if (type.magie && COF.Recompense) {
+      var p = COF.Store && COF.Store.actif();
+      var N = p ? (p.niveau || 1) : 5;
+      Object.keys(type.magie).forEach(function (genre) {
+        var mm = type.magie[genre], nb = mm[0] + alea(mm[1] - mm[0] + 1), vus = {};
+        for (var k = 0; k < nb; k++) {
+          var m = COF.Recompense.tirerObjetLivre(N, genre);
+          if (!m || vus[m.nom]) continue;
+          vus[m.nom] = 1;
+          var val = Math.max(1, m.item.prix || 1);
+          out.push({ nom: m.nom, prix: Math.max(1, Math.round(val * (0.8 + Math.random() * 0.4))), magique: true,
+            item: m.item, source: m.source, niveau: m.niveau, qte: m.item.qte || 1 });
+        }
+      });
     }
     return out;
   }

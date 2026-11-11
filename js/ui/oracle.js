@@ -32,12 +32,18 @@ COF.UI.Oracle = (function () {
     historique.unshift(ligne);
     if (historique.length > 8) historique.length = 8;
   }
+  /* Aventure en cours (Carnet) : ses fils/PNJ et sa tension pilotent
+     l'oracle, et chaque résultat est consigné dans la scène en cours. */
+  function campagne() { return COF.Carnet ? COF.Carnet.actif() : null; }
+  function consigner(e) { var c = campagne(); if (c) COF.Carnet.ajouterEntree(c, e); }
 
   /* ---------- Rendu ---------- */
   function rendre(node) {
     cible = node;
-    var h = '';
+    var h = '', c = campagne();
 
+    if (c) h += '<div class="note" style="margin:0 2px 10px">📖 Aventure <b>' + esc(c.titre) + '</b> · tension ' + c.tension +
+      ' : les résultats sont consignés dans la scène en cours et les événements visent vos fils et PNJ.</div>';
     h += '<div class="carte"><h2>Oracle oui/non</h2><div class="carte-corps">';
     h += '<div class="note" style="margin-bottom:8px">Posez une question fermée, choisissez sa vraisemblance, laissez le dé trancher.</div>';
     h += '<div class="chips" style="margin-bottom:12px">';
@@ -139,7 +145,11 @@ COF.UI.Oracle = (function () {
       case 'sens': sensChoisi = node.getAttribute('data-v') || null; rendre(cible); break;
 
       case 'oracle': {
-        var r = COF.Oracle.repondre(likelihoodId);
+        var cO = campagne();
+        var r = COF.Oracle.repondre(likelihoodId, cO ? { tension: cO.tension } : null);
+        if (cO && r.evenement) { var eh = COF.Carnet.evenementHistoire(cO); r.evenement = { focus: eh.libelle + (eh.cible ? ' — ' + eh.cible : ''), action: eh.action, sujet: eh.sujet }; r.evtTexte = eh.texte; }
+        consigner({ t: 'oracle', question: '', likelihood: r.likelihood.nom, roll: r.roll, seuil: r.seuil, nuance: r.nuance, txt: r.texte,
+          evt: r.evtTexte ? { texte: r.evtTexte } : null });
         dernier.oracle = r;
         $('#oracle-resultat').innerHTML = htmlOracle(r);
         noter('🔮 ' + r.likelihood.nom + ' → ' + r.texte + (r.evenement ? ' · ' + COF.Oracle.texteEvenement(r.evenement) : ''));
@@ -148,6 +158,7 @@ COF.UI.Oracle = (function () {
       }
       case 'muse': {
         var m = COF.Oracle.inspiration();
+        consigner({ t: 'muse', txt: m.mot1 + ' × ' + m.mot2 });
         dernier.muse = m;
         $('#muse-resultat').innerHTML = htmlMuse(m);
         noter('✨ ' + m.mot1 + ' × ' + m.mot2);
@@ -155,7 +166,12 @@ COF.UI.Oracle = (function () {
         break;
       }
       case 'evenement': {
-        var e = COF.Oracle.evenement();
+        var cE = campagne(), e;
+        if (cE) {
+          var eh2 = COF.Carnet.evenementHistoire(cE);
+          e = { focus: eh2.libelle + (eh2.cible ? ' — ' + eh2.cible : ''), action: eh2.action, sujet: eh2.sujet };
+          consigner({ t: 'evt', txt: eh2.texte });
+        } else e = COF.Oracle.evenement();
         dernier.evt = e;
         $('#evt-resultat').innerHTML = htmlEvenement(e);
         noter('🔀 ' + COF.Oracle.texteEvenement(e));
@@ -163,7 +179,12 @@ COF.UI.Oracle = (function () {
         break;
       }
       case 'scene': {
-        var s = COF.Oracle.testScene();
+        var cS = campagne();
+        var s = COF.Oracle.testScene(cS ? cS.tension : null);
+        if (cS && s.evenement) {
+          var eh3 = COF.Carnet.evenementHistoire(cS);
+          s.evenement = { focus: eh3.libelle + (eh3.cible ? ' — ' + eh3.cible : ''), action: eh3.action, sujet: eh3.sujet };
+        }
         dernier.scene = s;
         $('#scene-resultat').innerHTML = htmlScene(s);
         noter('🎬 Scène : ' + s.label + (s.evenement ? ' · ' + COF.Oracle.texteEvenement(s.evenement) : ''));
@@ -172,6 +193,7 @@ COF.UI.Oracle = (function () {
       }
       case 'detail': {
         var d = COF.Oracle.detailSensoriel(sensChoisi);
+        consigner({ t: 'detail', txt: d.detail });
         dernier.detail = d;
         $('#detail-resultat').innerHTML = htmlDetail(d);
         noter('🖐️ ' + d.detail);

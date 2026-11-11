@@ -33,7 +33,7 @@ COF.UI.Lieux = (function () {
       texte: function (id, v) {
         if (id === 'type') return v.nom;
         if (id === 'marchand') return texteTenancier(v);
-        if (id === 'stock') return v.map(function (it) { return it.nom + ' (' + it.prix + ' po)'; }).join(' · ');
+        if (id === 'stock') return v.map(function (it) { return (it.magique ? '✨ ' : '') + it.nom + ' (' + it.prix + ' po)'; }).join(' · ');
         return v;
       },
       vue: COF.UI.creerVueChamps(COF.LieuxCalc.boutique, function (id, v) { return VUES.boutique.texte(id, v); }, 'lact')
@@ -79,12 +79,50 @@ COF.UI.Lieux = (function () {
     v.champs.forEach(function (c) { h += v.vue.ligne(c[0], c[1]); });
     h += '<button class="btn btn-plein btn-bloc" style="margin-top:10px" data-lact="tout">' + esc(v.bouton) + '</button>';
     h += '</div></div>';
+    if (MODE === 'boutique') h += blocAchats(v.vue.get('stock') || []);
 
     node.innerHTML = h;
   }
 
+  /* Comptoir : chaque article s'achète avec la bourse du personnage actif
+     et arrive sur sa fiche (armes, armures et objets magiques prêts). */
+  function blocAchats(stock) {
+    if (!stock.length) return '';
+    var perso = COF.Store.actif();
+    var h = '<div class="carte"><h2>Comptoir</h2><div class="carte-corps">';
+    if (!perso) h += '<div class="note" style="margin-bottom:8px">Aucun personnage actif : ouvrez-en un depuis « Persos » pour acheter.</div>';
+    else {
+      var b = perso.bourse || {};
+      h += '<div class="note" style="margin-bottom:8px">Bourse de <b>' + esc(perso.nom) + '</b> : ' + (b.po || 0) + ' po · ' + (b.pa || 0) + ' pa' +
+        (stock.some(function (s) { return s.magique; }) ? '. Objets magiques limités au niveau ' + (perso.niveau || 1) + '.' : '.') + '</div>';
+    }
+    stock.forEach(function (s, i) {
+      h += '<div class="ligne" style="align-items:flex-start"><div class="info"><div class="t">' + (s.magique ? '✨ ' : '') + esc(s.nom) +
+        ' <span class="puce">' + s.prix.toLocaleString('fr-FR') + ' po</span>' + (s.qte > 1 ? ' <span class="puce">×' + s.qte + '</span>' : '') + '</div>' +
+        (s.source ? '<div class="s" style="color:var(--or)">' + esc(s.source) + (s.niveau ? ' · niveau ' + s.niveau : '') + '</div>' : '') +
+        (s.magique && s.item && s.item.note ? '<div class="s">' + esc(s.item.note) + '</div>' : '') + '</div>' +
+        '<div class="actions">' + (s.achete ? '<button class="btn btn-sm" disabled style="opacity:.6">✓</button>'
+          : (perso ? '<button class="btn btn-sm" data-lact="acheter" data-i="' + i + '">💰 Acheter</button>' : '')) + '</div></div>';
+    });
+    if (achatMsg) h += '<div class="note" style="margin-top:8px;color:var(--sang-clair)">' + esc(achatMsg) + '</div>';
+    return h + '</div></div>';
+  }
+  var achatMsg = '';
+
+  function acheter(i) {
+    var stock = VUES.boutique.vue.get('stock') || [], s = stock[i], perso = COF.Store.actif();
+    achatMsg = '';
+    if (!s || !perso || s.achete) return;
+    if (!COF.Artisanat.payer(perso, Math.round(s.prix * 10))) { achatMsg = 'Pas assez d’argent pour « ' + s.nom + ' ».'; return; }
+    COF.Store.ajouterObjet(perso, Object.assign({}, s.item || { nom: s.nom, qte: 1 }, { prix: s.prix }));
+    COF.Store.sauver(perso);
+    s.achete = true;
+  }
+
   function actions(act, node) {
     if (act === 'mode') { MODE = node.getAttribute('data-v'); if (cible) rendre(cible); return; }
+    if (act === 'acheter') { acheter(+node.getAttribute('data-i')); if (cible) rendre(cible); return; }
+    achatMsg = '';
     var v = VUES[MODE];
     if (v.vue.actionGenerique(act, node)) { if (cible) rendre(cible); return; }
   }

@@ -5,9 +5,9 @@
      - genererFouille(o)  : petite trouvaille en explorant un lieu
      - genererCoffre(o)   : trésor accumulé (coffre, cache, repaire)
    Toutes partagent les mêmes tables et la même mécanique d'objet
-   magique, dont les paliers (mineur/majeur/légendaire) s'ouvrent
-   progressivement avec le niveau, et qui se concrétise en une arme
-   ou une armure réelle du jeu quand le tirage en désigne une.
+   magique, tirée des règles du Compagnon : armes des voies de
+   recettes ou objets/potions du catalogue, jamais au-dessus du
+   niveau du groupe.
    ============================================================ */
 window.COF = window.COF || {};
 
@@ -55,47 +55,60 @@ COF.Recompense = (function () {
 
   /* ---------- Objets magiques ---------- */
 
-  /* Palier d'objet magique atteignable selon le niveau du groupe.
-     Un groupe de bas niveau peut trouver un objet mineur ; les
-     paliers supérieurs ne s'ouvrent qu'avec l'expérience. */
-  function tiersDisponibles(niveau) {
-    if (niveau >= 12) return ['mineur', 'majeur', 'legendaire'];
-    if (niveau >= 6) return ['mineur', 'majeur'];
-    return ['mineur'];
+  /* Les objets magiques du butin sont ceux des règles du Compagnon :
+       - armes : système des voies de recettes (COF.ArmeMagiqueCalc),
+         calibré pour que le niveau requis ne dépasse pas celui du groupe ;
+       - le reste : objets et potions du Catalogue du Compagnon dont le
+         niveau requis (ou une de leurs variantes) est accessible.
+     Chaque tirage porte l'objet prêt pour la fiche (champ item). */
+
+  /* Variantes d'un objet du catalogue accessibles au niveau N. */
+  function variantesAccessibles(o, N) {
+    if (o.t === 'propriété' || /^\+/.test(String(o.niv))) return [];
+    var vs = COF.Artisanat.variantes(o);
+    if (!vs.length) {
+      var m = String(o.niv).match(/\d+/), n = m ? +m[0] : 1;
+      vs = [{ i: 0, niveau: n, prix: 0 }];
+    }
+    return vs.filter(function (v) { return v.niveau <= N; }).map(function (v) { return { v: v, nb: vs.length }; });
   }
 
-  /* Transforme une entrée générique « Arme +N » / « Armure +N » en un
-     objet concret du jeu (arme ou armure réelle) pour un butin qui se
-     manie directement, plutôt qu'une étiquette abstraite. */
-  function concretiser(item) {
-    if (!item) return null;
-    if (item.arme) {
-      /* les mains nues ne sont pas un objet qu'on trouve dans un butin */
-      var pool = COF.ARMES_CONTACT.concat(COF.ARMES_DISTANCE).filter(function (a) { return a.id !== 'mainsnues'; });
-      var arme = piocher(pool);
-      var suffixe = item.nom.replace(/^Arme\s*/, '');
-      var armeType = COF.ARMES_DISTANCE.indexOf(arme) >= 0 ? 'distance' : 'contact';
-      return { tier: item.tier, nom: arme.nom + ' ' + suffixe, desc: item.desc, dm: arme.dm, armeType: armeType };
-    }
-    if (item.armure) {
-      var armure = piocher(COF.ARMURES.filter(function (a) { return a.id !== 'aucune'; }));
-      var suffixe2 = item.nom.replace(/^Armure\s*/, '');
-      return { tier: item.tier, nom: armure.nom + ' ' + suffixe2, desc: item.desc, def: armure.def };
-    }
-    return { tier: item.tier, nom: item.nom, desc: item.desc };
+  function tirerArme(N) {
+    var o = COF.ArmeMagiqueCalc.generer(N);
+    var it = COF.ArmeMagiqueCalc.versItem(o);
+    var c = COF.ArmeMagiqueCalc.calcul(o);
+    return { nom: it.nom, desc: it.note, item: it, source: 'Arme à voie de recettes', niveau: c.niveau };
+  }
+
+  function tirerArmure(N) {
+    var o = COF.ArmureMagiqueCalc.generer(N);
+    var it = COF.ArmureMagiqueCalc.versItem(o);
+    return { nom: it.nom, desc: it.note, item: it, source: 'Armure à voie de recettes', niveau: COF.ArmureMagiqueCalc.calcul(o).niveau };
+  }
+
+  function tirerCatalogue(N, potions) {
+    var pool = [];
+    (COF.CATALOGUE_COMPAGNON || []).forEach(function (o) {
+      if ((o.g === 'potions') !== potions) return;
+      var acc = variantesAccessibles(o, N);
+      if (acc.length) pool.push({ o: o, acc: acc });
+    });
+    if (!pool.length) return null;
+    var e = piocher(pool), x = piocher(e.acc);
+    var it = COF.Artisanat.itemObjet(e.o, x.v, x.nb);
+    return {
+      nom: it.nom, item: it, source: e.o.v, niveau: x.v.niveau,
+      desc: e.o.d + ' (' + e.o.v + ', niveau requis ' + x.v.niveau + ')'
+    };
   }
 
   /* chance : probabilité (0-1) qu'un objet magique soit trouvé. */
   function tirerMagiqueGenerique(niveau, chance) {
     if (Math.random() > Math.min(1, chance)) return null;
-    var tiers = tiersDisponibles(niveau);
-    /* pondération : le palier le plus élevé accessible reste le plus rare */
-    var poids = { mineur: 6, majeur: 3, legendaire: 1 };
-    var pool = [];
-    tiers.forEach(function (t) { for (var i = 0; i < poids[t]; i++) pool.push(t); });
-    var tier = piocher(pool);
-    var choix = COF.OBJETS_MAGIQUES.filter(function (o) { return o.tier === tier; });
-    return concretiser(piocher(choix));
+    var N = Math.max(1, Math.round(niveau)), r = Math.random();
+    if (r < 0.3) return tirerArme(N);
+    if (r < 0.5) return tirerArmure(N);
+    return tirerCatalogue(N, r < 0.7) || tirerArme(N);
   }
 
   function tirerMagiqueRencontre(r) {
@@ -233,6 +246,13 @@ COF.Recompense = (function () {
 
   return {
     generer: generer, genererFouille: genererFouille, genererCoffre: genererCoffre,
+    /* genre : 'arme' | 'armure' | 'potion' | 'objet' — objet du livre ≤ niveau N */
+    tirerObjetLivre: function (N, genre) {
+      N = Math.max(1, Math.round(N || 1));
+      if (genre === 'arme') return tirerArme(N);
+      if (genre === 'armure') return tirerArmure(N);
+      return tirerCatalogue(N, genre === 'potion');
+    },
     DIFF_MULT: DIFF_MULT
   };
 })();
