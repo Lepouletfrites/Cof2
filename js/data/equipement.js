@@ -27,7 +27,9 @@ COF.ARMES_CONTACT = [
   { id: 'marteau',   nom: 'Marteau',         dm: '1d6',  prix: 4,   type: 'C', cat: '1m' },
   { id: 'masse',     nom: 'Masse',           dm: '1d6',  prix: 4,   type: 'C', cat: '1m' },
   { id: 'pique',     nom: 'Pique',           dm: '1d10', prix: 5,   type: 'P', cat: '2m',    note: "Deux mains. DM doublés contre une grande créature qui charge. Attaque depuis le 2e rang à -5." },
-  { id: 'rapiere',   nom: 'Rapière',         dm: '1d6',  prix: 6,   type: 'P', cat: 'legere', crit: 19, note: "Arme légère. Critique sur 19-20." },
+  { id: 'sabrecourt',nom: 'Sabre court',     dm: '1d4',  prix: 10,  type: 'T', cat: 'legere', crit: 19, note: "Arme légère. Dé explosif, critique sur 19-20 (Compagnon du joueur)." },
+  { id: 'sabredroit',nom: 'Sabre droit',     dm: '1d6',  dm2: '1d8', prix: 15, type: 'T', cat: '1ou2m', crit: 19, note: "Une ou deux mains. Dé explosif, critique sur 19-20 (Compagnon du joueur)." },
+  { id: 'rapiere',  nom: 'Rapière',         dm: '1d6',  prix: 6,   type: 'P', cat: 'legere', crit: 19, note: "Arme légère. Critique sur 19-20." },
   { id: 'stylet',    nom: 'Stylet',          dm: '1d3',  prix: 1,   type: 'P', cat: 'legere', noFor: true, note: "Pas de FOR aux DM. 1d6+AGI contre une cible surprise." },
   { id: 'vivelame',  nom: 'Vivelame',        dm: '1d10', prix: 15,  type: 'T', cat: '2m',    crit: 19, note: "Deux mains. Critique sur 19-20." }
 ];

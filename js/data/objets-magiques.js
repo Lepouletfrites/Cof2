@@ -31,23 +31,8 @@ COF.OM_POUVOIR_PROFILS = [
   ['rodeur', 1], ['voleur', 1]
 ];
 
-/* Armes magiques — type d'arme (d6) puis propriété (d12, simplifié en
-   table pondérée). Les armes précises sont piochées dans les vraies
-   tables d'équipement (COF.ARMES_CONTACT / COF.ARMES_DISTANCE). */
-COF.OM_TYPE_ARME = [['contact', 3], ['distance', 2], ['sceptre', 1]];
-
-COF.OM_PROP_ARME = [
-  { id: 'affutee', poids: 2, nom: 'affûtée', niveau: 1,
-    texte: "Zone de critique augmentée de 1 point ; +1d4° DM supplémentaires sur un critique." },
-  { id: 'fleau', poids: 5, niveau: 1, fleau: true },
-  { id: 'feu', poids: 1, nom: 'de feu', niveau: 2, elem: { formule: '1d4°', label: 'de feu' } },
-  { id: 'froid', poids: 1, nom: 'de froid', niveau: 2, elem: { formule: '1d4°', label: 'de froid' } },
-  { id: 'foudre', poids: 1, nom: 'de foudre', niveau: 2, elem: { formule: '1d4°', label: 'de foudre' } }
-];
-COF.OM_FLEAU_CREATURES = [
-  'morts-vivants', 'dragons', 'géants', 'gobelinoïdes', 'démons',
-  'animaux', 'lycanthropes', 'élémentaires', 'lanceurs de sorts'
-];
+/* Armes magiques : voir js/data/armes-recettes.js (voies de recettes
+   du Compagnon du joueur). */
 
 /* Armures magiques — propriétés (d12). */
 COF.OM_PROP_ARMURE = [

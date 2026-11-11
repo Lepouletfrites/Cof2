@@ -29,6 +29,8 @@ COF.UI.Generateurs = (function () {
     COF.UI.Voyage.init();
     COF.UI.Donjon.init();
     COF.UI.ObjetsMagiques.init();
+    COF.UI.ArmeMagique.init();
+    COF.UI.Catalogue.init();
     COF.UI.ObjetPrestigieux.init();
     COF.UI.Intrigue.init();
     COF.UI.Solo.init();
@@ -50,6 +52,7 @@ COF.UI.Generateurs = (function () {
       '<span class="chip ' + (SOUS === 'voyage' ? 'on' : '') + '" data-gact="sous" data-v="voyage">🧭 Voyage</span>' +
       '<span class="chip ' + (SOUS === 'donjon' ? 'on' : '') + '" data-gact="sous" data-v="donjon">🗝️ Donjon</span>' +
       '<span class="chip ' + (SOUS === 'objmagie' ? 'on' : '') + '" data-gact="sous" data-v="objmagie">🪄 Objets magiques</span>' +
+      '<span class="chip ' + (SOUS === 'catalogue' ? 'on' : '') + '" data-gact="sous" data-v="catalogue">📚 Catalogue du Compagnon</span>' +
       '<span class="chip ' + (SOUS === 'objprestige' ? 'on' : '') + '" data-gact="sous" data-v="objprestige">👑 Objet prestigieux</span>' +
       '<span class="chip ' + (SOUS === 'intrigue' ? 'on' : '') + '" data-gact="sous" data-v="intrigue">🎭 Intrigue</span>' +
       '<span class="chip ' + (SOUS === 'solo' ? 'on' : '') + '" data-gact="sous" data-v="solo">🕰️ Vie & temps</span>' +
@@ -65,6 +68,7 @@ COF.UI.Generateurs = (function () {
     if (SOUS === 'voyage') { COF.UI.Voyage.rendre($('#gen-corps')); return; }
     if (SOUS === 'donjon') { COF.UI.Donjon.rendre($('#gen-corps')); return; }
     if (SOUS === 'objmagie') { COF.UI.ObjetsMagiques.rendre($('#gen-corps')); return; }
+    if (SOUS === 'catalogue') { COF.UI.Catalogue.rendre($('#gen-corps')); return; }
     if (SOUS === 'objprestige') { COF.UI.ObjetPrestigieux.rendre($('#gen-corps')); return; }
     if (SOUS === 'intrigue') { COF.UI.Intrigue.rendre($('#gen-corps')); return; }
     if (SOUS === 'solo') { COF.UI.Solo.rendre($('#gen-corps')); return; }

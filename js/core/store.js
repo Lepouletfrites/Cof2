@@ -118,8 +118,9 @@ COF.Store = (function () {
   function ajouterObjet(p, o) {
     if (o.dm) {
       p.armes.push({
-        nom: o.nom, type: o.armeType || 'contact', dm: o.dm, portee: null, crit: o.crit || 20,
-        noFor: !!o.noFor, note: null, bonus: o.bonus || 0, elementaires: o.elementaires || []
+        nom: o.nom, type: o.armeType || 'contact', dm: o.dm, dm2: o.dm2 || null, portee: o.portee || null,
+        crit: o.crit || 20, noFor: !!o.noFor, note: o.noteArme || null, bonus: o.bonus || 0,
+        bonusAtt: o.bonusAtt || 0, elementaires: o.elementaires || []
       });
     }
     var item = { nom: o.nom, qte: o.qte || 1 };

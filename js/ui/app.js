@@ -269,7 +269,8 @@ COF.UI = COF.UI || {};
   function modArme(C, w, aa) {
     aa = aa || COF.Calc.attaques(C);
     var base = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
-    return base + (w.bonus || 0);
+    /* bonusAtt : bonus d'attaque seul (arme de qualité : +1 en attaque, pas aux DM). */
+    return base + (w.bonus || 0) + (w.bonusAtt || 0);
   }
   COF.UI.modArme = modArme;
 

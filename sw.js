@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v28';
+var CACHE_VERSION = 'cof2-v32';
 
 var FICHIERS = [
   './',
@@ -15,11 +15,14 @@ var FICHIERS = [
 
   'js/data/rules.js',
   'js/data/peuples.js',
+  'js/data/peuples-compagnon.js',
   'js/data/equipement.js',
   'js/data/profils-aventuriers.js',
   'js/data/profils-combattants.js',
   'js/data/profils-mages.js',
   'js/data/profils-mystiques.js',
+  'js/data/profils-compagnon.js',
+  'js/data/domaines-pretre.js',
   'js/data/atlas-mage.js',
   'js/data/atlas-mystique.js',
   'js/data/historique.js',
@@ -28,6 +31,7 @@ var FICHIERS = [
   'js/data/prestige-combattant.js',
   'js/data/prestige-mage.js',
   'js/data/prestige-mystique.js',
+  'js/data/prestige-compagnon.js',
   'js/data/compagnons.js',
   'js/data/bestiaire-1.js',
   'js/data/bestiaire-2.js',
@@ -43,6 +47,8 @@ var FICHIERS = [
   'js/data/voyage.js',
   'js/data/donjon.js',
   'js/data/objets-magiques.js',
+  'js/data/armes-recettes.js',
+  'js/data/catalogue-compagnon.js',
   'js/data/objet-prestigieux.js',
   'js/data/intrigue.js',
   'js/data/solo.js',
@@ -61,6 +67,7 @@ var FICHIERS = [
   'js/core/voyage.js',
   'js/core/donjon.js',
   'js/core/objets-magiques.js',
+  'js/core/arme-magique.js',
   'js/core/objet-prestigieux.js',
   'js/core/intrigue.js',
   'js/core/solo.js',
@@ -83,6 +90,8 @@ var FICHIERS = [
   'js/ui/voyage.js',
   'js/ui/donjon.js',
   'js/ui/objets-magiques.js',
+  'js/ui/arme-magique.js',
+  'js/ui/catalogue.js',
   'js/ui/objet-prestigieux.js',
   'js/ui/intrigue.js',
   'js/ui/solo.js',

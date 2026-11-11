@@ -107,50 +107,8 @@ COF.ObjetsMagiquesCalc = (function () {
     { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
   ];
 
-  /* ---------- Arme magique ---------- */
-  function typeArme() { return piockerPoids(COF.OM_TYPE_ARME); }
-  function tirerArme(type) {
-    if (type === 'sceptre') return { nom: 'Sceptre de magie', dm: '1d6', armeType: 'contact', sceptre: true };
-    var table = type === 'distance' ? COF.ARMES_DISTANCE : COF.ARMES_CONTACT.filter(function (a) { return a.id !== 'mainsnues'; });
-    var a = piocher(table);
-    return { nom: a.nom, dm: a.dm, armeType: type };
-  }
-  function tirerProprieteArme() {
-    var p = piockerPoids(COF.OM_PROP_ARME.map(function (x) { return [x, x.poids]; }));
-    var out = { niveau: p.niveau };
-    if (p.fleau) {
-      var cible = piocher(COF.OM_FLEAU_CREATURES);
-      out.nom = 'fléau des ' + cible;
-      out.texte = 'Inflige +1d4° DM supplémentaires contre les ' + cible + '.';
-    } else {
-      out.nom = p.nom;
-      out.texte = p.elem ? ('Inflige +1d4° DM ' + p.nom + ' supplémentaires.') : p.texte;
-      out.elem = p.elem;
-    }
-    return out;
-  }
-  var CHAMPS_ARME = [
-    { id: 'palier', label: 'Palier', gen: function () { return piocher(PALIERS_ARME); } },
-    { id: 'typeArme', label: "Type d'arme", gen: function () { return typeArme(); } },
-    { id: 'base', label: 'Arme', gen: function (ctx) { return tirerArme(ctx.typeArme || 'contact'); } },
-    { id: 'proprietes', label: 'Propriétés', gen: function (ctx) {
-        var bonus = (ctx.palier || PALIERS_ARME[0]).bonus;
-        var props = [];
-        if (Math.random() * 6 < bonus) {
-          props.push(tirerProprieteArme());
-          if (Math.random() < 0.17) {
-            var p2 = tirerProprieteArme();
-            p2.double = true;
-            p2.niveau *= 2;
-            props.push(p2);
-          }
-        }
-        return props;
-      } },
-    { id: 'nom', label: 'Nom', gen: function (ctx) { return nomMagique((ctx.base || {}).nom || 'Arme', false); } },
-    { id: 'maudit', label: 'Malédiction', gen: function () { return tirerMaledictionEventuelle(); } },
-    { id: 'origine', label: 'Origine', gen: function () { return genererOrigine(); } }
-  ];
+  /* L'arme magique a son propre moteur, fondé sur les voies de recettes
+     du Compagnon du joueur : voir js/core/arme-magique.js. */
 
   /* ---------- Armure / bouclier magique ---------- */
   var CATALOGUE_ARMURE = COF.ARMURES ? COF.ARMURES.filter(function (a) { return a.id !== 'aucune'; }).map(function (a) {
@@ -231,7 +189,6 @@ COF.ObjetsMagiquesCalc = (function () {
     potion: COF.creerGenerateurChamps(CHAMPS_POTION),
     parchemin: COF.creerGenerateurChamps(CHAMPS_PARCHEMIN),
     baguette: COF.creerGenerateurChamps(CHAMPS_BAGUETTE),
-    arme: COF.creerGenerateurChamps(CHAMPS_ARME),
     armure: COF.creerGenerateurChamps(CHAMPS_ARMURE),
     pouvoir: COF.creerGenerateurChamps(CHAMPS_POUVOIR),
     puissance: COF.creerGenerateurChamps(CHAMPS_PUISSANCE),
@@ -244,10 +201,6 @@ COF.ObjetsMagiquesCalc = (function () {
   function valeurPotionParchemin(rang) { return rang * rang * 5; }
   function valeurGenerique(niveauMagie) { return niveauMagie * niveauMagie * 200; }
 
-  function niveauMagieArme(o) {
-    var bonus = (o.palier || PALIERS_ARME[0]).bonus;
-    return bonus + (o.proprietes || []).reduce(function (s, p) { return s + p.niveau; }, 0);
-  }
   function niveauMagieArmure(o) {
     var bonus = (o.palier || PALIERS_ARME[0]).bonus;
     return bonus + (o.proprietes || []).reduce(function (s, p) { return s + p.niveau; }, 0);
@@ -255,8 +208,9 @@ COF.ObjetsMagiquesCalc = (function () {
 
   return {
     GENS: GENS, PALIERS_ARME: PALIERS_ARME, PALIERS_PARCHEMIN: PALIERS_PARCHEMIN, POTION_PALIERS: POTION_PALIERS,
+    genererOrigine: genererOrigine,
     valeurPotionParchemin: valeurPotionParchemin, valeurGenerique: valeurGenerique,
-    niveauMagieArme: niveauMagieArme, niveauMagieArmure: niveauMagieArmure,
+    niveauMagieArmure: niveauMagieArmure,
     nomMagique: nomMagique
   };
 })();

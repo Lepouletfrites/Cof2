@@ -394,7 +394,7 @@ COF.UI.Arene = (function () {
   function lancerPjArme(p, i, ci) {
     var K = COF.Calc, aa = K.attaques(p);
     var w = p.armes[i];
-    var att = w.type === 'distance' ? aa.distance : (w.type === 'magique' ? aa.magique : aa.contact);
+    var att = COF.UI.modArme(p, w, aa);   // bonus magique / de qualité de l'arme inclus
     var dm = COF.UI.dmgArme(p, w);
     var cfg = {
       titre: p.nom + ' — ' + w.nom,

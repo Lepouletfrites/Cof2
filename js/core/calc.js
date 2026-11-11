@@ -6,9 +6,15 @@ window.COF = window.COF || {};
 COF.Calc = (function () {
 
   function profil(p) { return COF.PROFILS[p.profil] || null; }
+  /* Famille effective : certains profils (psionique) laissent le joueur
+     choisir sa famille, mémorisée sur le personnage (p.familleProfil). */
   function famille(p) {
     var pr = profil(p);
-    return pr ? COF.RULES.familles[pr.famille] : null;
+    if (!pr) return null;
+    if (pr.familleChoix && p.familleProfil && COF.RULES.familles[p.familleProfil]) {
+      return COF.RULES.familles[p.familleProfil];
+    }
+    return COF.RULES.familles[pr.famille];
   }
 
   function carac(p, id) { return (p.carac && typeof p.carac[id] === 'number') ? p.carac[id] : 0; }
@@ -44,7 +50,11 @@ COF.Calc = (function () {
   function pvMax(p) {
     var f = famille(p); if (!f) return 0;
     var n = p.niveau || 1;
-    return (n + 1) * f.pv + n * carac(p, 'CON') + (p.bonus && p.bonus.pv || 0);
+    /* Les PV par niveau du profil priment (primaliste : 4 bien que mage ;
+       psionique : 4 quelle que soit la famille choisie). */
+    var pr = profil(p);
+    var pvNiv = (pr && pr.pv) || f.pv;
+    return (n + 1) * pvNiv + n * carac(p, 'CON') + (p.bonus && p.bonus.pv || 0);
   }
 
   function drMax(p) {
@@ -81,6 +91,7 @@ COF.Calc = (function () {
        "profil.brute"           voie du profil principal
        "hyb.guerrier.combat"    voie d'un autre profil (profil hybride)
        "prestige.colosse"       voie de prestige
+       "domaine.arcanna"        voie de domaine de prêtre (Compagnon)
        "historique.nomade"      voie d'historique (Atlas d'Osgild)     */
   function voieDef(p, key) {
     if (key === 'mage') return COF.VOIE_MAGE;
@@ -88,6 +99,9 @@ COF.Calc = (function () {
     if (parts[0] === 'peuple') {
       var pe = COF.PEUPLES[parts[1]];
       return pe && pe.voie ? pe.voie : null;
+    }
+    if (parts[0] === 'domaine') {
+      return (COF.DOMAINES && COF.DOMAINES[parts[1]]) || null;
     }
     if (parts[0] === 'prestige') {
       return (COF.PRESTIGE && COF.PRESTIGE[parts[1]]) || null;

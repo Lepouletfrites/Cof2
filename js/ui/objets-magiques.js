@@ -77,21 +77,8 @@ COF.UI.ObjetsMagiques = (function () {
       valeur: function (o) { return (o.sort ? Calc.valeurPotionParchemin(o.sort.cap.r) : 0) * (o.charges || 1); },
       peutUtiliser: function (o) { return !!o.sort; }
     },
-    arme: {
-      titre: 'Arme magique', bouton: '↻ Nouvelle arme',
-      champs: [['palier', 'Palier'], ['base', 'Arme'], ['proprietes', 'Propriétés'], ['maudit', 'Malédiction'], ['origine', 'Origine']],
-      texte: function (id, v) {
-        if (id === 'palier') return v.nom + ' (+' + v.bonus + ')';
-        if (id === 'base') return v.nom + (v.sceptre ? ' (peut servir d\'arme si sa forme le permet)' : '') + ' — DM ' + v.dm;
-        if (id === 'proprietes') return texteProprietes(v);
-        if (id === 'maudit') return v ? v : 'Aucune — objet sain';
-        if (id === 'origine') return texteOrigine(v);
-        return v;
-      },
-      titreObjet: function (o) { return o.nom || 'Arme magique'; },
-      valeur: function (o) { return Calc.valeurGenerique(Calc.niveauMagieArme(o)); },
-      peutUtiliser: function () { return false; }
-    },
+    /* Vue dédiée (atelier des voies de recettes) : js/ui/arme-magique.js */
+    arme: { titre: 'Arme magique', dediee: true },
     armure: {
       titre: 'Armure / bouclier magique', bouton: '↻ Nouvelle armure',
       champs: [['palier', 'Palier'], ['base', 'Type'], ['proprietes', 'Propriétés'], ['maudit', 'Malédiction'], ['origine', 'Origine']],
@@ -161,6 +148,7 @@ COF.UI.ObjetsMagiques = (function () {
      complet, comme les autres générateurs). */
   Object.keys(VUES).forEach(function (mode) {
     var v = VUES[mode];
+    if (v.dediee) return;
     v.vue = COF.UI.creerVueChamps(Calc.GENS[mode], function (id, val) { return v.texte(id, val, v.vue.etatCourant()); }, 'omact');
   });
 
@@ -182,14 +170,6 @@ COF.UI.ObjetsMagiques = (function () {
     } else if (mode === 'baguette') {
       descParts.push('Contient ' + (o.sort ? o.sort.cap.n : '?') + ' (' + o.charges + ' charges).');
       descParts.push(o.sort ? o.sort.cap.d : '');
-    } else if (mode === 'arme') {
-      item.dm = o.base.dm;
-      item.armeType = o.base.armeType;
-      item.bonus = (o.palier || Calc.PALIERS_ARME[0]).bonus;
-      item.elementaires = (o.proprietes || []).filter(function (p) { return p.elem; }).map(function (p) { return p.elem; });
-      if ((o.proprietes || []).some(function (p) { return p.id === 'affutee' || (p.nom && p.nom.indexOf('affûtée') > -1); })) item.crit = 19;
-      descParts.push(texteProprietes(o.proprietes));
-      if (o.maudit) descParts.push('Malédiction : ' + o.maudit);
     } else if (mode === 'armure') {
       item.def = (o.base ? o.base.def : 0) + (o.palier || Calc.PALIERS_ARME[0]).bonus;
       item.slot = o.base ? o.base.slot : 'armure';
@@ -229,8 +209,6 @@ COF.UI.ObjetsMagiques = (function () {
   function rendre(node) {
     cible = node;
     var v = VUES[MODE];
-    v.vue.assurer();
-    var o = v.vue.etatCourant();
     var perso = COF.Store.actif();
 
     var h = '<div class="carte"><div class="carte-corps" style="padding-bottom:2px">' +
@@ -239,6 +217,14 @@ COF.UI.ObjetsMagiques = (function () {
       Object.keys(VUES).map(function (m) {
         return '<span class="chip ' + (MODE === m ? 'on' : '') + '" data-omact="mode" data-v="' + m + '">' + esc(VUES[m].titre) + '</span>';
       }).join('') + '</div></div></div>';
+
+    if (v.dediee) {
+      node.innerHTML = h + '<div id="om-arme"></div>';
+      COF.UI.ArmeMagique.rendre(node.querySelector('#om-arme'));
+      return;
+    }
+    v.vue.assurer();
+    var o = v.vue.etatCourant();
 
     h += '<div class="carte"><h2>' + esc(v.titreObjet(o)) + '<span class="h2-action" data-omact="tout">' + esc(v.bouton) + '</span></h2>';
     h += '<div class="carte-corps">';
@@ -255,6 +241,7 @@ COF.UI.ObjetsMagiques = (function () {
   function actions(act, node) {
     if (act === 'mode') { MODE = node.getAttribute('data-v'); if (cible) rendre(cible); return; }
     var v = VUES[MODE];
+    if (v.dediee) return;
 
     if (act === 'utiliser') {
       var oU = v.vue.etatCourant();

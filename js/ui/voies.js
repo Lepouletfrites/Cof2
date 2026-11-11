@@ -10,6 +10,7 @@ COF.UI.Voies = (function () {
   var C = null;
   var hybProfil = null;      // profil affiché dans la section hybride
   var prestigeFam = null;    // famille affichée dans la section prestige
+  var domaineSel = null;     // divinité affichée parmi les voies de domaine
 
   function init() {
     document.addEventListener('click', function (e) {
@@ -22,6 +23,12 @@ COF.UI.Voies = (function () {
       if (!t.hasAttribute || !t.closest || !t.closest('#vue-voies')) return;
       if (t.id === 'sel-hyb') { hybProfil = t.value; rendre(); }
       if (t.id === 'sel-prestige') { prestigeFam = t.value; rendre(); }
+      if (t.id === 'sel-domaine') { domaineSel = t.value; rendre(); }
+      if (t.id === 'sel-famille-profil') {
+        C.familleProfil = t.value; prestigeFam = t.value;
+        sauver(); rendre();
+        if (COF.UI.majTitre) COF.UI.majTitre();
+      }
     });
   }
 
@@ -43,7 +50,8 @@ COF.UI.Voies = (function () {
     var pr = COF.PROFILS[C.profil];
     var pc = COF.Calc.pointsCapacite(C);
     if (!hybProfil) hybProfil = Object.keys(COF.PROFILS).filter(function (k) { return k !== C.profil; })[0];
-    if (!prestigeFam) prestigeFam = pr.famille;
+    var famId = COF.Calc.famille(C).id;     // famille effective (psionique : au choix)
+    if (!prestigeFam) prestigeFam = famId;
 
     var h = '';
 
@@ -63,29 +71,39 @@ COF.UI.Voies = (function () {
 
     /* ---- Voies du profil principal (mises en avant) ---- */
     h += '<div class="carte"><h2>Voies de ' + esc(pr.nom) + '</h2><div class="carte-corps">';
+    if (pr.familleChoix) {
+      h += '<div class="champ"><label>Famille du profil</label><select id="sel-famille-profil">' +
+        Object.keys(COF.RULES.familles).map(function (f) {
+          return '<option value="' + f + '"' + (f === famId ? ' selected' : '') + '>' +
+            esc(COF.RULES.familles[f].nom) + '</option>';
+        }).join('') + '</select></div>';
+    }
+    if (pr.note) h += '<div class="note" style="margin-bottom:10px">' + esc(pr.note) + '</div>';
     pr.voies.forEach(function (v) { h += voieHTML(v, 'profil.' + v.id); });
     h += '</div></div>';
 
     /* ---- Voie de peuple ---- */
     var pe = COF.PEUPLES[C.peuple];
     h += '<div class="carte"><h2>Voie de peuple — ' + esc(pe.nom) + '</h2><div class="carte-corps">';
-    if (pe.voie) {
-      h += voieHTML(pe.voie, 'peuple.' + pe.id);
-    } else if (pe.voieChoix) {
+    if (pe.traits) h += '<div class="note" style="margin-bottom:8px">' + esc(pe.traits) + '</div>';
+    if (pe.voieChoix) {
       h += '<div class="note" style="margin-bottom:8px">' + esc(pe.voieSpeciale) + '</div>';
       pe.voieChoix.forEach(function (k) {
         var v = COF.PEUPLES[k];
         if (v && v.voie) h += voieHTML(v.voie, 'peuple.' + k);
       });
+    } else if (pe.voie) {
+      h += voieHTML(pe.voie, 'peuple.' + pe.id);
     }
-    if (pr.famille === 'mage') {
+    if (famId === 'mage' && !pr.pasVoieMage) {
       h += '<div class="note" style="margin:10px 0 6px;color:var(--or)">Option des mages : remplacer la voie de peuple par la voie du mage.</div>';
       h += voieHTML(COF.VOIE_MAGE, 'mage');
     }
+    h += blocDomaines(pr);
     h += '</div></div>';
 
     /* ---- Voie de prestige (repliée) ---- */
-    h += blocPrestige(pr);
+    h += blocPrestige(famId);
 
     /* ---- Autres voies : profil hybride (repliée) ---- */
     h += blocHybride(pr);
@@ -110,8 +128,38 @@ COF.UI.Voies = (function () {
     });
   }
 
+  /* ---------------- Voies de domaine (Compagnon du joueur) ----------------
+     Option des prêtres (et, pour certaines divinités, des druides ou des
+     chamanes) : remplacer la voie de peuple par la voie de domaine de sa
+     divinité. Les voies déjà entamées sont toujours affichées ; un menu
+     permet de consulter celle des autres divinités. */
+  function blocDomaines(pr) {
+    if (!COF.DOMAINES) return '';
+    var ids = Object.keys(COF.DOMAINES).filter(function (k) {
+      return pr.id === 'pretre' || (COF.DOMAINES[k].aussi || []).indexOf(pr.id) >= 0;
+    });
+    if (!ids.length) return '';
+    var acquises = (C.voies || []).filter(function (v) { return v.key.indexOf('domaine.') === 0; })
+      .map(function (v) { return v.key.split('.')[1]; });
+    if (!domaineSel || ids.indexOf(domaineSel) < 0) domaineSel = acquises[0] || ids[0];
+
+    var h = '<div class="note" style="margin:10px 0 6px;color:var(--or)">' + esc(COF.DOMAINES_NOTE) + '</div>';
+    h += '<div class="champ"><label>Divinité</label><select id="sel-domaine">' +
+      ids.map(function (k) {
+        var d = COF.DOMAINES[k];
+        return '<option value="' + k + '"' + (k === domaineSel ? ' selected' : '') + '>' +
+          esc(d.dieu + ' — arme : ' + d.arme) + '</option>';
+      }).join('') + '</select></div>';
+    var affichees = acquises.slice();
+    if (affichees.indexOf(domaineSel) < 0) affichees.push(domaineSel);
+    affichees.forEach(function (k) {
+      if (COF.DOMAINES[k]) h += voieHTML(COF.DOMAINES[k], 'domaine.' + k);
+    });
+    return h;
+  }
+
   /* ---------------- Voies de prestige ---------------- */
-  function blocPrestige(pr) {
+  function blocPrestige(famId) {
     var active = COF.Calc.prestigeActive(C);
     var dispo = (C.niveau || 1) >= 5;
     var fams = [
@@ -127,7 +175,7 @@ COF.UI.Voies = (function () {
 
     h += '<div class="note" style="margin-bottom:10px">' +
       'À partir du niveau 5, un personnage peut choisir <b>une seule</b> voie de prestige pour toute sa carrière, ' +
-      'dans les voies génériques ou celles de sa famille de profils (' + esc(COF.RULES.familles[pr.famille].nom) + '). ' +
+      'dans les voies génériques ou celles de sa famille de profils (' + esc(COF.RULES.familles[famId].nom) + '). ' +
       'Rangs 4 à 8 — niveaux requis : 5, 7, 9, 11 et 13.</div>';
 
     if (!dispo) h += '<div class="note" style="color:var(--sang-clair);margin-bottom:10px">Niveau 5 requis.</div>';
@@ -139,7 +187,7 @@ COF.UI.Voies = (function () {
 
     h += '<div class="champ"><label>Famille</label><select id="sel-prestige">' +
       fams.map(function (f) {
-        var recom = (f.id === 'generique' || f.id === pr.famille) ? '' : ' — hors famille';
+        var recom = (f.id === 'generique' || f.id === famId) ? '' : ' — hors famille';
         return '<option value="' + f.id + '"' + (f.id === prestigeFam ? ' selected' : '') + '>' +
           esc(f.nom + recom) + '</option>';
       }).join('') + '</select></div>';
@@ -312,7 +360,7 @@ COF.UI.Voies = (function () {
 
   function capacitesEligiblesVoie(cfg) {
     var out = [];
-    var familles = cfg.memeFamille ? [(COF.PROFILS[C.profil] || {}).famille] : cfg.familles;
+    var familles = cfg.memeFamille ? [(COF.Calc.famille(C) || {}).id] : cfg.familles;
     var rangMin = cfg.rangMin || 1;
     Object.keys(COF.PROFILS).forEach(function (pid) {
       var pr = COF.PROFILS[pid];

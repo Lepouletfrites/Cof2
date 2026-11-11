@@ -54,13 +54,14 @@ COF.UI.Persos = (function () {
 
   /* ---------- Création ---------- */
   function optionsProfils() {
-    var fam = { aventurier: [], combattant: [], mage: [], mystique: [] };
+    var fam = { aventurier: [], combattant: [], mage: [], mystique: [], choix: [] };
     Object.keys(COF.PROFILS).forEach(function (k) {
       var p = COF.PROFILS[k];
-      fam[p.famille].push('<option value="' + k + '">' + esc(p.nom) + '</option>');
+      fam[p.familleChoix ? 'choix' : p.famille].push('<option value="' + k + '">' + esc(p.nom) + '</option>');
     });
-    return Object.keys(fam).map(function (f) {
-      return '<optgroup label="' + esc(COF.RULES.familles[f].nom) + '">' + fam[f].join('') + '</optgroup>';
+    return Object.keys(fam).filter(function (f) { return fam[f].length; }).map(function (f) {
+      var lbl = f === 'choix' ? 'Famille au choix' : COF.RULES.familles[f].nom;
+      return '<optgroup label="' + esc(lbl) + '">' + fam[f].join('') + '</optgroup>';
     }).join('');
   }
 
@@ -77,6 +78,11 @@ COF.UI.Persos = (function () {
     h += '<div class="champ"><label>Profil</label><select id="c-profil">' + optionsProfils() + '</select></div>';
     h += '<div class="champ"><label>Peuple</label><select id="c-peuple">' + optionsPeuples() + '</select></div>';
     h += '</div>';
+    h += '<div class="champ" id="c-famille-bloc" style="display:none"><label>Famille du profil</label><select id="c-famille">' +
+      Object.keys(COF.RULES.familles).map(function (f) {
+        return '<option value="' + f + '">' + esc(COF.RULES.familles[f].nom) + '</option>';
+      }).join('') + '</select>' +
+      '<div class="aide">Ce profil appartient à la famille de votre choix (dé de récupération, voies de prestige…).</div></div>';
     h += '<div class="champ"><label>Série de caractéristiques</label><select id="c-serie">' +
       COF.RULES.series.map(function (s) {
         return '<option value="' + s.id + '">' + esc(s.nom) + ' — ' + s.vals.map(sgn).join(' ') + '</option>';
@@ -89,7 +95,8 @@ COF.UI.Persos = (function () {
       function apercu() {
         var pr = COF.PROFILS[$('#c-profil', root).value];
         var pe = COF.PEUPLES[$('#c-peuple', root).value];
-        var f = COF.RULES.familles[pr.famille];
+        $('#c-famille-bloc', root).style.display = pr.familleChoix ? '' : 'none';
+        var f = COF.RULES.familles[pr.familleChoix ? $('#c-famille', root).value : pr.famille];
         var mods = pe.modsTexte || (pe.modsFixes ? pe.modsFixes.map(function (m) {
           return sgn(m.v) + ' ' + m.c;
         }).join(', ') : pe.mods.map(function (m) {
@@ -98,11 +105,12 @@ COF.UI.Persos = (function () {
         $('#c-apercu', root).innerHTML =
           '<b style="color:var(--or-clair)">' + esc(pr.nom) + '</b> — ' + esc(pr.resume) + '<br>' +
           'Caractéristiques clés : <b>' + pr.caracs.join(', ') + '</b><br>' +
-          esc(f.nom) + ' : ' + f.pv + ' PV/niveau, DR d' + f.dr + ', ' + esc(f.bonus) + '<br>' +
+          esc(f.nom) + ' : ' + (pr.pv || f.pv) + ' PV/niveau, DR d' + f.dr + ', ' + esc(f.bonus) + '<br>' +
           '<b style="color:var(--or-clair)">' + esc(pe.nom) + '</b> — ' + esc(mods);
       }
       $('#c-profil', root).addEventListener('change', apercu);
       $('#c-peuple', root).addEventListener('change', apercu);
+      $('#c-famille', root).addEventListener('change', apercu);
       apercu();
 
       $('#c-creer', root).addEventListener('click', function () {
@@ -111,6 +119,7 @@ COF.UI.Persos = (function () {
           profil: $('#c-profil', root).value,
           peuple: $('#c-peuple', root).value
         });
+        if ((COF.PROFILS[p.profil] || {}).familleChoix) p.familleProfil = $('#c-famille', root).value;
         appliquerSerie(p, $('#c-serie', root).value);
         COF.Store.equiperDepart(p);
         ajouterVoiePeuple(p);
@@ -136,9 +145,12 @@ COF.UI.Persos = (function () {
 
     /* modificateur de peuple : première option proposée par défaut */
     var pe = COF.PEUPLES[p.peuple];
+    /* Un peuple peut combiner des modificateurs fixes et un choix (frouïn :
+       +1 CON, -1 FOR, -1 CHA fixes, puis +1 AGI ou PER). */
     if (pe && pe.modsFixes) {
       pe.modsFixes.forEach(function (m) { p.carac[m.c] += m.v; });
-    } else if (pe && pe.mods && pe.mods[0] && pe.mods[0].plus[0] !== '*faibles') {
+    }
+    if (pe && pe.mods && pe.mods[0] && pe.mods[0].plus[0] !== '*faibles') {
       var m = pe.mods[0];
       var plus = m.plus.filter(function (c) { return pr.caracs.indexOf(c) >= 0; })[0] || m.plus[0];
       p.carac[plus] += 1;
@@ -160,8 +172,8 @@ COF.UI.Persos = (function () {
     var pe = COF.PEUPLES[p.peuple];
     if (!pe) return;
     var key = null;
-    if (pe.voie) key = 'peuple.' + pe.id;
-    else if (pe.voieChoix) key = 'peuple.' + pe.voieChoix[0];   // demi-elfe : voie de l'humain par défaut
+    if (pe.voieChoix) key = 'peuple.' + pe.voieChoix[0];   // demi-elfe : voie de l'humain par défaut
+    else if (pe.voie) key = 'peuple.' + pe.id;
     if (key) p.voies.push({ key: key, rang: 1 });
   }
 
