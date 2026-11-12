@@ -81,6 +81,7 @@ COF.Monde = (function () {
     l = K().ajouterListe(c, 'lieux', { nom: nom, note: note || '' });
     var p = placeLibre(c, pres); l.x = p.x; l.y = p.y;
     l.env = env || devinerEnv(nom + ' ' + (note || '')) || envAuPoint(c, l.x, l.y) || 'plaine';
+    if (COF.Culture) COF.Culture.peupleLieu(c, l);   /* peuple dominant (celui du nom, s'il vient d'être inventé) */
     return l;
   }
   /* ---------- Régions : grandes zones de terrain ----------
@@ -113,8 +114,12 @@ COF.Monde = (function () {
     'des Ronces', 'de l’Ermite', 'aux Cendres', 'du Silence', 'de la Source', 'des Trois Pierres', 'du Gibet', 'de la Lune', 'des Ombres'];
   /* Nom de lieu inédit pour un terrain (« Clairière aux Loups »…). */
   function nomLieu(c, env) {
-    var nom, essai = 0;
+    var nom, essai = 0, h = ici(c);
+    /* dans la culture de la région (nains, elfes, halfelins…) */
+    var cu = COF.Culture ? COF.Culture.nommer(c, env, h ? h.x : L / 2, h ? h.y : H / 2) : null;
+    if (cu && cu.nom) return cu.nom;
     do { nom = COF.piocher(NOMS_DEC[env] || NOMS_DEC.plaine) + ' ' + COF.piocher(EPITHETES); } while (lieuParNom(c, nom) && ++essai < 12);
+    if (cu) COF.Culture.retenir(nom, cu.peuple);
     return nom;
   }
   function decouvrir(c, depart, dest, fraction, env) {
@@ -124,10 +129,12 @@ COF.Monde = (function () {
     var dec = 8 + Math.random() * 10;
     x += Math.cos(ang) * dec; y += Math.sin(ang) * dec;
     var e = Math.random() < 0.25 ? COF.piocher(['ruines', 'souterrain', 'urbain']) : (env || envAuPoint(c, x, y) || 'plaine');
-    var nom, essai = 0;
-    do { nom = COF.piocher(NOMS_DEC[e] || NOMS_DEC.plaine) + ' ' + COF.piocher(EPITHETES); } while (lieuParNom(c, nom) && ++essai < 10);
+    var nom, essai = 0, cu = COF.Culture ? COF.Culture.nommer(c, e, x, y) : null;
+    if (cu && cu.nom) nom = cu.nom;
+    else do { nom = COF.piocher(NOMS_DEC[e] || NOMS_DEC.plaine) + ' ' + COF.piocher(EPITHETES); } while (lieuParNom(c, nom) && ++essai < 10);
     var l = K().ajouterListe(c, 'lieux', { nom: nom, note: 'Découvert en voyage le jour ' + c.jour + '.' });
     l.x = Math.round(x); l.y = Math.round(y); l.env = e;
+    if (cu) l.peuple = cu.peuple;
     return l;
   }
 

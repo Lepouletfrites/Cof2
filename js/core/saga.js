@@ -306,8 +306,8 @@ COF.Saga = (function () {
       var l = T().decouvrirLieu(c);
       if (l) { l.note = 'Découvert grâce à la rumeur « ' + f.nom + ' ».'; return '🧵 La rumeur « ' + f.nom + ' » mène à ' + l.nom + ' (ajouté à la carte).'; }
     }
-    var pn = AV().pnj({}), ici = M().ici(c);
-    var x = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'allié', note: 'Rencontré en remontant la rumeur « ' + f.nom + ' ».\n' + pn.texte });
+    var pn = COF.Culture ? COF.Culture.pnj(c, {}) : AV().pnj({}), ici = M().ici(c);
+    var x = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'allié', peuple: pn.peuple, genre: pn.genre, note: 'Rencontré en remontant la rumeur « ' + f.nom + ' ».\n' + pn.texte });
     x.lieuId = ici ? ici.id : null; x.jour = c.jour;
     return '🧵 En remontant la rumeur « ' + f.nom + ' », le héros trouve une alliée ou un allié : ' + pn.nom + ' (ajouté aux PNJ).';
   }

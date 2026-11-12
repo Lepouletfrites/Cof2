@@ -61,9 +61,9 @@ COF.Conteur = (function () {
   /* Article et prépositions d'un nom de lieu généré (« la Clairière du
      Silence », « au Gué des Ronces », « aux Ruines… ») ; un nom propre
      saisi à la main (« Brumeval ») reste sans article. */
-  var FEM = /^(Clairière|Cabane|Pierre|Ferme|Tourbière|Hutte|Mare|Passerelle|Grotte|Mine|Galerie|Caverne|Crevasse|Auberge|Tour|Crypte|Nécropole|Forteresse|Maison|Abbaye|Faille)(?=\s|$)/,
-    MAS = /^(Bosquet|Chêne|Sous-bois|Tertre|Moulin|Gué|Col|Pic|Refuge|Défilé|Belvédère|Îlot|Gouffre|Glacier|Cairn|Lac|Igloo|Hameau|Relais|Poste|Marché|Tombeau|Temple|Fort|Cercle|Palais|Puits|Antre|Donjon|Camp|Castel|Repaire|Sanctuaire|Cœur|Arbre-Monde)(?=\s|$)/,
-    PLU = /^(Ruines|Égouts)(?=\s|$)/;
+  var FEM = /^(Clairière|Cabane|Pierre|Ferme|Tourbière|Hutte|Mare|Passerelle|Grotte|Mine|Galerie|Caverne|Crevasse|Auberge|Tour|Crypte|Nécropole|Forteresse|Maison|Abbaye|Faille|Forge|Porte|Halle|Source|Futaie|Flèche|Fabrique|Fosse|Palissade)(?=\s|$)/,
+    MAS = /^(Bosquet|Chêne|Sous-bois|Tertre|Moulin|Gué|Col|Pic|Refuge|Défilé|Belvédère|Îlot|Gouffre|Glacier|Cairn|Lac|Igloo|Hameau|Relais|Poste|Marché|Tombeau|Temple|Fort|Cercle|Palais|Puits|Antre|Donjon|Camp|Castel|Repaire|Sanctuaire|Cœur|Arbre-Monde|Atelier|Observatoire|Croc)(?=\s|$)/,
+    PLU = /^(Ruines|Égouts|Jardins)(?=\s|$)/;
   function formes(nom) {
     nom = String(nom || '');
     var voy = /^[aeiouyàâäéèêëîïôöûüAEIOUYÀÂÉÈÊËÎÏÔÖÛÜ]/.test(nom);

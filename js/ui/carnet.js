@@ -311,6 +311,9 @@ COF.UI.Carnet = (function () {
       if (COF.Loisirs) h += '<div class="carte"><h2>☕ Temps libre</h2><div class="carte-corps"><div class="cn-loisirs">' + COF.Loisirs.offres(c).map(function (o, i) {
         return '<button class="cn-loisir" data-cn="loisir-go" data-v="' + i + '"><span class="ic">' + o.ic + '</span><span>' + esc(o.titre) + (o.v.mise ? '<small>mise ' + o.v.mise + ' po</small>' : '') + '</span></button>';
       }).join('') + '</div></div></div>';
+      /* ce qui vient d'être tiré pour l'affichage (activités, offre d'affaire, village…) est
+         enregistré : le bouton touché lance exactement ce qui est écrit dessus */
+      K.sauver(c);
       return h;
     }
     var fS = s.filId ? c.fils.filter(function (f) { return f.id === s.filId; })[0] : null;
@@ -501,7 +504,8 @@ COF.UI.Carnet = (function () {
     var c = K.actif(), M = COF.Monde, l = M.lieu(c, id); if (!l) return;
     var ici = M.ici(c), vois = M.voisins(c, id), routeIci = ici && ici.id !== id ? M.route(c, ici.id, id) : null;
     var mk = marqueursLieux(c)[id], envL = M.envDe(l.env) || {};
-    var h = '<div class="cn-lieu-tete">' + (envL.ic || '📍') + ' ' + esc(envL.nom || '') + (l.ville ? ' · ' + esc(l.ville.type || 'village') + (COF.Saga ? ' · réputation : ' + esc(COF.Saga.libRep(COF.Saga.reputation(l))) : '') : '') + '</div>';
+    var peL = COF.Culture ? COF.Culture.peupleLieu(c, l) : null;
+    var h = '<div class="cn-lieu-tete">' + (envL.ic || '📍') + ' ' + esc(envL.nom || '') + (peL ? ' · culture ' + esc(COF.Culture.adjectif(peL)) : '') + (l.ville ? ' · ' + esc(l.ville.type || 'village') + (COF.Saga ? ' · réputation : ' + esc(COF.Saga.libRep(COF.Saga.reputation(l))) : '') : '') + '</div>';
     if (mk && mk.txt.length) h += '<label class="cn-lbl2">Ce qui vous attend ici</label><div class="cn-attend">' + mk.txt.slice(0, 8).map(function (t) { return '<div>' + esc(t) + '</div>'; }).join('') + '</div>';
     if (l.note) h += '<div class="note" style="margin:8px 0 10px;white-space:pre-line">' + esc(l.note.length > 300 ? l.note.slice(0, 300) + '…' : l.note) + '</div>';
     if (ici && ici.id !== id) {

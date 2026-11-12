@@ -593,8 +593,8 @@ COF.Imprevus = (function () {
         case 'tension+': c.tension = Math.min(9, c.tension + 1); x = 'tension +1'; break;
         case 'allie': case 'hostile': {
           var g = evt.v.p_e !== undefined ? (evt.v.p_e ? 'féminin' : 'masculin') : null;
-          var pn = AV().pnj(g ? { genre: g } : {});
-          var nx = K().ajouterListe(c, 'pnj', { nom: pn.nom, genre: g || undefined, lieuId: (M().ici(c) || {}).id || null, jour: c.jour, attitude: code === 'allie' ? 'allié' : 'hostile', note: 'Rencontré le jour ' + c.jour + (evt.v.p_un ? ' : ' + evt.v.p_un + (evt.v.etat ? ' ' + evt.v.etat : '') : '') + '.\n' + pn.texte });
+          var pn = COF.Culture ? COF.Culture.pnj(c, g ? { genre: g } : {}) : AV().pnj(g ? { genre: g } : {});
+          var nx = K().ajouterListe(c, 'pnj', { nom: pn.nom, genre: g || pn.genre, peuple: pn.peuple, lieuId: (M().ici(c) || {}).id || null, jour: c.jour, attitude: code === 'allie' ? 'allié' : 'hostile', note: 'Rencontré le jour ' + c.jour + (evt.v.p_un ? ' : ' + evt.v.p_un + (evt.v.etat ? ' ' + evt.v.etat : '') : '') + '.\n' + pn.texte });
           x = (code === 'allie' ? '🤝 ' : '⚔️ ') + pn.nom + ' ajouté aux PNJ';
           /* on s'en souviendra : un obligé, ou un ennemi qui reviendra */
           if (COF.Echos && Math.random() < 0.45) COF.Echos.noter(c, code === 'allie' ? 'sauve' : 'rancune', { pnjId: nx.id });

@@ -78,7 +78,7 @@ COF.Aventure = (function () {
     var desc = x.nom + ', ' + (f ? 'une ' : 'un ') + pe + ' ' + x.age + ', ' + min1(x.metier.nom) + '.\n' + app + '\n' + carac + '\n' +
       'Ce qu’' + (f ? 'elle' : 'il') + ' veut : ' + min1(x.motivation) + '. Son secret : ' + min1(x.secret) + '.\n' +
       'Envers le héros : ' + min1(x.attitude) + '. Accroche : ' + min1(x.accroche) + '.';
-    return { gen: 'pnj', titre: 'PNJ', nom: x.nom, texte: desc, liste: 'pnj', attitude: attitudeCarnet(x.attitude) };
+    return { gen: 'pnj', titre: 'PNJ', nom: x.nom, texte: desc, liste: 'pnj', attitude: attitudeCarnet(x.attitude), peuple: x.peuple, genre: x.genre };
   }
   /* type : 'village' | 'taverne' | 'boutique' */
   function lieu(type) {

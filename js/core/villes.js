@@ -31,7 +31,13 @@ COF.Villes = (function () {
   }
   /* Donne une identité de village à un lieu urbain qui n'en a pas. */
   function assurer(l) {
-    if (l && !l.ville) { l.ville = generer(); l.ville.nom = l.nom; if (!l.note) l.note = texte(l.ville); }
+    if (l && !l.ville) {
+      l.ville = generer();
+      /* notable et taverne à l'image du peuple du lieu (le nom du lieu ne change pas) */
+      var c0 = K().actif && K().actif();
+      if (COF.Culture && c0) { var pe = COF.Culture.peupleLieu(c0, l); COF.Culture.adapterVille(c0, l.ville, pe); }
+      l.ville.nom = l.nom; if (!l.note) l.note = texte(l.ville);
+    }
     return l;
   }
   /* Un village apparaît près du héros (ou au centre de la carte). */
@@ -45,6 +51,14 @@ COF.Villes = (function () {
     }
     if (!l) l = M().obtenirLieu(c, v.nom, null, '', 'urbain');
     if (!l) return null;
+    /* le village prend la culture de sa région : nom, notable, taverne */
+    if (COF.Culture) {
+      var envR = M().envAuPoint(c, l.x, l.y) || (ici && ici.env !== 'urbain' ? ici.env : 'urbain');
+      delete l.peuple;   /* ne pas hériter de soi-même */
+      var pe = COF.Culture.peupleAu(c, l.x, l.y, envR);
+      if (pe === 'demielfe') pe = 'humain';
+      COF.Culture.adapterVille(c, v, pe); l.nom = v.nom; l.peuple = pe;
+    }
     l.env = 'urbain'; l.ville = v; l.note = texte(v);
     K().sauver(c);
     return l;

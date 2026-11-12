@@ -162,8 +162,8 @@ COF.Missions = (function () {
         var o = COF.Recompense.tirerObjetLivre(niv, p(['potion', 'potion', 'objet']));
         if (o) { COF.Store.ajouterObjet(hP, Object.assign({}, o.item, { nom: '✨ ' + o.item.nom, qte: 1 })); COF.Store.sauver(hP); notes.push('🎁 En prime : ' + o.nom + '.'); }
       } else if (tir < 0.55) {
-        var pn = COF.Aventure.pnj({ genre: m.v.donneurGenre });
-        var x = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'allié', genre: m.v.donneurGenre, note: 'Reconnaissant envers le héros (' + m.v.donneur_un + ').\n' + pn.texte });
+        var pn = COF.Culture ? COF.Culture.pnj(c, { genre: m.v.donneurGenre, lieu: lieu ? lieu.id : null }) : COF.Aventure.pnj({ genre: m.v.donneurGenre });
+        var x = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'allié', genre: m.v.donneurGenre, peuple: pn.peuple, note: 'Reconnaissant envers le héros (' + m.v.donneur_un + ').\n' + pn.texte });
         x.lieuId = lieu ? lieu.id : null; x.jour = c.jour;
         notes.push('🤝 ' + pn.nom + ' (' + m.v.donneur_un.replace(/^une? /, '') + ') devient un allié.');
       }

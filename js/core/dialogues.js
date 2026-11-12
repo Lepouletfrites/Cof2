@@ -53,7 +53,7 @@ COF.Dialogues = (function () {
       if ((x.compagnon && x.compagnon.actif) || (ici && x.lieuId === ici.id)) out.push(x);
     });
     if (ici && ici.ville && !out.some(function (x) { return x.nom === ici.ville.notable.nom; })) {
-      var n = K().ajouterListe(c, 'pnj', { nom: ici.ville.notable.nom, attitude: 'neutre', genre: ici.ville.notable.genre, note: ici.ville.notable.metier + ' à ' + ici.nom + '.' });
+      var n = K().ajouterListe(c, 'pnj', { nom: ici.ville.notable.nom, attitude: 'neutre', genre: ici.ville.notable.genre, peuple: ici.peuple || ici.ville.peuple, note: ici.ville.notable.metier + ' à ' + ici.nom + '.' });
       n.lieuId = ici.id; n.jour = c.jour; out.push(n); K().sauver(c);
     }
     return out.slice(0, 4);

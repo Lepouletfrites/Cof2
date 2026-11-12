@@ -55,9 +55,9 @@ COF.Directeur = (function () {
     var env = (q.lieu && q.lieu.id) || 'ruines';
     /* le commanditaire devient un PNJ (genre d'après « Un… / Une… ») */
     var fem = /^une\b/i.test(q.commanditaire);
-    var pn = AV().pnj({ genre: fem ? 'féminin' : 'masculin' });
+    var pn = COF.Culture ? COF.Culture.pnj(c, { genre: fem ? 'féminin' : 'masculin' }) : AV().pnj({ genre: fem ? 'féminin' : 'masculin' });
     var ici = M().ici(c);
-    var com = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'neutre',
+    var com = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'neutre', peuple: pn.peuple, genre: pn.genre,
       note: 'Commanditaire — ' + sansPoint(q.commanditaire) + '.\n' + pn.texte });
     com.lieuId = ici ? ici.id : null; com.jour = c.jour;
     /* le lieu de la quête, posé sur la carte et relié à la position du héros */
@@ -203,8 +203,8 @@ COF.Directeur = (function () {
     var f = ev.cibleId ? fil(c, ev.cibleId) : null, x = ev.cibleId ? pnj(c, ev.cibleId) : null, p = heros(c), t;
     switch (ev.focus) {
       case 'pnjNouveau': {
-        var pn = AV().pnj({});
-        K().ajouterListe(c, 'pnj', { nom: pn.nom, note: pn.texte, attitude: pn.attitude || 'inconnu' });
+        var pn = COF.Culture ? COF.Culture.pnj(c, {}) : AV().pnj({}), ici0 = M().ici(c);
+        K().ajouterListe(c, 'pnj', { nom: pn.nom, note: pn.texte, attitude: pn.attitude || 'inconnu', peuple: pn.peuple, genre: pn.genre, lieuId: ici0 ? ici0.id : null, jour: c.jour });
         return 'Entre en scène : ' + pn.nom + ' (ajouté aux PNJ).';
       }
       case 'filNouveau': {

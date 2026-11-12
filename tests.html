@@ -111,7 +111,7 @@ async function lancer() {
     localStorage.setItem('cof2.mode', 'aventure');
 
     test('Modules du moteur présents', function () {
-      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons']
+      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons', 'Culture']
         .filter(function (m) { return !COF[m]; });
       return { ok: !manquants.length, detail: manquants.length ? 'manquants : ' + manquants.join(', ') : '' };
     });
@@ -255,6 +255,40 @@ async function lancer() {
       var deja = !COF.Directeur.propositions(K.actif()).some(function (o) { return o.type === 'fete'; });
       c = K.actif(); c.jour = Math.max(j0, c.jour); K.sauver(c);
       return { ok: okN && okM && !!pr && deja, detail: noms.join(' → ') + ' · fête : ' + (pr ? pr.titre : 'aucune') };
+    });
+
+    /* cultures : noms et peuples cohérents avec le terrain et la région */
+    test('Noms cohérents : peuples, lieux, villages', function () {
+      var C = COF.Culture, pb = [], exemples = [];
+      /* une région de montagne isolée : surtout des nains, des noms nains */
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var base = { x: 5000, y: 5000 };
+      var mont = COF.Monde.obtenirLieu(c, 'Pic de test', null, '', 'montagne'); mont.x = base.x; mont.y = base.y; mont.peuple = 'nain';
+      COF.Monde.seRendre(c, mont.id);
+      var nains = 0, n = 60;
+      for (var i = 0; i < n; i++) { if (C.peuplePnj(c, mont) === 'nain') nains++; }
+      if (nains < n * 0.55) pb.push('trop peu de nains en montagne naine : ' + nains + '/' + n);
+      /* lieux découverts autour : ils héritent souvent de la culture naine */
+      var herit = 0;
+      for (var j = 0; j < 30; j++) { if (C.peupleAu(c, base.x + 20, base.y + 10, 'montagne') === 'nain') herit++; }
+      if (herit < 15) pb.push('la région ne garde pas sa culture : ' + herit + '/30');
+      /* chaque peuple donne des noms de lieux et de villages bien formés */
+      ['nain', 'elfehaut', 'elfesylvain', 'halfelin', 'gnome', 'demiorc'].forEach(function (pe) {
+        for (var k = 0; k < 8; k++) {
+          var a = C.nomLieuCulture(pe, 'montagne'), b = C.nomVille(pe), pn = C.nomPersonne(pe, k % 2 ? 'féminin' : 'masculin');
+          [a, b, pn].forEach(function (x) { if (!x || CASSE.test(x) || /\s\s|^\s|\s$/.test(x)) pb.push(pe + ' : « ' + x + ' »'); });
+          if (k === 0) exemples.push(pe + ' → ' + a + ' / ' + b + ' / ' + pn);
+        }
+      });
+      /* un village découvert dans la région prend la culture du pays */
+      var v = COF.Villes.decouvrir(c);
+      exemples.push('village : ' + v.nom + ' (' + v.peuple + '), notable ' + v.ville.notable.nom + ', taverne « ' + v.ville.taverne.nom + ' »');
+      if (!v.peuple) pb.push('village sans peuple');
+      /* un PNJ du récit a un peuple et un genre */
+      var pnj = C.pnj(c, {}); if (!pnj.peuple || !pnj.genre) pb.push('PNJ sans peuple/genre');
+      exemples.push('PNJ : ' + pnj.nom + ' (' + pnj.peuple + ')');
+      K.sauver(c);
+      return { ok: !pb.length, detail: (pb.length ? pb.slice(0, 6).join('\n') + '\n' : '') + exemples.join('\n') };
     });
 
     /* 9. campagne : fin d'aventure et chapitre suivant, récit complet */

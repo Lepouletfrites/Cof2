@@ -30,10 +30,25 @@ COF.Factions = (function () {
     livraison: 'guilde', escorte: 'guilde', pont: 'guilde', apprenti: 'guilde', perdu: 'guilde', message: 'noblesse', concours: 'noblesse',
     mariage: 'noblesse', dispute: 'noblesse', prophete: 'temple', hante: 'temple', malade: 'temple', cueillette: 'mages', tresor: 'mages', dette: 'pegre' };
 
+  /* Noms ancrés dans la région : la maison noble porte un nom de famille du pays,
+     la garde celui de la ville la plus proche (sinon un nom générique). */
+  function nomLocal(c, k) {
+    var villes = (c.lieux || []).filter(function (l) { return l.ville; }), ici = COF.Monde && COF.Monde.ici(c);
+    var v = ici && ici.ville ? ici : villes[0];
+    if (k === 'noblesse' && Math.random() < 0.7) {
+      var pe = v && v.peuple && COF.PNJ_NOMS[v.peuple] && COF.PNJ_NOMS[v.peuple].famille ? v.peuple : 'humain';
+      var fam = p(COF.PNJ_NOMS[pe].famille);
+      return 'la Maison ' + fam;
+    }
+    if (k === 'garde' && v && Math.random() < 0.7 && COF.Conteur) return p(['la Garde ', 'la Milice ']) + COF.Conteur.formes(v.nom).de;
+    if (k === 'temple' && v && v.peuple === 'nain' && Math.random() < 0.6) return p(['le Temple de la Forge Éternelle', 'les Gardiens de l’Enclume']);
+    if (k === 'temple' && v && /elfe/.test(v.peuple || '') && Math.random() < 0.6) return p(['le Sanctuaire des Étoiles', 'les Veilleurs de la Lune']);
+    return null;
+  }
   function liste(c) {
     if (!c.factions) {
       /* noms tirés une fois pour toutes (et enregistrés aussitôt) */
-      c.factions = Object.keys(TYPES).map(function (k) { return { id: k, nom: p(TYPES[k].noms), ic: TYPES[k].ic, rep: 0, faveur: -99 }; });
+      c.factions = Object.keys(TYPES).map(function (k) { return { id: k, nom: nomLocal(c, k) || p(TYPES[k].noms), ic: TYPES[k].ic, rep: 0, faveur: -99 }; });
       if (c.id && COF.Carnet && COF.Carnet.get && COF.Carnet.get(c.id)) COF.Carnet.sauver(c);
     }
     return c.factions;
