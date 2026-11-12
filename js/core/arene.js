@@ -11,7 +11,7 @@
 window.COF = window.COF || {};
 
 COF.Arene = (function () {
-  var KEY = 'cof2.arene';
+  function KEY() { return COF.cle('cof2.arene'); }
 
   function uid() { return 'cb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -19,13 +19,13 @@ COF.Arene = (function () {
 
   function lire() {
     try {
-      var s = JSON.parse(localStorage.getItem(KEY));
+      var s = JSON.parse(localStorage.getItem(KEY()));
       if (!s || !s.combattants) return etatVide();
       return s;
     } catch (e) { return etatVide(); }
   }
   function ecrire(s) {
-    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+    try { localStorage.setItem(KEY(), JSON.stringify(s)); } catch (e) {}
   }
 
   /* Nom unique parmi les combattants déjà présents : "Gobelin", "Gobelin 2"... */

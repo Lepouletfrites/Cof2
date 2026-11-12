@@ -34,7 +34,7 @@ COF.UI.Oracle = (function () {
   }
   /* Aventure en cours (Carnet) : ses fils/PNJ et sa tension pilotent
      l'oracle, et chaque résultat est consigné dans la scène en cours. */
-  function campagne() { return COF.Carnet ? COF.Carnet.actif() : null; }
+  function campagne() { return COF.Carnet && COF.modeDonnees() === 'aventure' ? COF.Carnet.actif() : null; }
   function consigner(e) { var c = campagne(); if (c) COF.Carnet.ajouterEntree(c, e); }
 
   /* ---------- Rendu ---------- */

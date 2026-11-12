@@ -8,7 +8,8 @@
 window.COF = window.COF || {};
 
 COF.Sauvegarde = (function () {
-  var CLES = ['cof2.personnages', 'cof2.actif', 'cof2.carnets', 'cof2.carnetActif', 'cof2.arene', 'cof2.mode', 'cof2.prefs'];
+  var CLES = ['cof2.personnages', 'cof2.actif', 'cof2.carnets', 'cof2.carnetActif', 'cof2.arene', 'cof2.mode', 'cof2.prefs',
+    'cof2.personnages.av', 'cof2.actif.av', 'cof2.arene.av'];
   var KEY_DATE = 'cof2.derniereSauvegarde';
 
   function lire(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }

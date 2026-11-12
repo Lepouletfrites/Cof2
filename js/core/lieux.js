@@ -88,7 +88,7 @@ COF.LieuxCalc = (function () {
     var out = [];
     for (var i = 0; i < n && pool.length; i++) {
       var e = piocher(pool), it = e.x;
-      var nom = it.gabarit ? it.gabarit.replace('{nom}', piocher(COMPOSANT_SOURCES)) : it.nom;
+      var nom = it.gabarit ? (COF.remplirNom ? COF.remplirNom(it.gabarit, piocher(COMPOSANT_SOURCES)) : it.gabarit.replace('{nom}', piocher(COMPOSANT_SOURCES))) : it.nom;
       var prix = Math.max(1, Math.round(it.prix * (0.8 + Math.random() * 0.6) * 10) / 10);
       /* entrée prête pour la fiche (armes et armures directement équipables) */
       var item = { nom: nom, qte: 1, prix: prix, note: it.note || null };

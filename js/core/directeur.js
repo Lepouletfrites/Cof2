@@ -32,6 +32,8 @@ COF.Directeur = (function () {
   function sansPoint(s) { return String(s || '').replace(/[.\s]+$/, ''); }
   function heros(c) { return AV() ? AV().heros(c) : null; }
   /* « de Marc », « d’Eleande » */
+  /* « la Clairière… », « au Gué… » (formes du Conteur, sinon le nom seul) */
+  function fl(nom) { return COF.Conteur ? COF.Conteur.formes(nom) : { n: nom, a: 'à ' + nom, de: de(nom) }; }
   function de(nom) { return /^[aeiouyàâäéèêëîïôöûü]/i.test(nom) ? 'd’' + nom : 'de ' + nom; }
 
   var ETAPES = [
@@ -46,25 +48,31 @@ COF.Directeur = (function () {
 
   /* ================= Quêtes ================= */
   /* q : tirage du générateur de quêtes (facultatif). */
-  function creerQuete(c, q) {
+  /* opts (facultatif) : { lieu (lieu existant), etape, saga ('final'), titre } */
+  function creerQuete(c, q, opts) {
     q = q || COF.QueteCalc.genererTout({}, {});
+    opts = opts || {};
     var env = (q.lieu && q.lieu.id) || 'ruines';
     /* le commanditaire devient un PNJ (genre d'après « Un… / Une… ») */
     var fem = /^une\b/i.test(q.commanditaire);
     var pn = AV().pnj({ genre: fem ? 'féminin' : 'masculin' });
+    var ici = M().ici(c);
     var com = K().ajouterListe(c, 'pnj', { nom: pn.nom, attitude: 'neutre',
       note: 'Commanditaire — ' + sansPoint(q.commanditaire) + '.\n' + pn.texte });
+    com.lieuId = ici ? ici.id : null; com.jour = c.jour;
     /* le lieu de la quête, posé sur la carte et relié à la position du héros */
-    var ici = M().ici(c);
-    var l = M().obtenirLieu(c, M().nomLieu(c, env), ici, '', env);
+    var l = opts.lieu || M().obtenirLieu(c, M().nomLieu(c, env), ici, '', env);
     if (ici && ici.id !== l.id && !M().route(c, ici.id, l.id)) M().relier(c, ici.id, l.id, 1 + d(3), env);
-    var titre = maj(String(q.objectif).split(/,| ou /)[0].trim()) + ' — ' + l.nom;
-    l.note = 'Lieu de la quête « ' + titre + ' ».';
+    var titre = opts.titre || (maj(String(q.objectif).split(/,| ou /)[0].trim()) + ' — ' + l.nom);
+    if (!opts.lieu) l.note = 'Lieu de la quête « ' + titre + ' ».';
     var f = K().ajouterListe(c, 'fils', {
       nom: titre, note: COF.QueteCalc.accroche(q),
-      quete: { etape: 0, commanditaire: com.id, comNom: com.nom, lieu: l.id, lieuNom: l.nom, env: env,
-        fem: fem, objectif: q.objectif, cible: q.cible, obstacle: q.obstacle, complication: q.complication, recompense: q.recompense, revers: 0 }
+      quete: { etape: opts.etape || 0, commanditaire: com.id, comNom: com.nom, lieu: l.id, lieuNom: l.nom, env: env,
+        fem: fem, objectif: q.objectif, cible: q.cible, obstacle: q.obstacle, complication: q.complication, recompense: q.recompense, revers: 0,
+        saga: opts.saga || null, finale: opts.finale || null }
     });
+    /* une quête ordinaire peut cacher la main du grand méchant */
+    if (!opts.saga && COF.Saga) COF.Saga.lier(c, f);
     K().sauver(c);
     return f;
   }
@@ -72,9 +80,10 @@ COF.Directeur = (function () {
   function sceneDe(c, f) {
     var q = f.quete, e = q.etape;
     if (e === 0) return { titre: 'L’offre ' + de(q.comNom), attendu: q.comNom + ' expose son affaire : ' + min1(sansPoint(q.objectif)) + ' (' + sansPoint(q.cible) + '). Le héros écoute, pose ses questions et décide.' };
-    if (e === 1) return { titre: 'Sur la piste, vers ' + q.lieuNom, lieu: q.lieu, attendu: 'Le héros cherche des indices à ' + q.lieuNom + '. ' + maj(sansPoint(q.obstacle)) + '.', tests: true };
+    if (e === 1) return { titre: 'Sur la piste, vers ' + fl(q.lieuNom).n, lieu: q.lieu, attendu: 'Le héros cherche des indices ' + fl(q.lieuNom).a + '. ' + maj(sansPoint(q.obstacle)) + '.', tests: true };
     if (e === 2) return { titre: 'Coup de théâtre', attendu: maj(sansPoint(q.complication)) + '.' };
-    if (e === 3) return { titre: 'Confrontation à ' + q.lieuNom, lieu: q.lieu, combat: true, attendu: 'Le moment de vérité : ' + min1(sansPoint(q.obstacle)) + '. Il faudra sans doute se battre.' };
+    if (e === 3 && q.finale && q.finale !== 'boss' && COF.Conteur) return { titre: COF.Conteur.titreFinale(q), lieu: q.lieu, combat: false, attendu: 'La quête majeure se joue maintenant ' + fl(q.lieuNom).a + '. ' + maj(sansPoint(q.obstacle)) + '.' };
+    if (e === 3) return { titre: 'Confrontation ' + fl(q.lieuNom).a, lieu: q.lieu, combat: true, attendu: 'Le moment de vérité : ' + min1(sansPoint(q.obstacle)) + '. Il faudra sans doute se battre.' };
     return { titre: 'Retour auprès ' + de(q.comNom), attendu: q.comNom + ' tiendra-t-' + (q.fem ? 'elle' : 'il') + ' parole ? Récompense promise : ' + min1(sansPoint(q.recompense)) + '.' };
   }
   /* Passe la quête à l'étape suivante ; renvoie le texte à noter. */
@@ -92,14 +101,20 @@ COF.Directeur = (function () {
     var q = f.quete, p = heros(c);
     q.etape = ETAPES.length; q.fin = 'réussie'; f.ouvert = false;
     var com = pnj(c, q.commanditaire); if (com) com.attitude = 'allié';
+    /* affaire personnelle d'un compagnon menée à bien : loyauté maximale */
+    if (q.perso && com && com.compagnon) com.compagnon.loyaute = 10;
     c.tension = Math.max(1, c.tension - 1);
     c.jalons = (c.jalons || 0) + 1;
     var b = COF.Recompense.genererCoffre({ niveau: (p && p.niveau) || 1, env: q.env, richesse: 'standard' });
     if (p) AV().encaisser(p, b);
+    var sagaTxt = '';
+    if (COF.Saga) { var nc = COF.Saga.compagnons(c, 'quete'); if (nc.length) sagaTxt += '\n' + nc.join('\n'); }
+    if (COF.Saga && q.saga === 'final') sagaTxt = '\n' + COF.Saga.victoire(c);
+    else if (COF.Saga && q.saga === 'lie') sagaTxt = '\n' + (COF.Saga.indice(c) || '');
     K().sauver(c);
     return '🏆 Quête accomplie : « ' + f.nom + ' ». ' + (com ? com.nom + ' devient ' + (q.fem ? 'une alliée' : 'un allié') + ' du héros. ' : '') +
       'Récompense : ' + AV().texteButin(b) + (p ? ' (ajoutée à ' + p.nom + ').' : '.') +
-      ' Jalon d’aventure n° ' + c.jalons + ' : le moment de faire progresser le héros.';
+      ' Jalon d’aventure n° ' + c.jalons + ' : le moment de faire progresser le héros.' + sagaTxt;
   }
   function quetesOuvertes(c) { return (c.fils || []).filter(function (f) { return f.ouvert && f.quete; }); }
 
@@ -109,18 +124,21 @@ COF.Directeur = (function () {
     quetesOuvertes(c).slice(0, 3).forEach(function (f) {
       var sc = sceneDe(c, f), et = ETAPES[f.quete.etape];
       if (sc.lieu && ici && ici.id !== sc.lieu) {
-        out.push({ type: 'voyage', ic: '🗺️', titre: 'Partir pour ' + f.quete.lieuNom, lieu: sc.lieu, filId: f.id, fil: f.nom,
-          attendu: 'La quête mène à ' + f.quete.lieuNom + ' (' + et.nom.toLowerCase() + ').' });
+        out.push({ type: 'voyage', ic: '🗺️', titre: 'Partir pour ' + fl(f.quete.lieuNom).n, lieu: sc.lieu, filId: f.id, fil: f.nom,
+          attendu: 'La quête mène ' + fl(f.quete.lieuNom).a + ' (' + et.nom.toLowerCase() + ').' });
       } else out.push({ type: 'quete', ic: et.ic, titre: sc.titre, attendu: sc.attendu, filId: f.id, fil: f.nom, lieu: sc.lieu, combat: sc.combat, etape: et.nom });
     });
     (c.fils || []).filter(function (f) { return f.ouvert && !f.quete; }).slice(0, 2).forEach(function (f) {
       out.push({ type: 'fil', ic: '🧵', titre: f.nom, filId: f.id, fil: f.nom, attendu: 'Le héros s’occupe de cette affaire' + (f.note ? ' : ' + f.note.slice(0, 120) : '.') });
     });
     if (!quetesOuvertes(c).length) out.push({ type: 'nouvelle', ic: '📜', titre: 'Une nouvelle affaire', attendu: 'Quelqu’un a besoin du héros. Le directeur crée une quête, son commanditaire et son lieu.' });
-    out.push({ type: 'explorer', ic: '🧭', titre: 'Explorer ' + (ici ? 'les environs de ' + ici.nom : 'les environs'), attendu: 'Le héros explore et observe ce qui l’entoure. Rencontre et découverte possibles.' });
-    if (ici) M().voisins(c, ici.id).slice(0, 2).forEach(function (v) {
+    out.push({ type: 'explorer', ic: '🧭', titre: 'Explorer ' + (ici ? 'les environs ' + fl(ici.nom).de : 'les environs'), attendu: 'Le héros explore et observe ce qui l’entoure. Rencontre et découverte possibles.' });
+    if (ici && (ici.env === 'ruines' || ici.env === 'souterrain') && !ici.explore)
+      out.push({ type: 'donjon', ic: '🗝️', titre: 'Explorer les profondeurs ' + fl(ici.nom).de, lieu: ici.id, attendu: 'Salle après salle : pièges, occupants… et un trésor au fond, peut-être.' });
+    if (COF.Villes) COF.Villes.propositions(c).forEach(function (o) { out.push(o); });
+    if (ici) M().voisins(c, ici.id).slice(0, 3).forEach(function (v) {
       if (out.some(function (o) { return o.lieu === v.lieu.id && o.type === 'voyage'; })) return;
-      out.push({ type: 'voyage', ic: '🗺️', titre: 'Partir pour ' + v.lieu.nom, lieu: v.lieu.id, attendu: v.route.jours + ' jour(s) de route.' });
+      out.push({ type: 'voyage', ic: '🗺️', titre: 'Partir pour ' + fl(v.lieu.nom).n, lieu: v.lieu.id, attendu: v.route.jours + ' jour(s) de route.' });
     });
     out.push({ type: 'repos', ic: '🏕️', titre: 'Souffler un peu', attendu: 'Le héros se repose, soigne ses blessures et prépare la suite. Pas de rencontre.' });
     return out;
@@ -144,7 +162,11 @@ COF.Directeur = (function () {
       s.test.modif = piocher(MODIFS)(c, f);
     }
     if (prop && prop.type === 'quete' && prop.combat && !c.rencontre) {
-      var r = AV().rencontre(c, { env: f && f.quete ? f.quete.env : null, difficulte: 'difficile', style: 'auto' });
+      var qs = f && f.quete && f.quete.saga, S = COF.Saga, sg = c.saga;
+      /* quête liée à la menace : ses serviteurs ; quête finale : le chef en personne */
+      var r = AV().rencontre(c, { env: f && f.quete ? f.quete.env : null, difficulte: qs && S ? S.diffMenace(c, 'difficile') : 'difficile', style: qs === 'final' ? 'bande' : 'auto',
+        theme: !!qs, chef: qs === 'final' && sg ? maj(sg.chef_le) : null });
+      if (r.erreur && qs) r = AV().rencontre(c, { env: f.quete.env, difficulte: 'difficile', style: 'auto', theme: true, chef: qs === 'final' && sg ? maj(sg.chef_le) : null });
       if (!r.erreur) {
         r.test = 'Confrontation de la quête';
         if (r.reaction === 'amical' || r.reaction === 'neutre') { r.reaction = 'mefiant'; r.reactionTexte = 'Méfiantes : elles savent pourquoi le héros est là.'; }

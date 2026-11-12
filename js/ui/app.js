@@ -63,7 +63,7 @@ COF.UI = COF.UI || {};
     { id: 'recit', ic: '📖', tx: 'Récit', subs: [['carnet', '📖 Récit', 'carnet']] },
     { id: 'combat', ic: '⚔️', tx: 'Combat', subs: [['arene', '⚔️ Combat', 'arene'], ['bestiaire', '🐉 Bestiaire', 'bestiaire']] },
     { id: 'heros', ic: '🛡️', tx: 'Héros', subs: [
-      ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'], ['artisanat', '⚒️ Artisanat', 'artisanat']] },
+      ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'], ['artisanat', '⚒️ Artisanat', 'artisanat'], ['persos', '👥 Mes héros', 'persos']] },
     { id: 'marche', ic: '🛒', tx: 'Marché', subs: [['marche', '🛒 Marché', 'marche']] },
     { id: 'outils', ic: '🧰', tx: 'Outils', subs: [
       ['oracle', '🔮 Oracle', 'generateurs'], ['rencontre', '🎯 Rencontres', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'],

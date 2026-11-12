@@ -204,6 +204,14 @@ COF.Rencontre = (function () {
     var diff = opts.difficulte || 'ordinaire';
     var b = budget(nbPJ, niveau, diff);
     var pool = candidats(opts.env);
+    /* filtre thématique (ex. : serviteurs de la menace d'une aventure) :
+       d'abord dans le terrain, sinon n'importe où ; sinon on l'ignore */
+    if (typeof opts.filtre === 'function') {
+      var f1 = pool.filter(opts.filtre), f2 = candidats(null).filter(opts.filtre);
+      if (f1.length >= 6) pool = f1;
+      else if (f2.length >= 2) pool = f2;          /* peu de serviteurs ici : on élargit à tous les terrains */
+      else if (f1.length) pool = f1;
+    }
 
     if (!pool.length) {
       return { erreur: "Aucune créature ne vit dans cet environnement." };

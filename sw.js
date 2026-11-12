@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v48';
+var CACHE_VERSION = 'cof2-v55';
 
 var FICHIERS = [
   './',
@@ -70,6 +70,12 @@ var FICHIERS = [
   'js/core/sauvegarde.js',
   'js/core/monde.js',
   'js/core/directeur.js',
+  'js/core/conteur.js',
+  'js/core/imprevus.js',
+  'js/core/villes.js',
+  'js/core/saga.js',
+  'js/core/chronique.js',
+  'js/core/campagne.js',
   'js/core/lieux.js',
   'js/core/quetes.js',
   'js/core/voyage.js',
@@ -84,6 +90,8 @@ var FICHIERS = [
   'js/core/store.js',
 
   'js/ui/app.js',
+  'js/ui/niveau.js',
+  'js/ui/selects.js',
   'js/ui/champs-ui.js',
   'js/ui/persos.js',
   'js/ui/sheet.js',
@@ -117,7 +125,8 @@ var FICHIERS = [
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE_VERSION).then(function (cache) {
-      return cache.addAll(FICHIERS);
+      /* « reload » : contourne le cache HTTP du navigateur pour avoir les fichiers neufs */
+      return cache.addAll(FICHIERS.map(function (u) { return new Request(u, { cache: 'reload' }); }));
     }).then(function () { return self.skipWaiting(); })
   );
 });
@@ -131,22 +140,35 @@ self.addEventListener('activate', function (e) {
   );
 });
 
-/* Cache-first : sert le cache immédiatement, revalide en tâche de fond.
-   Si la ressource est absente du cache, tente le réseau puis l'y ajoute. */
+/* Stratégie :
+   - la page (navigation) : réseau d'abord, cache si hors ligne ;
+   - les fichiers de l'app (JS, CSS, icônes) : cache seul. Ils sont tous
+     versionnés par CACHE_VERSION : une nouvelle version du service worker
+     les retélécharge d'un coup à l'installation. Plus de revalidation des
+     ~100 fichiers à chaque lancement (moins de données et de batterie,
+     démarrage plus rapide sur téléphone).
+   - un fichier absent du cache : réseau, puis mis en cache. */
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
   var url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
 
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(function (net) {
+        if (net && net.ok) { var cl = net.clone(); caches.open(CACHE_VERSION).then(function (cache) { cache.put('./index.html', cl); }); }
+        return net;
+      }).catch(function () { return caches.match('./index.html').then(function (r) { return r || caches.match(e.request); }); })
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(function (reponse) {
-      var maj = fetch(e.request).then(function (net) {
-        if (net && net.ok) {
-          caches.open(CACHE_VERSION).then(function (cache) { cache.put(e.request, net.clone()); });
-        }
+      if (reponse) return reponse;
+      return fetch(e.request).then(function (net) {
+        if (net && net.ok) { var cl = net.clone(); caches.open(CACHE_VERSION).then(function (cache) { cache.put(e.request, cl); }); }
         return net;
-      }).catch(function () { return reponse; });
-      return reponse || maj;
+      });
     })
   );
 });

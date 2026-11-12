@@ -3,21 +3,49 @@
    ============================================================ */
 window.COF = window.COF || {};
 
+/* ---------- Deux applications séparées : mode normal / mode aventure ----------
+   Les héros, le héros actif, le combat de l'Arène et le journal de dés
+   ont chacun leur stockage propre selon le mode (suffixe « .av » en
+   aventure). Au premier passage en aventure, les héros liés aux
+   aventures du Carnet (et le combat d'une aventure en cours) y sont
+   recopiés une fois. */
+COF.modeDonnees = function () { try { return localStorage.getItem('cof2.mode') === 'aventure' ? 'aventure' : 'normal'; } catch (e) { return 'normal'; } };
+COF.cle = function (base) {
+  if (COF.modeDonnees() !== 'aventure') return base;
+  COF.migrerAventure();
+  return base + '.av';
+};
+COF.migrerAventure = function () {
+  try {
+    if (localStorage.getItem('cof2.personnages.av') !== null) return;
+    var carnets = JSON.parse(localStorage.getItem('cof2.carnets') || '[]') || [];
+    var ids = carnets.map(function (c) { return c.persoId; }).filter(Boolean);
+    /* une aventure sans héros lié jouait avec le héros actif : on le reprend */
+    if (carnets.some(function (c) { return !c.persoId; }) && localStorage.getItem('cof2.actif')) ids.push(localStorage.getItem('cof2.actif'));
+    var persos = (JSON.parse(localStorage.getItem('cof2.personnages') || '[]') || []).filter(function (p) { return ids.indexOf(p.id) >= 0; });
+    localStorage.setItem('cof2.personnages.av', JSON.stringify(persos));
+    var actifC = localStorage.getItem('cof2.carnetActif'), ca = carnets.filter(function (c) { return c.id === actifC; })[0] || carnets[0];
+    var act = (ca && ca.persoId) || (persos[0] && persos[0].id);
+    if (act) localStorage.setItem('cof2.actif.av', act);
+    if (carnets.some(function (c) { return c.combat; }) && localStorage.getItem('cof2.arene') !== null) localStorage.setItem('cof2.arene.av', localStorage.getItem('cof2.arene'));
+  } catch (e) {}
+};
+
 COF.Store = (function () {
-  var KEY = 'cof2.personnages';
-  var KEY_ACTIF = 'cof2.actif';
-  var KEY_LOG = 'cof2.journal';
+  function KEY() { return COF.cle('cof2.personnages'); }
+  function KEY_ACTIF() { return COF.cle('cof2.actif'); }
+  function KEY_LOG() { return COF.cle('cof2.journal'); }
 
   function uid() {
     return 'pj_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
   function lire() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+    try { return JSON.parse(localStorage.getItem(KEY())) || []; }
     catch (e) { return []; }
   }
   function ecrire(list) {
-    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem(KEY(), JSON.stringify(list)); } catch (e) {}
   }
 
   function tous() { return lire(); }
@@ -40,9 +68,9 @@ COF.Store = (function () {
     if (actifId() === id) setActif(null);
   }
 
-  function actifId() { try { return localStorage.getItem(KEY_ACTIF); } catch (e) { return null; } }
+  function actifId() { try { return localStorage.getItem(KEY_ACTIF()); } catch (e) { return null; } }
   function setActif(id) {
-    try { id ? localStorage.setItem(KEY_ACTIF, id) : localStorage.removeItem(KEY_ACTIF); } catch (e) {}
+    try { id ? localStorage.setItem(KEY_ACTIF(), id) : localStorage.removeItem(KEY_ACTIF()); } catch (e) {}
   }
   function actif() { return get(actifId()); }
 
@@ -146,18 +174,18 @@ COF.Store = (function () {
 
   /* ---------- Journal de dés ---------- */
   function journal() {
-    try { return JSON.parse(sessionStorage.getItem(KEY_LOG)) || []; }
+    try { return JSON.parse(sessionStorage.getItem(KEY_LOG())) || []; }
     catch (e) { return []; }
   }
   function logJet(entry) {
     var j = journal();
     j.unshift(entry);
     if (j.length > 60) j = j.slice(0, 60);
-    try { sessionStorage.setItem(KEY_LOG, JSON.stringify(j)); } catch (e) {}
+    try { sessionStorage.setItem(KEY_LOG(), JSON.stringify(j)); } catch (e) {}
     return j;
   }
   function viderJournal() {
-    try { sessionStorage.removeItem(KEY_LOG); } catch (e) {}
+    try { sessionStorage.removeItem(KEY_LOG()); } catch (e) {}
   }
 
   /* ---------- Export / import ---------- */

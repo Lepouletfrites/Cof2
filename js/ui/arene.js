@@ -223,9 +223,9 @@ COF.UI.Arene = (function () {
     r.verdict = ok ? 'touche' : 'rate';
     var effet = '', an = cb.nom, cn = d.nom;
     var RECITS = {
-      renverser: [an + ' bouscule ' + cn + ', qui s’étale au sol.', cn + ' résiste à la poussée de ' + an + '.'],
-      desarmer: ['D’un geste vif, ' + an + ' fait sauter l’arme des mains de ' + cn + '.', cn + ' garde fermement son arme.'],
-      saisir: [an + ' empoigne ' + cn + ' et l’immobilise.', cn + ' se dégage de la prise de ' + an + '.'],
+      renverser: [an + ' bouscule ' + cn + ', qui s’étale au sol.', cn + ' résiste à la poussée ' + COF.Narration.de(an) + '.'],
+      desarmer: ['D’un geste vif, ' + an + ' fait sauter l’arme des mains ' + COF.Narration.de(cn) + '.', cn + ' garde fermement son arme.'],
+      saisir: [an + ' empoigne ' + cn + ' et l’immobilise.', cn + ' se dégage de la prise ' + COF.Narration.de(an) + '.'],
       pousser: [an + ' repousse violemment ' + cn + '.', cn + ' ne recule pas d’un pouce.']
     };
     if (ok) {
@@ -397,7 +397,7 @@ COF.UI.Arene = (function () {
   function log(r, m) {
     s.log = s.log || []; s.log.push({ r: r, m: m || '' }); if (s.log.length > 80) s.log = s.log.slice(-80);
   }
-  function combatAventure() { var c = COF.Carnet && COF.Carnet.actif(); return c && c.combat ? c : null; }
+  function combatAventure() { if (COF.modeDonnees() !== 'aventure') return null; var c = COF.Carnet && COF.Carnet.actif(); return c && c.combat ? c : null; }
   /* Le récit complet est versé au Carnet en fin de combat (bilan). */
   function verserJournal() { journalCombat = []; }
 
@@ -731,7 +731,7 @@ COF.UI.Arene = (function () {
     var h = '<div class="cb-consigne">👣 Une action de mouvement : on passe d’une distance à la voisine.</div><div class="cb-options">';
     adv.forEach(function (c) {
       var z = A().zoneEntre(cb, c); if (z <= 0) return;
-      h += '<button data-cb="bouger" data-v="approche" data-id="' + c.id + '"><span class="ic">🏃</span><span class="tx"><b>S’approcher de ' + esc(c.nom) + '</b><small>' +
+      h += '<button data-cb="bouger" data-v="approche" data-id="' + c.id + '"><span class="ic">🏃</span><span class="tx"><b>S’approcher ' + esc(COF.Narration.de(c.nom)) + '</b><small>' +
         esc(A().ZONES[z].nom) + ' → ' + esc(nomZone(z - 1)) + '</small></span><span class="act act-M">M</span></button>';
     });
     if (adv.some(function (c) { return A().zoneEntre(cb, c) < 3; })) {

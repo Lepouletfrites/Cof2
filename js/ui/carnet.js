@@ -76,6 +76,12 @@ COF.UI.Carnet = (function () {
     }
     rendre.defiler = false; rendre.haut = false;
     ajusterHauteur();
+    /* après un choix : on montre le début de ce qui vient d'être raconté */
+    if (zc && rendre.ancre !== null && rendre.ancre !== undefined && onglet === 'scene') {
+      var items = zc.querySelectorAll('#cn-fil > .cn-recit, #cn-fil > .cn-entree'), cib = items[rendre.ancre];
+      if (cib) zc.scrollTop += cib.getBoundingClientRect().top - zc.getBoundingClientRect().top - 6;
+    }
+    rendre.ancre = null;
     if (COF.UI.majTitre) COF.UI.majTitre();
   }
 
@@ -178,6 +184,11 @@ COF.UI.Carnet = (function () {
   }
   function htmlEntree(e) {
     var corps;
+    if (e.t === 'recit') {
+      return '<div class="cn-recit' + (e.rappel ? ' rappel' : '') + (e.fin ? ' fin' : '') + (e.evt ? ' evt' : '') + (e.ok === false ? ' ko' : '') + '">' +
+        (e.fin ? '<span class="cn-recit-fin">❧</span>' : '') + (e.evt ? '<div class="cn-recit-evt">⚡ ' + esc(e.titre || 'Imprévu') + '</div>' : '') + '<p>' + esc(e.txt) + '</p>' +
+        (e.m ? '<div class="cn-meca">🎲 ' + esc(e.m) + '</div>' : '') + '</div>';
+    }
     if (e.t === 'texte') corps = '<div class="cn-txt">' + esc(e.txt).replace(/\n/g, '<br>') + '</div>';
     else if (e.t === 'oracle') {
       var cls = /^oui/.test(e.nuance) ? (e.nuance === 'oui_mais' ? 'mod' : 'ok') : (e.nuance === 'non_mais' ? 'mod' : 'ko');
@@ -207,11 +218,63 @@ COF.UI.Carnet = (function () {
       '<button class="cn-x" data-cn="suppr-entree" data-id="' + e.id + '" aria-label="Supprimer">×</button>' +
       '<div class="cn-heure">' + heure(e.quand) + '</div></div>';
   }
+  /* ---------- La menace de fond (saga) ---------- */
+  function htmlSaga(c) {
+    var s = c.saga; if (!s) return '';
+    if (s.fini) return '<div class="cn-saga fini"><div class="t">👑 La quête majeure est accomplie' + (s.fini === 'amère' ? ', au prix fort' : '') + '.</div>' +
+      '<button class="btn btn-plein btn-bloc cn-gros" style="margin-top:8px" data-cn="fin-aventure">🏁 Clore l’aventure<small>épilogue · niveau +1 · chapitre suivant</small></button>' +
+      '<div class="s">Vous pouvez aussi finir les affaires en cours avant de clore.</div></div>';
+    var j = ''; for (var i = 1; i <= s.max; i++) j += '<span class="' + (i <= s.horloge ? 'on' : '') + '"></span>';
+    return '<div class="cn-saga"><div class="t">🌑 La menace : <b>' + esc(maj(s.nom)) + '</b></div><div class="cn-saga-j">' + j + '</div>' +
+      '<div class="s">' + (s.horloge >= 5 ? 'Ses plans avancent dangereusement. ' : '') + 'Indices : ' + s.indices + '/2' + (s.lieu ? ' · repaire connu : ' + esc((COF.Monde.lieu(c, s.lieu) || {}).nom || '?') : ' · repaire inconnu') + '</div></div>';
+  }
+  /* ---------- Choix du héros (scène jouée par le Conteur) ---------- */
+  function chance(mod, diff, bonus) {
+    var q = Math.max(0.05, Math.min(0.95, (21 - (diff - mod)) / 20));
+    return Math.round((bonus ? 1 - (1 - q) * (1 - q) : q) * 100);
+  }
+  function jauges(j) {
+    if (j.genre === 'confrontation') return '<div class="cn-jauges"><span>⚔️ Vaincre les adversaires</span></div>';
+    var r = function (ch, vide, n, max) { var t = ''; for (var i = 0; i < max; i++) t += i < n ? ch : vide; return t; };
+    return '<div class="cn-jauges"><span title="Objectif">🎯 ' + r('◆', '◇', Math.min(j.prog, j.progMax), j.progMax) + '</span>' +
+      '<span class="dg" title="Danger">⚠️ ' + r('●', '○', Math.min(j.danger, j.dangerMax), j.dangerMax) + '</span>' +
+      (j.bonus ? '<span class="bn">🎲 dé bonus</span>' : '') + '</div>';
+  }
+  function htmlChoix(c, s) {
+    var j = s.jeu; if (!j) return '';
+    var p = perso(c), nom = p ? p.nom : 'le héros';
+    if (j.fini) return '<div class="cn-choix"><button class="btn btn-plein btn-bloc cn-gros" data-cn="suite">▶ La suite' +
+      '<small>' + (j.fini === 'reussite' ? 'Scène réussie · tension −1' : 'La situation a échappé au héros · tension +1') + '</small></button></div>';
+    if (c.rencontre) return '<div class="cn-choix"><div class="note">⚔️ Il faut d’abord régler la rencontre : combattre, ou tenter une approche avec les boutons ci-dessus.</div></div>';
+    var l = COF.Conteur.choix(c, s);
+    var h = '<div class="cn-choix' + (j.evt ? ' evt' : '') + '"><div class="cn-choix-q">' + (j.evt ? '⚡ ' + esc(j.evt.titre) + ' — que fait ' : 'Que fait ') + esc(nom) + ' ?</div>' + jauges(j);
+    if (!l.length && j.genre === 'confrontation') h += '<button class="cn-opt ko" data-cn="provoquer"><b>⚔️ Aller au-devant du danger</b><small>les adversaires se montrent</small></button>';
+    h += l.map(function (o) {
+      return '<button class="cn-opt" data-cn="choix" data-v="' + o.i + '"><b>' + esc(o.nom) + '</b><small>' +
+        (o.auto ? 'sans jet · ' + esc(o.aide || 'réussite assurée') : o.carac + ' ' + sgn(o.mod) + ' · difficulté ' + o.diff + ' · ≈ ' + chance(o.mod, o.diff, j.bonus) + ' %') + '</small></button>';
+    }).join('');
+    if (j.genre === 'ville' && !j.evt) h += '<button class="cn-opt" data-cn="aller" data-v="marche"><b>🛒 Parcourir les échoppes</b><small>le marché du village : sa spécialité, ses objets rares</small></button>';
+    return h + '<button class="cn-opt autre" data-cn="libre"><b>✍️ Autre chose…</b><small>écrivez ce que fait ' + esc(nom) + ' : l’app comprend et lance le dé</small></button></div>';
+  }
   function htmlScene(c) {
+    if (c.termine) {
+      var camp = c.campagne || { nom: c.titre, numero: 1 };
+      return '<div class="carte"><h2>🏁 Aventure terminée</h2><div class="carte-corps">' + htmlArchive(c, false) +
+        (c.suiteId && K.get(c.suiteId) ? '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="aller-suite">▶ Aller au chapitre suivant</button>'
+          : '<label class="cn-lbl2" style="margin-top:14px">La campagne continue</label>' +
+            '<div class="champ"><label>Titre du chapitre suivant</label><input id="cn-suite-titre" placeholder="' + esc(camp.nom + ' — chapitre ' + (camp.numero + 1)) + '"></div>' +
+            '<button class="btn btn-plein btn-bloc cn-gros" data-cn="suite-aventure">▶ Commencer le chapitre suivant<small>même héros, même monde, nouvelle menace</small></button>') +
+        '<button class="btn btn-bloc" style="margin-top:8px" data-cn="campagne">📚 Voir la campagne</button>' +
+        '</div></div>';
+    }
     var s = K.sceneCourante(c), h = '';
     if (!s) {
       var der = c.scenes[c.scenes.length - 1];
       if (der) h += '<div class="note cn-rappel">Scène précédente : <b>' + esc(der.titre) + '</b>' + (der.resume ? ' — ' + esc(der.resume) : '') + '</div>';
+      /* ce que la fin de la scène a changé (quête, menace, carte, réputation…) */
+      var chg = der ? der.entrees.filter(function (e) { return e.clot; }).slice(-6) : [];
+      if (chg.length) h += '<div class="cn-changes">' + chg.map(function (e) { return '<div>' + esc(e.txt).replace(/\n/g, '<br>') + '</div>'; }).join('') + '</div>';
+      h += htmlSaga(c);
       /* Le directeur propose les scènes qui découlent de l'aventure */
       h += '<div class="carte"><h2>🎬 Et maintenant ?</h2><div class="carte-corps"><div class="cn-props">' +
         COF.Directeur.propositions(c).map(function (pr, i) {
@@ -230,9 +293,10 @@ COF.UI.Carnet = (function () {
     var fS = s.filId ? c.fils.filter(function (f) { return f.id === s.filId; })[0] : null;
     h += '<div class="carte cn-scene"><h2>' + s.n + '. ' + esc(s.titre) + '<span class="h2-action" data-cn="clore">🏁 Clore</span></h2><div class="carte-corps">' +
       (fS ? '<div class="cn-filtag">🧵 ' + esc(fS.nom) + (fS.quete && fS.quete.etape < 5 ? ' · ' + COF.Directeur.ETAPES[fS.quete.etape].ic + ' ' + esc(COF.Directeur.ETAPES[fS.quete.etape].nom) : '') + '</div>' : '') +
-      (s.attendu ? '<div class="note" style="margin-bottom:8px">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) + '</div></div>';
+      (function () { var t = COF.Conteur.infoTemps(c); return '<div class="cn-temps">' + t.heure + (t.meteo ? ' · ' + esc(t.meteo) : '') + ' · Jour ' + c.jour + '</div>'; })() +
+      (s.attendu && !s.jeu ? '<div class="note" style="margin-bottom:8px">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) + '</div></div>';
     h += '<div id="cn-fil" class="cn-fil">' + (s.entrees.length ? s.entrees.map(htmlEntree).join('') :
-      '<div class="vide" style="padding:14px">Racontez ce qui se passe, ou interrogez l’oracle.</div>') + '</div>';
+      '<div class="vide" style="padding:14px">Racontez ce qui se passe, ou interrogez l’oracle.</div>') + htmlChoix(c, s) + '</div>';
     /* La barre de saisie et d'actions reste fixe sous la zone qui défile. */
     dockCourant = '<div class="cn-dock"><div class="cn-compose">' +
       '<textarea id="cn-texte" rows="2" placeholder="Que se passe-t-il ?"></textarea>' +
@@ -589,10 +653,87 @@ COF.UI.Carnet = (function () {
     });
   }
 
+  /* ---------- Action libre : le joueur écrit, le Conteur interprète ---------- */
+  var libre = { texte: '', carac: null };
+  function sheetLibre() {
+    var c = K.actif(), p = perso(c), it = libre.texte ? COF.Conteur.interpreter(c, libre.texte) : null;
+    var caracs = ['FOR', 'AGI', 'CON', 'PER', 'CHA', 'INT', 'VOL'];
+    var h = '<div class="champ"><label>Que fait ' + esc(p ? p.nom : 'le héros') + ' ?</label><textarea id="cn-libre-txt" rows="3" placeholder="Je grimpe au mur pour entrer par la fenêtre, prudemment…">' + esc(libre.texte) + '</textarea></div>' +
+      '<button class="btn btn-bloc" data-cn="libre-analyser">🔍 Comment l’app comprend-elle ?</button>';
+    if (it) h += '<div class="note" style="margin-top:6px">Caractéristique : <b>' + (libre.carac || it.carac) + '</b>' + (libre.carac ? ' (choisie)' : '') + ' · difficulté ' + (COF.Conteur.difficulteBase(c) + it.mod) +
+      '<br>' + esc(it.raisons.join(' · ')) + '</div>';
+    h += '<label class="cn-lbl2" style="margin-top:8px">Forcer une caractéristique (facultatif)</label><div class="cn-grille cn-g4">' + caracs.map(function (k) {
+      return '<button data-cn="libre-carac" data-v="' + k + '" class="' + (libre.carac === k ? 'on' : '') + '">' + k + '<small>' + sgn(p ? COF.Calc.carac(p, k) : 0) + '</small></button>';
+    }).join('') + '</div>' +
+      '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="libre-ok">🎲 Tenter</button>' +
+      '<button class="btn btn-bloc" style="margin-top:6px" data-cn="test">Test détaillé (compétences, difficulté…)</button>';
+    ouvrir('✍️ Action libre', h, { type: 'libre' });
+  }
+
+  /* ---------- Export du récit (texte à copier, télécharger, partager) ---------- */
+  function sheetExport(titre, texte, fichier) {
+    ouvrir(titre, '<div class="note" style="margin-bottom:6px">Le récit en texte continu, sans les jets de dés. ' + texte.split(/\s+/).length + ' mots.</div>' +
+      '<textarea id="cn-export-txt" class="cn-export-txt" readonly>' + esc(texte) + '</textarea>' +
+      '<div class="cn-grille cn-g3" style="margin-top:8px"><button data-cn="copier-export" class="on">📋 Copier</button><button data-cn="dl-export">⬇️ .txt</button>' +
+      (navigator.share ? '<button data-cn="partager-export">📤 Partager</button>' : '<button disabled>📤</button>') + '</div>', { type: 'export', fichier: fichier });
+  }
+  /* Aventure terminée (lecture seule) : épilogue et exports. */
+  function htmlArchive(cx, compact) {
+    var t = cx.termine || {};
+    return (compact ? '' : '<div class="cn-recit fin"><span class="cn-recit-fin">❧</span><p>' + esc(t.epilogue || '') + '</p></div>') +
+      (t.niveau && !compact ? '<div class="cn-changes"><div>⬆️ ' + esc((perso(cx) || {}).nom || 'Le héros') + ' atteint le <b>niveau ' + t.niveau + '</b>.' +
+        (perso(cx) && COF.Calc.pointsCapacite(perso(cx)).reste > 0 ? ' <a href="#" data-cn="rangs-niveau">Choisir ses nouveaux rangs</a>' : '') + '</div></div>' : '') +
+      '<button class="btn btn-plein btn-bloc cn-gros" data-cn="export-aventure" data-id="' + cx.id + '">📜 Exporter le récit complet<small>toutes les scènes à la suite, en un seul texte</small></button>' +
+      '<label class="cn-lbl2" style="margin-top:10px">Une scène seule</label><div class="cn-comps">' + cx.scenes.map(function (s) {
+        return '<button data-cn="export-scene" data-c="' + cx.id + '" data-id="' + s.id + '"><b>' + s.n + '.</b> ' + esc(s.titre) + '<small>jour ' + (s.jour || 1) + '</small></button>';
+      }).join('') + '</div>';
+  }
+  function sheetArchive(cx) {
+    ouvrir('🏁 ' + cx.titre, '<div class="note" style="margin-bottom:8px">Aventure terminée' + (cx.campagne ? ' · campagne « ' + esc(cx.campagne.nom) + ' », chapitre ' + cx.campagne.numero : '') +
+      ' · jour ' + (cx.termine.jour || cx.jour) + '. Elle ne se rouvre plus, mais son récit reste disponible.</div>' + htmlArchive(cx, false), { type: 'archive' });
+  }
+  /* ---------- Page Campagne ---------- */
+  function sheetCampagne() {
+    var c = K.actif(), b = COF.Campagne.bilan(c);
+    var h = '<div class="note" style="margin-bottom:8px">' + (b.heros ? esc(b.heros.nom) + ' · niveau ' + b.heros.niveau + ' · ' : '') + b.chapitres.length + ' chapitre(s)</div>' +
+      '<div class="cn-frise">' + b.chapitres.map(function (x) {
+        return '<div class="cn-frise-ch' + (x.id === c.id ? ' on' : '') + '"><div class="n">' + x.numero + '</div><div class="i"><b>' + esc(x.titre) + '</b>' +
+          '<small>' + (x.menace ? '🌑 ' + esc(x.menace) + ' · ' : '') + esc(x.issue) + ' · ' + x.jours + ' j · ' + x.scenes + ' scènes' + (x.niveau ? ' · ⬆️ niv. ' + x.niveau : '') + '</small></div>' +
+          '<button class="cn-frise-x" data-cn="export-aventure" data-id="' + x.id + '" aria-label="Exporter le récit">📜</button></div>';
+      }).join('') + '</div>';
+    if (b.allies.length) h += '<div class="cn-l" style="margin-top:8px"><span>🤝</span><div>' + esc(b.allies.slice(0, 8).join(', ')) + '</div></div>';
+    if (b.nemesis.length) h += '<div class="cn-l"><span>☠️</span><div>Némésis : ' + esc(b.nemesis.join(', ')) + '</div></div>';
+    h += '<button class="btn btn-plein btn-bloc cn-gros" style="margin-top:10px" data-cn="export-campagne">📜 Récit de toute la campagne<small>tous les chapitres à la suite, en un seul texte</small></button>' +
+      '<div class="cn-grille" style="margin-top:8px"><button data-cn="fichier-campagne">💾 Fichier de campagne</button><button data-cn="import-campagne">📥 Importer</button></div>' +
+      '<div class="note" style="margin-top:6px">Le fichier contient les aventures et le héros de cette campagne : pour la sauvegarder, l’envoyer, ou la reprendre sur un autre appareil. L’import ajoute une copie, sans rien écraser.</div>';
+    ouvrir('📚 Campagne « ' + b.nom + ' »', h, { type: 'campagne' });
+  }
+  /* Montée de niveau guidée : ce qui change, et les rangs de voie à choisir. */
+  function sheetNiveau(c, pvAv) {
+    var p = perso(c); if (!p) { fermer(); return; }
+    var Kc = COF.Calc, pc = Kc.pointsCapacite ? Kc.pointsCapacite(p) : null;
+    var h = '<div class="resultat crit"><div class="grand">⬆️ ' + p.niveau + '</div><div class="verdict ok" style="font-size:18px">' + esc(p.nom) + ' passe au niveau ' + p.niveau + ' !</div></div>' +
+      '<div class="cn-changes" style="margin-top:10px">' +
+      '<div>❤️ PV maximum : <b>' + Kc.pvMax(p) + '</b>' + (typeof pvAv === 'number' && typeof p.pv === 'number' && p.pv > pvAv ? ' (+' + (p.pv - pvAv) + ' PV)' : '') + '</div>' +
+      (pc ? '<div>📜 Points de capacité à dépenser : <b>' + Math.max(0, pc.reste) + '</b> (2 par niveau)</div>' : '') +
+      '<div>🎯 Bonus d’attaque et caractéristiques : recalculés automatiquement sur la fiche.</div></div>' +
+      '<div class="note" style="margin-top:6px">En COF2, chaque niveau donne 2 points pour acheter de nouveaux rangs dans les voies (rang 1 et 2 : 1 point, rang 3 et plus : 2 points).</div>' +
+      '<button class="btn btn-plein btn-bloc cn-gros" style="margin-top:10px" data-cn="aller-voies">📜 Choisir mes nouveaux rangs de voie</button>' +
+      '<button class="btn btn-bloc" style="margin-top:8px" data-cn="fermer">Plus tard</button>';
+    ouvrir('⬆️ Montée de niveau', h, { type: 'niveau' });
+  }
+  function sheetFinAventure() {
+    var c = K.actif(), s = c.saga, p = perso(c);
+    ouvrir('🏁 Clore l’aventure', '<div class="note" style="margin-bottom:8px">' + (s && s.fini ? 'La quête majeure est accomplie.' : 'La quête majeure n’est pas terminée : l’aventure s’achèvera sur un dénouement ouvert.') +
+      ' Un épilogue est écrit, ' + (p ? esc(p.nom) + ' gagne un niveau' : 'le héros gagne un niveau') + ', et l’aventure passe en lecture seule (son récit reste exportable). Vous pourrez ensuite enchaîner sur le chapitre suivant de la campagne.</div>' +
+      '<button class="btn btn-plein btn-bloc cn-gros ok" data-cn="fin-ok">🏁 Clore l’aventure<small>épilogue · niveau +1</small></button>' +
+      '<button class="btn btn-bloc" style="margin-top:8px" data-cn="fermer">Pas encore</button>', { type: 'fin' });
+  }
+
   /* ---------- Onglet Journal ---------- */
   function htmlJournal(c) {
-    var h = '<div class="cn-export"><button class="btn btn-or" data-cn="partager">📤 Partager / copier</button>' +
-      '<button class="btn" data-cn="telecharger">⬇️ Fichier .md</button></div>';
+    var h = '<div class="cn-export"><button class="btn btn-or" data-cn="export-aventure">📜 Récit complet (texte)</button>' +
+      '<button class="btn" data-cn="partager">📤 Détaillé</button><button class="btn" data-cn="telecharger">⬇️ .md</button></div>';
     if (!c.scenes.length) return h + '<div class="vide">Le journal se remplit au fil des scènes.</div>';
     c.scenes.slice().reverse().forEach(function (s, i) {
       h += '<div class="carte pliable' + (i > 0 ? ' ferme' : '') + '"><h2 data-cn="plier">' + s.n + '. ' + esc(s.titre) +
@@ -600,6 +741,7 @@ COF.UI.Carnet = (function () {
         (s.attendu ? '<div class="note">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) +
         s.entrees.map(function (e) { return '<div class="cn-lu">' + esc(K.texteEntree(e)).replace(/\n/g, '<br>') + '</div>'; }).join('') +
         (s.close ? '<div class="note" style="margin-top:6px">🏁 ' + (s.controle ? 'Le héros garde la main' : 'Ça tourne mal') + (s.resume ? ' — ' + esc(s.resume) : '') + '</div>' : '') +
+        '<button class="btn btn-bloc" style="margin-top:8px" data-cn="export-scene" data-id="' + s.id + '">📜 Exporter le texte de cette scène</button>' +
         '</div></div>';
     });
     return h;
@@ -722,13 +864,19 @@ COF.UI.Carnet = (function () {
       '<div class="cn-grille"><button data-cn="renommer">✏️ Renommer</button>' +
       (p ? '<button data-cn="lier">🔗 Héros : ' + esc(p.nom) + '</button>' : '<button disabled>Aucun perso actif</button>') + '</div>' +
       '<div class="cn-grille" style="margin-top:8px"><button data-cn="jour" data-v="-1">◀ Jour</button><button data-cn="jour" data-v="1">Jour ▶</button></div>';
+    var hg = perso(c);
+    if (hg) h += '<label class="cn-lbl2" style="margin-top:12px">Le récit parle de ' + esc(hg.nom) + ' au…</label><div class="cn-grille">' +
+      '<button data-cn="genre-heros" data-v="masculin" class="' + (hg.genre !== 'féminin' ? 'on' : '') + '">Masculin (il)</button>' +
+      '<button data-cn="genre-heros" data-v="féminin" class="' + (hg.genre === 'féminin' ? 'on' : '') + '">Féminin (elle)</button></div>';
     if (l.length > 1) {
       h += '<label class="cn-lbl2" style="margin-top:12px">Mes aventures</label>' + l.map(function (x) {
         return '<button class="cn-item' + (x.id === c.id ? ' on' : '') + '" data-cn="basculer-camp" data-id="' + x.id + '"><div class="info"><div class="t">' + esc(x.titre) + '</div>' +
-          '<div class="s">' + x.scenes.length + ' scène(s) · jour ' + x.jour + '</div></div></button>';
+          '<div class="s">' + (x.campagne ? '📚 ' + esc(x.campagne.nom) + ' · ch. ' + x.campagne.numero + ' · ' : '') + x.scenes.length + ' scène(s) · jour ' + x.jour + (x.termine ? ' · ✓ terminée (exporter)' : '') + '</div></div></button>';
       }).join('');
     }
     h += '<div class="champ" style="margin-top:12px"><label>Nouvelle aventure</label><div class="cn-ajout"><input id="cn-m-new" placeholder="Titre…"><button class="btn btn-plein" data-cn="creer-menu">＋</button></div></div>' +
+      '<div class="cn-grille" style="margin-top:6px"><button data-cn="campagne">📚 Campagne</button><button data-cn="import-campagne">📥 Importer</button></div>' +
+      (c.termine ? '' : '<button class="btn btn-bloc" style="margin-top:6px" data-cn="fin-aventure">🏁 Terminer cette aventure</button>') +
       '<button class="btn btn-bloc" style="margin-top:6px" data-cn="rencontres-auto">🎲 Rencontres aléatoires en début de scène : <b>' + (c.rencontresAuto === false ? 'désactivées' : 'activées') + '</b></button>' +
       '<div class="cn-grille" style="margin-top:6px"><button data-rg="sauver">💾 Tout sauvegarder</button><button data-rg="ouvrir">⚙️ Réglages</button></div>' +
       '<button class="btn btn-bloc" style="margin-top:10px" data-cn="reinit-camp">♻️ Recommencer cette aventure à zéro</button>' +
@@ -925,8 +1073,12 @@ COF.UI.Carnet = (function () {
     prop = prop || {};
     var s = K.nouvelleScene(c, titre, attendu, { filId: prop.filId, type: prop.type });
     c = K.actif(); s = K.sceneCourante(c);
+    if (prop.voyage) s.voyage = prop.voyage;
     var entrees = COF.Directeur.preparerScene(c, s, prop);
-    if (c.rencontresAuto !== false && !c.expedition && !c.rencontre && prop.type !== 'repos' && prop.type !== 'quete') {
+    /* le conteur raconte l'ouverture (le détail sensoriel y est intégré) */
+    var ouv = COF.Conteur.ouvrir(c, s);
+    if (ouv.length) entrees = ouv.concat(entrees.filter(function (e) { return e.t !== 'detail'; }));
+    if (c.rencontresAuto !== false && !c.expedition && !c.rencontre && ['repos', 'quete', 'ville', 'voyage', 'donjon'].indexOf(prop.type) < 0) {
       var tr = A.testRencontre(c);
       if (prop.type === 'explorer' && !tr.rencontre && tr.n > 2) tr.rencontre = Math.random() < 1 / tr.n;   /* explorer : deux chances */
       if (tr.rencontre) {
@@ -941,7 +1093,9 @@ COF.UI.Carnet = (function () {
     }
     entrees.forEach(function (e) { K.ajouterEntree(c, e); });
     K.sauver(c);
-    rendre.defiler = true; rendre();
+    if (!c.rencontre) { COF.Conteur.apresOuverture(c); c = K.actif(); }
+    if (s.jeu) rendre.haut = true; else rendre.defiler = true;
+    rendre();
     if (prop.type === 'repos') sheetRessources();
   }
 
@@ -961,11 +1115,16 @@ COF.UI.Carnet = (function () {
           if (!destV) return;
           if (!iciV) { COF.Monde.seRendre(c, destV.id); K.sauver(c); flash('📍 ' + destV.nom); rendre(); return; }
           var rtV = COF.Monde.route(c, iciV.id, destV.id) || COF.Monde.relier(c, iciV.id, destV.id, 2);
-          K.nouvelleScene(c, 'En route pour ' + destV.nom, rtV.jours + ' jour(s) de route depuis ' + iciV.nom + (pr.fil ? ', pour « ' + pr.fil + ' »' : '') + '.',
-            { type: 'voyage', filId: pr.filId, sansTest: true });
-          c = K.actif();
-          X.commencerVoyage(c, iciV.nom, destV.nom, rtV.jours, rtV.env); K.sauver(c);
-          onglet = 'expe'; rendre.haut = true; rendre(); return;
+          /* le voyage se joue comme une scène racontée, jour après jour */
+          demarrerScene(c, 'En route pour ' + COF.Conteur.formes(destV.nom).n, '', { type: 'voyage', filId: pr.filId,
+            voyage: { dest: destV.id, destNom: destV.nom, departNom: iciV.nom, jours: rtV.jours, env: rtV.env || destV.env } });
+          return;
+        }
+        if (pr.type === 'fumees') {
+          var vl = COF.Villes.decouvrir(c); if (!vl) return;
+          COF.Monde.seRendre(c, vl.id); COF.Conteur.avancerTemps(c, 1); K.sauver(c);
+          flash('🏘️ ' + vl.nom + ' ajouté à la carte');
+          pr = { type: 'ville', titre: 'Arrivée à ' + vl.nom, attendu: '', lieu: vl.id };
         }
         if (pr.type === 'nouvelle') {
           var nq = COF.Directeur.creerQuete(c);
@@ -975,6 +1134,26 @@ COF.UI.Carnet = (function () {
         demarrerScene(c, pr.titre, pr.attendu, pr);
         return;
       }
+      case 'choix': {
+        var scC = K.sceneCourante(c); if (!scC) return;
+        rendre.ancre = scC.entrees.length;
+        var res = COF.Conteur.agir(c, scC, +v); rendre();
+        if (res.menace) flash('⚠️ Le danger se concrétise !');
+        return;
+      }
+      case 'provoquer': { var scP = K.sceneCourante(c); rendre.ancre = scP ? scP.entrees.length : null; COF.Conteur.provoquer(c); rendre(); return; }
+      case 'suite': {
+        var scS = K.sceneCourante(c); if (!scS || !scS.jeu) return;
+        var notesS = COF.Conteur.conclure(c, scS);
+        K.clore(c, scS.jeu.fini === 'reussite', scS.jeu.resume);
+        c = K.actif();
+        var derS = c.scenes[c.scenes.length - 1];
+        notesS.forEach(function (n) { derS.entrees.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quand: Date.now(), t: 'evt', txt: n, clot: true }); });
+        K.sauver(c); rendre.haut = true; rendre();
+        if (notesS.length) flash(notesS[0].slice(0, 90));
+        return;
+      }
+      case 'genre-heros': { var hg2 = perso(c); if (hg2) { hg2.genre = v; COF.Store.sauver(hg2); } sheetMenu(); return; }
       case 'rencontres-auto': c.rencontresAuto = c.rencontresAuto === false; K.sauver(c); sheetMenu(); return;
       case 'ecrire': { var t = val('cn-texte'); if (!t) return; K.ajouterEntree(c, { t: 'texte', txt: t }); apresEntree(); return; }
       case 'oracle': sheetOracle(); return;
@@ -1008,7 +1187,7 @@ COF.UI.Carnet = (function () {
         if (jet.effet && /^appr-/.test(jet.effet) && c.rencontre) {
           var ra = A.resoudreApproche(c.rencontre, jet.effet.slice(5), !!r.reussite);
           eff = ra.texte; combatPossible = ra.combat;
-          if (!ra.combat) finRencontre(c, eff);
+          if (!ra.combat) { finRencontre(c, eff); COF.Conteur.apresCombat(c, 'evitee'); }
         } else if (jet.effet) eff = X.appliquerTest(c, jet.effet, r);
         var csq = eff && !r.crit && !r.fumble ? null : X.consequence(r);
         K.ajouterEntree(c, { t: 'jet', txt: txt, reussite: !!r.reussite, csq: csq, effet: eff });
@@ -1044,7 +1223,7 @@ COF.UI.Carnet = (function () {
         });
         /* l'avancée est notée dans la scène qui vient de se clore */
         var der0 = c.scenes[c.scenes.length - 1];
-        notes.filter(Boolean).forEach(function (n) { der0.entrees.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quand: Date.now(), t: 'evt', txt: n }); });
+        notes.filter(Boolean).forEach(function (n) { der0.entrees.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quand: Date.now(), t: 'evt', txt: n, clot: true }); });
         K.sauver(c); fermer(); rendre.haut = true; rendre();
         flash(notes.length ? notes[0].slice(0, 90) : 'Tension : ' + K.actif().tension);
         return;
@@ -1082,7 +1261,83 @@ COF.UI.Carnet = (function () {
       case 'aller': fermer(); COF.UI.aller(v); return;
       case 'renommer': c.titre = val('cn-m-titre') || c.titre; K.sauver(c); fermer(); rendre(); return;
       case 'lier': c.persoId = (COF.Store.actif() || {}).id || null; K.sauver(c); fermer(); rendre(); flash('Héros lié'); return;
-      case 'basculer-camp': K.setActif(node.getAttribute('data-id')); fermer(); onglet = 'scene'; rendre(); return;
+      case 'basculer-camp': {
+        var cb = K.get(node.getAttribute('data-id'));
+        /* une aventure terminée ne se rouvre plus : on peut seulement exporter son récit */
+        if (cb && cb.termine && cb.id !== c.id) { sheetArchive(cb); return; }
+        K.setActif(node.getAttribute('data-id')); fermer(); onglet = 'scene'; rendre(); return;
+      }
+      case 'archive': { var ca = K.get(node.getAttribute('data-id')); if (ca) sheetArchive(ca); return; }
+      case 'export-aventure': { var cx = K.get(node.getAttribute('data-id') || c.id) || c; sheetExport('📜 ' + cx.titre, COF.Chronique.aventure(cx), cx.titre); return; }
+      case 'export-scene': {
+        var cs = K.get(node.getAttribute('data-c') || c.id) || c, sx = cs.scenes.filter(function (x) { return x.id === node.getAttribute('data-id'); })[0];
+        if (sx) sheetExport('📜 ' + sx.n + '. ' + sx.titre, COF.Chronique.scene(cs, sx, true), cs.titre + ' - scene ' + sx.n);
+        return;
+      }
+      case 'copier-export': {
+        var ta = $('#cn-export-txt'); if (!ta) return;
+        if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function () { flash('📋 Texte copié'); }, function () { ta.select(); flash('Sélectionnez puis copiez'); });
+        else { ta.select(); try { document.execCommand('copy'); flash('📋 Texte copié'); } catch (e) { flash('Sélectionnez puis copiez'); } }
+        return;
+      }
+      case 'dl-export': {
+        var ta2 = $('#cn-export-txt'); if (!ta2) return;
+        var blob2 = new Blob([ta2.value], { type: 'text/plain;charset=utf-8' }), a2 = document.createElement('a');
+        a2.href = URL.createObjectURL(blob2); a2.download = (sheet.fichier || 'recit').replace(/[^\wÀ-ÿ -]/g, '').trim().replace(/\s+/g, '-') + '.txt';
+        document.body.appendChild(a2); a2.click(); setTimeout(function () { URL.revokeObjectURL(a2.href); a2.remove(); }, 500);
+        return;
+      }
+      case 'partager-export': { var ta3 = $('#cn-export-txt'); if (ta3 && navigator.share) navigator.share({ title: sheet.fichier || 'Récit', text: ta3.value }).catch(function () {}); return; }
+      case 'campagne': sheetCampagne(); return;
+      case 'export-campagne': sheetExport('📜 Campagne', COF.Campagne.texte(c), 'campagne ' + (c.campagne ? c.campagne.nom : c.titre)); return;
+      case 'fichier-campagne': {
+        var blobC = new Blob([COF.Campagne.exporter(c)], { type: 'application/json' }), aC = document.createElement('a');
+        aC.href = URL.createObjectURL(blobC); aC.download = COF.Campagne.nomFichier(c);
+        document.body.appendChild(aC); aC.click(); setTimeout(function () { URL.revokeObjectURL(aC.href); aC.remove(); }, 500);
+        flash('💾 Fichier de campagne prêt'); return;
+      }
+      case 'import-campagne': {
+        var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+        inp.onchange = function () {
+          var fi = inp.files && inp.files[0]; if (!fi) return;
+          var rd = new FileReader();
+          rd.onload = function () {
+            var ri = COF.Campagne.importer(String(rd.result));
+            if (ri.erreur) { flash(ri.erreur); return; }
+            fermer(); onglet = 'scene'; rendre.haut = true; rendre(); flash('📥 « ' + ri.nom + ' » : ' + ri.nb + ' aventure(s) importée(s)');
+          };
+          rd.readAsText(fi);
+        };
+        inp.click(); return;
+      }
+      case 'libre': libre = { texte: '', carac: null }; sheetLibre(); return;
+      case 'libre-analyser': libre.texte = val('cn-libre-txt'); sheetLibre(); return;
+      case 'libre-carac': libre.texte = val('cn-libre-txt'); libre.carac = libre.carac === v ? null : v; sheetLibre(); return;
+      case 'libre-ok': {
+        libre.texte = val('cn-libre-txt'); if (!libre.texte) { flash('Écrivez d’abord l’action'); return; }
+        var scL = K.sceneCourante(c); if (!scL) return;
+        rendre.ancre = scL.entrees.length;
+        var resL = COF.Conteur.agirLibre(c, scL, libre.texte, libre.carac);
+        fermer(); rendre(); if (resL.menace) flash('⚠️ Le danger se concrétise !');
+        return;
+      }
+      case 'fin-aventure': sheetFinAventure(); return;
+      case 'fin-ok': {
+        var pvAv = (perso(c) || {}).pv;
+        var fin = COF.Saga.terminerAventure(c);
+        onglet = 'scene'; rendre.haut = true; rendre();
+        if (fin.niveau && COF.UI.Niveau) { var hN = perso(c); fermer(); COF.UI.Niveau.ouvrir(hN, { pvGain: hN && typeof pvAv === 'number' ? Math.max(0, hN.pv - pvAv) : 0, fin: function () { flash('⬆️ Nouveaux rangs enregistrés'); rendre(); } }); }
+        else if (fin.niveau) sheetNiveau(c, pvAv); else { fermer(); flash('🏁 Aventure terminée'); }
+        return;
+      }
+      case 'aller-voies': fermer(); COF.UI.aller('voies'); return;
+      case 'rangs-niveau': fermer(); if (COF.UI.Niveau) COF.UI.Niveau.ouvrir(perso(c), { fin: function () { rendre(); } }); return;
+      case 'suite-aventure': {
+        var nv = COF.Saga.suite(c, val('cn-suite-titre'));
+        fermer(); onglet = 'scene'; rendre.haut = true; rendre(); flash('▶ ' + nv.titre);
+        return;
+      }
+      case 'aller-suite': { if (c.suiteId && K.get(c.suiteId)) { K.setActif(c.suiteId); onglet = 'scene'; rendre(); } return; }
       case 'creer-menu': K.creer(val('cn-m-new') || 'Nouvelle aventure', (COF.Store.actif() || {}).id); fermer(); onglet = 'scene'; rendre(); return;
       case 'reinit-camp': {
         if (!confirm('Recommencer « ' + c.titre + ' » à zéro ?\n\nScènes, fils, PNJ, compagnons, lieux, carte et expédition seront effacés ; le titre et le héros sont gardés. ' +
@@ -1182,9 +1437,10 @@ COF.UI.Carnet = (function () {
           if (cb0.source === 'etape' && c.expedition) { var ev = c.expedition.etapes[c.expedition.etapes.length - 1]; if (ev) ev.vaincue = true; }
           finRencontre(c, 'Victoire');
           K.ajouterEntree(c, { t: 'note', titre: 'Victoire', txt: 'Le combat est gagné (' + cb0.texte + ').\nButin : ' + A.texteButin(bt) });
+          COF.Conteur.apresCombat(c, 'victoire');
           /* victoire lors de la confrontation d'une quête : elle avance d'elle-même */
           var scV = K.sceneCourante(c), fV = scV && scV.filId ? c.fils.filter(function (f) { return f.id === scV.filId; })[0] : null;
-          if (fV && fV.quete && fV.quete.etape === 3) { K.ajouterEntree(c, { t: 'evt', txt: COF.Directeur.avancer(c, fV) }); scV.filId = null; }
+          if (fV && fV.quete && fV.quete.etape === 3 && (!fV.quete.finale || fV.quete.finale === 'boss')) { K.ajouterEntree(c, { t: 'evt', txt: COF.Directeur.avancer(c, fV) }); scV.filId = null; }
           c.combat = null; c.butinEnAttente = bt; K.sauver(c);
           ouvrir('🏆 Victoire', '<div class="cn-menace ok"><div class="t">💰 Butin</div><div class="s">' + esc(A.texteButin(bt)) + '</div></div>' +
             '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="prendre-combat">📥 Prendre le butin</button>' +
@@ -1201,6 +1457,7 @@ COF.UI.Carnet = (function () {
           finRencontre(c, 'Défaite');
           K.ajouterEntree(c, { t: 'evt', txt: 'Le héros tombe… L’oracle suggère qu’il est ' + sort + '.' });
         }
+        COF.Conteur.apresCombat(c, v === 'fuite' ? 'fuite' : 'defaite');
         c.combat = null; K.sauver(c); fermer(); onglet = 'scene'; COF.UI.aller('carnet'); return;
       }
       case 'prendre-combat': {

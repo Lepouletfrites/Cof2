@@ -553,6 +553,8 @@ COF.UI.Fiche = (function () {
       }
 
       case 'niveau+': {
+        /* montée de niveau guidée (PV, points de capacité, nouveaux rangs) */
+        if (COF.UI.Niveau) { COF.UI.Niveau.ouvrir(C, { monter: true, fin: function () { if (COF.UI.rendreFicheOnglets) COF.UI.rendreFicheOnglets(); else rendre(); } }); rendre(); break; }
         var pvAvant = K.pvMax(C);
         C.niveau++;
         var gain = Math.max(0, K.pvMax(C) - pvAvant);

@@ -18,6 +18,7 @@ COF.UI.Compagnie = (function () {
 
   /* Aventure liée à un personnage (ou l'aventure active). */
   function campagnePour(p) {
+    if (COF.modeDonnees() !== 'aventure') return null;   /* les compagnons du récit n'existent qu'en mode aventure */
     var l = K().tous();
     return (p && l.filter(function (c) { return c.persoId === p.id; })[0]) || K().actif();
   }

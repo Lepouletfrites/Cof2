@@ -9,6 +9,7 @@ window.COF = window.COF || {};
 
 COF.Narration = (function () {
   function p(l) { return l[Math.floor(Math.random() * l.length)]; }
+  function de(n) { n = String(n || ''); return /^[aeiouyàâäéèêëîïôöûü]/i.test(n) ? 'd’' + n : 'de ' + n; }
   function maj(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
 
   var VERBES = [
@@ -38,9 +39,9 @@ COF.Narration = (function () {
     var a = o.a, c = o.c;
     if (o.verdict === 'rate' || o.verdict === 'fumble') {
       if (o.verdict === 'fumble') return p([a + ' trébuche et manque lamentablement son coup.', a + ' perd l’équilibre : l’attaque part dans le vide.', 'Maladresse ! ' + a + ' se découvre dangereusement.']);
-      if (o.sort) return p(['Le sort de ' + a + ' manque ' + c + ' de peu.', c + ' échappe à la magie de ' + a + '.']);
-      if (o.distance) return p(['Le tir de ' + a + ' manque ' + c + ' de peu.', 'Le projectile de ' + a + ' se perd.', c + ' esquive le tir de ' + a + '.']);
-      return p([c + ' esquive l’attaque de ' + a + '.', 'Le coup de ' + a + ' glisse sur la garde de ' + c + '.', a + ' frappe dans le vide.', c + ' pare de justesse.', 'L’armure de ' + c + ' encaisse le coup de ' + a + '.']);
+      if (o.sort) return p(['Le sort ' + de(a) + ' manque ' + c + ' de peu.', c + ' échappe à la magie ' + de(a) + '.']);
+      if (o.distance) return p(['Le tir ' + de(a) + ' manque ' + c + ' de peu.', 'Le projectile ' + de(a) + ' se perd.', c + ' esquive le tir ' + de(a) + '.']);
+      return p([c + ' esquive l’attaque ' + de(a) + '.', 'Le coup ' + de(a) + ' glisse sur la garde ' + de(c) + '.', a + ' frappe dans le vide.', c + ' pare de justesse.', 'L’armure ' + de(c) + ' encaisse le coup ' + de(a) + '.']);
     }
     var ratio = o.dm / Math.max(1, o.pvMax || 10), phrase;
     phrase = (o.crit ? p(['Coup magistral ! ', 'Coup terrible ! ', 'Un coup parfait : ']) : '') + a + ' ' + verbe(o.arme, o.sort) + ' ' + c;
@@ -57,13 +58,13 @@ COF.Narration = (function () {
   }
   function soin(a, c, objet, n) {
     if (objet) return a === c ? a + ' boit ' + objet + ' : ses blessures se referment (+' + n + ' PV).' : a + ' fait boire ' + objet + ' à ' + c + ' (+' + n + ' PV).';
-    return a === c ? a + ' puise dans ses forces et se soigne (+' + n + ' PV).' : a + ' soigne les plaies de ' + c + ' (+' + n + ' PV).';
+    return a === c ? a + ' puise dans ses forces et se soigne (+' + n + ' PV).' : a + ' soigne les plaies ' + de(c) + ' (+' + n + ' PV).';
   }
   /* type : approche | engage | recule | fuite | horsVue | reddition | releve | ramasse | charge */
   function mouvement(type, a, c) {
     switch (type) {
-      case 'approche': return p([a + ' s’avance vers ' + c + '.', a + ' gagne du terrain sur ' + c + '.', a + ' se rapproche de ' + c + '.']);
-      case 'engage': return p([a + ' fond sur ' + c + ' et engage le corps à corps.', a + ' se jette sur ' + c + '.', a + ' arrive au contact de ' + c + '.']);
+      case 'approche': return p([a + ' s’avance vers ' + c + '.', a + ' gagne du terrain sur ' + c + '.', a + ' se rapproche ' + de(c) + '.']);
+      case 'engage': return p([a + ' fond sur ' + c + ' et engage le corps à corps.', a + ' se jette sur ' + c + '.', a + ' arrive au contact ' + de(c) + '.']);
       case 'charge': return p([a + ' charge ' + c + ' !', a + ' bondit vers ' + c + '.']);
       case 'recule': return p([a + ' recule pour garder ses distances.', a + ' rompt le contact et prend du champ.']);
       case 'fuite': return p([a + ' tourne les talons et s’enfuit.', a + ' prend la fuite !']);
@@ -104,5 +105,5 @@ COF.Narration = (function () {
     else if (s.surprise === 'monstres') phrase += ' Les adversaires n’ont rien vu venir.';
     return phrase;
   }
-  return { attaque: attaque, soin: soin, mouvement: mouvement, ouverture: ouverture, maj: maj };
+  return { de: de, attaque: attaque, soin: soin, mouvement: mouvement, ouverture: ouverture, maj: maj };
 })();

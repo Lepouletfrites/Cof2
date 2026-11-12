@@ -10,6 +10,12 @@
    niveau du groupe.
    ============================================================ */
 window.COF = window.COF || {};
+/* « Venin de {nom} » + « orc » → « Venin d’orc » (élision devant une voyelle). */
+COF.remplirNom = function (gabarit, nom) {
+  nom = String(nom || '');
+  var de = /^[aeiouyàâäéèêëîïôöûü]/i.test(nom) ? 'd’' : 'de ';
+  return String(gabarit).replace(/\bde \{nom\}/g, de + nom).replace(/\{nom\}/g, nom);
+};
 
 COF.Recompense = (function () {
 
@@ -170,7 +176,7 @@ COF.Recompense = (function () {
       if (Math.random() < (l.c.cat === 'fantastique' ? 0.7 : 0.5)) {
         var g = piocher(table);
         out.push({
-          nom: g.gabarit.replace('{nom}', l.c.nom.toLowerCase()),
+          nom: COF.remplirNom(g.gabarit, l.c.nom.toLowerCase()),
           prix: g.prix,
           nb: Math.max(1, Math.min(l.nb, 3))
         });

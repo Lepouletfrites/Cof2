@@ -136,8 +136,18 @@ COF.Aventure = (function () {
   function rencontre(c, opts) {
     opts = opts || {};
     var env = opts.env || envCourant(c), nb = 1 + nbAllies(c), niv = niveau(c);
-    var r = COF.Rencontre.generer({ env: env, nbPJ: nb, niveau: niv, difficulte: opts.difficulte || 'ordinaire', style: opts.style || 'auto' });
+    /* opts.theme : serviteurs de la menace de l'aventure ; opts.chef : nom du chef */
+    var filtre = opts.theme && COF.Saga ? COF.Saga.filtreServiteurs(c) : null;
+    var r = COF.Rencontre.generer({ env: env, nbPJ: nb, niveau: niv, difficulte: opts.difficulte || 'ordinaire', style: opts.style || 'auto', filtre: filtre });
     if (!r || r.erreur) return { erreur: (r && r.erreur) || 'Aucune rencontre possible ici.' };
+    var chefLot = null;
+    if (opts.chef) {
+      /* le plus fort devient le chef nommé, endurci (PV × 1,5) */
+      chefLot = r.lots.slice().sort(function (a, b) { return (b.c.nc || 0) - (a.c.nc || 0); })[0];
+      if (chefLot.nb > 1) { chefLot.nb--; r.lots.push(chefLot = { c: chefLot.c, nb: 1, role: 'chef' }); }
+      chefLot.inline = Object.assign({}, chefLot.c, { nom: opts.chef, pv: Math.round((chefLot.c.pv || 10) * 1.5) });
+      chefLot.role = 'chef';
+    }
     var bestial = r.lots.every(function (l) { return l.c.cat !== 'humanoide'; });
     var jet = d(6) + d(6) - Math.round(((c ? c.tension : 5) - 5) / 2) - (bestial ? 1 : 0);
     var re = REACTIONS.filter(function (x) { return jet <= x[0]; })[0];
@@ -145,8 +155,9 @@ COF.Aventure = (function () {
     var s = d(6), surprise = s === 1 ?'Les créatures sont surprises : le héros peut agir avant elles.' : (s === 6 ? 'Le héros est surpris !' : null);
     var obj = {
       id: 'r' + Date.now().toString(36), env: env, niveau: niv, nbPJ: nb, difficulte: r.difficulte, type: r.type, utilise: r.utilise,
-      lots: r.lots.map(function (l) { return { id: l.c.id, nom: l.c.nom, nb: l.nb, role: l.role || null }; }),
-      texte: r.lots.map(function (l) { return l.nb + ' × ' + l.c.nom + (l.role ? ' (' + l.role + ')' : ''); }).join(', '),
+      lots: r.lots.map(function (l) { return { id: l.c.id, nom: l.inline ? l.inline.nom : l.c.nom, nb: l.nb, role: l.role || null, inline: l.inline || null }; }),
+      texte: r.lots.map(function (l) { return l.nb + ' × ' + (l.inline ? l.inline.nom : l.c.nom) + (l.role ? ' (' + l.role + ')' : ''); }).join(', '),
+      theme: !!filtre,
       reaction: re[1], reactionTexte: re[2], jetReaction: jet, distance: DISTANCES[iDist], distanceM: [2, 10, 25, 50][iDist], surprise: surprise, issue: null
     };
     if (c) c.envDernier = env;

@@ -221,7 +221,7 @@ COF.Expedition = (function () {
     s.env = rencontre.env || (c.expedition && c.expedition.env) || (COF.Aventure ? COF.Aventure.envCourant(c) : '');
     s.surprise = /héros est surpris/i.test(rencontre.surprise || '') ? 'heros' : (/créatures sont surprises/i.test(rencontre.surprise || '') ? 'monstres' : null);
     rencontre.lots.forEach(function (l) {
-      var cr = COF.UI.Bestiaire && COF.UI.Bestiaire.get(l.id);
+      var cr = l.inline || (COF.UI.Bestiaire && COF.UI.Bestiaire.get(l.id));   /* inline : chef nommé d'une aventure */
       if (cr) for (var i = 0; i < l.nb; i++) COF.Arene.ajouterCreature(s, cr, l.role);
     });
     var p = (c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif();
