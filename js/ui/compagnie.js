@@ -61,6 +61,7 @@ COF.UI.Compagnie = (function () {
       '<div class="jauge jauge-pv" style="margin-top:6px"><div class="jauge-tete"><span class="lbl">PV</span>' +
         '<span class="compteur"><button data-cmp="pv" data-v="-1" data-id="' + x.id + '">−</button><span class="n">' + cp.pv + ' / ' + st.pvMax + '</span>' +
         '<button data-cmp="pv" data-v="1" data-id="' + x.id + '">+</button></span></div><div class="barre"><span style="width:' + pct + '%"></span></div></div>' +
+      (COF.Troupe ? '<div class="note" style="margin-top:4px">Talent : ' + esc(COF.Troupe.lib(x)) + ' · aide sur ' + esc(COF.Troupe.ROLES[cp.talent].caracs.join(', ')) + (COF.Troupe.ROLES[cp.talent].soigne ? ' et panse les blessures' : '') + '</div>' : '') +
       '<div class="cmp-loyl">Loyauté ' + jauge(cp.loyaute) + ' <small>' + libLoyaute(cp.loyaute) + '</small></div>' +
       '<div class="cn-grille cn-g3" style="margin-top:8px">' +
         '<button data-cmp="parler" data-id="' + x.id + '">💬 Discuter</button>' +

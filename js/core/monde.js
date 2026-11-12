@@ -54,8 +54,14 @@ COF.Monde = (function () {
     return c;
   }
   /* Cadre englobant les lieux (pour centrer la vue). */
-  function cadre(c) {
+  function cadre(c, autour) {
     var ls = (c.lieux || []).filter(function (l) { return l.x !== undefined; });
+    /* autour du héros : seulement les lieux proches (un lieu très lointain n'écrase plus la vue) */
+    var h = autour ? lieu(c, c.position) : null;
+    if (h && h.x !== undefined) {
+      var proches = ls.filter(function (l) { return Math.hypot(l.x - h.x, l.y - h.y) <= 140; });
+      if (proches.length) ls = proches;
+    }
     if (!ls.length) return { x: L / 2 - 50, y: H / 2 - 32, w: 100, h: 64 };
     var x0 = Math.min.apply(null, ls.map(function (l) { return l.x; })), x1 = Math.max.apply(null, ls.map(function (l) { return l.x; }));
     var y0 = Math.min.apply(null, ls.map(function (l) { return l.y; })), y1 = Math.max.apply(null, ls.map(function (l) { return l.y; }));

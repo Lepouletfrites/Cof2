@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COF2 — Tests</title>
+<style>
+  :root { --bg: #14110e; --panel: #241f1a; --line: #3a3229; --text: #ece3d4; --mute: #7d6f5d; --ok: #6fbf6a; --ko: #e0574e; --or: #c9a227; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; padding: 16px; }
+  h1 { font-family: Georgia, serif; color: var(--or); font-size: 22px; margin: 0 0 6px; }
+  p { color: var(--mute); margin: 0 0 12px; }
+  button { background: var(--or); color: #14110e; border: none; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; }
+  #resume { margin: 12px 0; font-weight: 600; }
+  .t { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+  .t b { display: inline-block; min-width: 1.5em; }
+  .t.ok b { color: var(--ok); } .t.ko b { color: var(--ko); } .t.ko { border-color: var(--ko); }
+  .t small { display: block; color: var(--mute); white-space: pre-wrap; margin-top: 2px; }
+  a { color: var(--or); }
+</style>
+</head>
+<body>
+<h1>🧪 Tests de COF2 Compagnon</h1>
+<p>Vérifie en un clic que l’app fonctionne : chargement, cache hors ligne, effets des voies, génération du récit (imprévus, affaires, temps libre, finales, conversations, nuits, campagne) et absence de phrases cassées. Vos données sont sauvegardées avant les tests puis remises à l’identique. <a href="index.html">← Retour à l’app</a></p>
+<button id="go">▶ Lancer les tests</button>
+<div id="resume"></div>
+<div id="res"></div>
+<script>
+/* Petits stubs d'interface : la page ne charge que les données et le moteur (js/data, js/core). */
+window.COF = window.COF || {};
+COF.UI = COF.UI || { esc: function (s) { return String(s); }, sgn: function (n) { return (n >= 0 ? '+' : '') + n; } };
+
+var res = document.getElementById('res'), resume = document.getElementById('resume'), nbOk = 0, nbKo = 0;
+function ajouter(nom, ok, detail) {
+  var d = document.createElement('div'); d.className = 't ' + (ok ? 'ok' : 'ko');
+  d.innerHTML = '<b>' + (ok ? '✅' : '❌') + '</b> ' + nom + (detail ? '<small></small>' : '');
+  if (detail) d.querySelector('small').textContent = detail;
+  res.appendChild(d); if (ok) nbOk++; else nbKo++;
+}
+function test(nom, f) {
+  try { var r = f(); ajouter(nom, r === true || (r && r.ok), r && r.detail); }
+  catch (e) { ajouter(nom, false, e.message + '\n' + String(e.stack || '').split('\n').slice(1, 3).join('\n')); }
+}
+function charger(src) { return new Promise(function (ok, ko) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { ko(new Error('chargement impossible : ' + src)); }; document.head.appendChild(s); }); }
+var CASSE = /\{[a-z_]+\}|\[[^\]]*\|[^\]]*\]|undefined|NaN|\bnull\b/;
+
+/* --- sauvegarde / restauration des données de l'utilisateur --- */
+var SAUVE = null;
+function sauvegarder() { SAUVE = {}; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf('cof2.') === 0) SAUVE[k] = localStorage.getItem(k); } }
+function restaurer() {
+  if (!SAUVE) return;
+  Object.keys(localStorage).filter(function (k) { return k.indexOf('cof2.') === 0; }).forEach(function (k) { localStorage.removeItem(k); });
+  Object.keys(SAUVE).forEach(function (k) { localStorage.setItem(k, SAUVE[k]); });
+}
+
+/* --- simulation d'une scène complète --- */
+function jouerScene(c, pr, textes) {
+  var K = COF.Carnet, C = COF.Conteur, D = COF.Directeur;
+  K.nouvelleScene(c, pr.titre || 'Scène', pr.attendu || '', { filId: pr.filId, type: pr.type }); c = K.actif();
+  var s = K.sceneCourante(c);
+  if (pr.voyage) s.voyage = pr.voyage; if (pr.loisir) s.loisir = pr.loisir; if (pr.dialogue) s.dialogue = pr.dialogue;
+  var ent = D.preparerScene(c, s, pr);
+  if (pr.type === 'mission') ent = ent.concat(COF.Missions.preparer(c, s, c.fils.filter(function (f) { return f.id === pr.filId; })[0]));
+  C.ouvrir(c, s).concat(ent).forEach(function (e) { K.ajouterEntree(c, e); }); K.sauver(c);
+  C.apresOuverture(c); c = K.actif(); s = K.sceneCourante(c);
+  var g = 0;
+  while (s.jeu && !s.jeu.fini && g++ < 30) {
+    if (c.rencontre) { c.rencontre = null; K.sauver(c); C.apresCombat(c, Math.random() < 0.85 ? 'victoire' : 'fuite'); c = K.actif(); s = K.sceneCourante(c); continue; }
+    var caps = C.capacitesHorsCombat(c, s).filter(function (k) { return k.possible; });
+    if (caps.length && Math.random() < 0.15) { C.utiliserCapacite(c, s, caps[0].cle); c = K.actif(); s = K.sceneCourante(c); continue; }
+    var ch = C.choix(c, s);
+    if (!ch.length) { C.provoquer(c); c = K.actif(); s = K.sceneCourante(c); if (!c.rencontre) break; continue; }
+    if (Math.random() < 0.08 && !s.jeu.evt && s.jeu.genre !== 'loisir' && s.jeu.genre !== 'dialogue') C.agirLibre(c, s, 'je fouille prudemment les environs');
+    else C.agir(c, s, Math.floor(Math.random() * ch.length));
+    c = K.actif(); s = K.sceneCourante(c);
+  }
+  s.entrees.forEach(function (e) { if (e.t === 'recit') textes.push(e.txt); });
+  var notes = C.conclure(c, s); notes.forEach(function (n) { textes.push(n); });
+  K.clore(c, s.jeu && s.jeu.fini === 'reussite', s.jeu ? s.jeu.resume : '');
+  return K.actif();
+}
+function proposition(c) {
+  var D = COF.Directeur, props = D.propositions(c), pr = props[Math.floor(Math.random() * props.length)];
+  if (pr.type === 'offre') { var fm = COF.Missions.accepter(c); pr = { type: 'mission', filId: fm.id, titre: fm.nom }; }
+  if (pr.type === 'nuit') pr = { type: 'loisir', titre: 'Nuit', loisir: COF.Loisirs.nuit(c) };
+  if (pr.type === 'faveur') { COF.Factions.faveur(c, pr.faction); return null; }
+  if (pr.type === 'fete') { COF.Saisons.marquerFete(c); pr = { type: 'loisir', titre: pr.titre, loisir: pr.fete }; }
+  if (pr.type === 'voyage') {
+    var ici = COF.Monde.ici(c), dl = COF.Monde.lieu(c, pr.lieu);
+    if (!ici) { COF.Monde.seRendre(c, dl.id); COF.Carnet.sauver(c); return null; }
+    var rt = COF.Monde.route(c, ici.id, dl.id) || COF.Monde.relier(c, ici.id, dl.id, 2);
+    pr = { type: 'voyage', titre: 'Route', filId: pr.filId, voyage: { dest: dl.id, destNom: dl.nom, departNom: ici.nom, jours: rt.jours, env: rt.env || dl.env } };
+  }
+  if (pr.type === 'fumees') { var vl = COF.Villes.decouvrir(c); COF.Monde.seRendre(c, vl.id); COF.Carnet.sauver(c); pr = { type: 'ville', titre: 'Arrivée' }; }
+  if (pr.type === 'nouvelle') { var nq = D.creerQuete(c); pr = Object.assign({ type: 'quete', filId: nq.id }, D.sceneDe(c, nq)); }
+  return pr;
+}
+
+async function lancer() {
+  document.getElementById('go').disabled = true; res.innerHTML = ''; nbOk = nbKo = 0; resume.textContent = 'Tests en cours…';
+  try {
+    /* 1. chargement des scripts de l'app (données et moteur) dans l'ordre de index.html */
+    var index = await (await fetch('index.html', { cache: 'no-store' })).text();
+    var scripts = (index.match(/src="(js\/[^"]+)"/g) || []).map(function (s) { return s.slice(5, -1); });
+    /* moteur + le catalogue (le tirage d'objets magiques s'en sert) */
+    var moteur = scripts.filter(function (s) { return /^js\/(data|core)\//.test(s) || s === 'js/ui/catalogue.js'; });
+    for (var i = 0; i < moteur.length; i++) await charger(moteur[i]);
+    ajouter('Chargement de ' + moteur.length + ' scripts (données et moteur)', true);
+
+    sauvegarder();
+    localStorage.setItem('cof2.mode', 'aventure');
+
+    test('Modules du moteur présents', function () {
+      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons']
+        .filter(function (m) { return !COF[m]; });
+      return { ok: !manquants.length, detail: manquants.length ? 'manquants : ' + manquants.join(', ') : '' };
+    });
+
+    /* 2. cache hors ligne : chaque script de la page doit être dans sw.js */
+    var sw = await (await fetch('sw.js', { cache: 'no-store' })).text();
+    test('Cache hors ligne (sw.js) complet', function () {
+      var absents = scripts.filter(function (s) { return sw.indexOf("'" + s + "'") < 0; });
+      var v = /CACHE_VERSION = '([^']+)'/.exec(sw);
+      return { ok: !absents.length && !!v, detail: (v ? 'version ' + v[1] : 'version introuvable') + (absents.length ? '\nabsents : ' + absents.join(', ') : '') };
+    });
+    var fichiers = (sw.match(/'((?:js|css|assets)\/[^']+)'/g) || []).map(function (s) { return s.slice(1, -1); });
+    var introuvables = [];
+    await Promise.all(fichiers.map(function (f) { return fetch(f, { cache: 'no-store' }).then(function (r) { if (!r.ok) introuvables.push(f); }, function () { introuvables.push(f); }); }));
+    ajouter('Fichiers du cache présents sur le serveur (' + fichiers.length + ')', !introuvables.length, introuvables.join(', '));
+
+    /* 3. héros de test */
+    var p = COF.Store.nouveau({ nom: 'Testeur', profil: 'pretre', peuple: 'humain' });
+    p.niveau = 4; p.carac = { FOR: 1, AGI: 1, CON: 1, PER: 2, CHA: 2, INT: 0, VOL: 3 };
+    p.voies = COF.PROFILS.pretre.voies.map(function (v) { return { key: 'profil.' + v.id, rang: 3 }; });
+    COF.Store.equiperDepart(p); COF.Store.reinitialiser(p); p.bourse = { po: 200, pa: 0, pc: 0 }; COF.Store.sauver(p); COF.Store.setActif(p.id);
+
+    test('Effets des voies : tous les profils au rang 5', function () {
+      var pb = [];
+      Object.keys(COF.PROFILS).forEach(function (k) {
+        var h = COF.Store.nouveau({ nom: 'T', profil: k, peuple: 'humain' }); h.id = 't_' + k; h.niveau = 12;
+        h.voies = COF.PROFILS[k].voies.map(function (v) { return { key: 'profil.' + v.id, rang: 5 }; });
+        try { COF.Effets.liste(h); COF.Calc.def(h); COF.Calc.pvMax(h); COF.Calc.attaques(h); } catch (e) { pb.push(k + ' : ' + e.message); }
+      });
+      var g = COF.Store.nouveau({ nom: 'G', profil: 'guerrier', peuple: 'humain' }); g.id = 't_g'; g.niveau = 7; g.carac.CON = 1;
+      g.voies = COF.PROFILS.guerrier.voies.map(function (v) { return { key: 'profil.' + v.id, rang: 5 }; });
+      var heroique = COF.Calc.carac(g, 'CON') > 1;
+      return { ok: !pb.length && heroique, detail: pb.join('\n') + (heroique ? '' : '\nla capacité héroïque n’ajoute pas +1') };
+    });
+
+    var textes = [], erreurs = [];
+    var K = COF.Carnet;
+    K.creer('Aventure de test', p.id); var c = K.actif();
+
+    /* 4. simulation de 120 scènes */
+    for (var n = 0; n < 120; n++) {
+      try { c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif(); var pr = proposition(c); if (pr) jouerScene(c, pr, textes); }
+      catch (e) { erreurs.push(e.message + ' — ' + String(e.stack || '').split('\n')[1]); }
+    }
+    ajouter('Simulation de 120 scènes sans erreur', !erreurs.length, erreurs.slice(0, 5).join('\n'));
+
+    /* 5. chaque activité de temps libre, chaque nuit */
+    var errL = [];
+    COF.Loisirs.ACTIVITES.forEach(function (a) {
+      try {
+        c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, '');
+        var v = { mise: 3, tripot: 'Le Dé', jeu: 'la Rafle', a_un: 'un forgeron', a_le: 'le forgeron', a_e: '', trait: 'qui triche', mus: 'une gigue', mar: 'des épices', poi: 'une truite', piece: 'une farce', aub: 'Le Sanglier', abri: 'sous un chêne', reine: 'la fille du meunier', feu: 'un grand feu', plat: 'du cidre nouveau', conteur: 'la doyenne', l: 'Brumeval' };
+        jouerScene(K.actif(), { type: 'loisir', titre: a.titre, loisir: { id: a.id, ic: a.ic, v: v, nuit: a.lieu === 'nuit', titre: a.titre } }, textes);
+      } catch (e) { errL.push(a.id + ' : ' + e.message); }
+    });
+    ajouter('Temps libre et nuits : ' + COF.Loisirs.ACTIVITES.length + ' activités jouées', !errL.length, errL.join('\n'));
+
+    /* 6. chaque type de petite affaire */
+    var types = Object.keys(COF.Missions.TYPES), vus = {}, errM = [];
+    /* en ville : certaines affaires (le concours) ne se proposent qu'en lieu habité */
+    c = K.actif(); var vT = COF.Villes.decouvrir(c); if (vT) { COF.Monde.seRendre(c, vT.id); K.sauver(c); }
+    for (var essai = 0; essai < 400 && Object.keys(vus).length < types.length; essai++) {
+      c = K.actif(); var o = COF.Missions.generer(c); if (vus[o.type]) continue; vus[o.type] = true;
+      try { if (K.sceneCourante(c)) K.clore(c, true, ''); var f = COF.Missions.accepter(K.actif(), o); jouerScene(K.actif(), { type: 'mission', filId: f.id, titre: f.nom }, textes); }
+      catch (e) { errM.push(o.type + ' : ' + e.message); }
+    }
+    ajouter('Petites affaires : ' + Object.keys(vus).length + ' / ' + types.length + ' types jouées', !errM.length && Object.keys(vus).length === types.length, errM.join('\n'));
+
+    /* 7. chaque finale de quête majeure */
+    var errF = [], finales = Object.keys(COF.Saga.FINALES);
+    finales.forEach(function (fi) {
+      try {
+        c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif(); COF.Saga.assurer(c);
+        var l = COF.Monde.obtenirLieu(c, 'Lieu final ' + fi, COF.Monde.ici(c), '', 'ruines');
+        var q = COF.Directeur.creerQuete(c, null, { lieu: l, etape: 3, saga: 'final', finale: fi, titre: 'Finale ' + fi });
+        jouerScene(K.actif(), Object.assign({ type: 'quete', filId: q.id }, COF.Directeur.sceneDe(K.actif(), q)), textes);
+      } catch (e) { errF.push(fi + ' : ' + e.message); }
+    });
+    ajouter('Finales : ' + finales.length + ' quêtes majeures jouées', !errF.length, errF.join('\n'));
+
+    /* 8. conversations, factions */
+    test('Conversations avec les PNJ', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var x = K.ajouterListe(c, 'pnj', { nom: 'Bertille', attitude: 'neutre', genre: 'féminin' }); x.lieuId = c.position; K.sauver(c);
+      for (var i = 0; i < 4; i++) { c = K.actif(); jouerScene(c, { type: 'dialogue', titre: 'Conversation', dialogue: { pnjId: x.id } }, textes); }
+      var y = K.actif().pnj.filter(function (z) { return z.id === x.id; })[0];
+      return { ok: !!(y && y.perso && typeof y.rel === 'number'), detail: y ? 'relation ' + y.rel + ' · ' + y.attitude : '' };
+    });
+    test('Factions : réputation et faveur', function () {
+      c = K.actif(); COF.Factions.changer(c, 'temple', 3); var f = COF.Factions.faveur(c, 'temple');
+      return { ok: !!f, detail: f || 'aucune faveur' };
+    });
+
+    /* compagnons vivants : talent, tempérament, répliques, réactions */
+    test('Compagnons : talents, tempéraments, répliques', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var x = K.ajouterListe(c, 'pnj', { nom: 'Odon', attitude: 'allié' }); x.compagnon = { actif: true, role: 'combattant', niveau: 3, loyaute: 6 }; K.sauver(c);
+      var ctx = COF.Conteur.contexte(c, null), lignes = [], pb = [];
+      Object.keys(COF.Troupe.TEMPS).forEach(function (t) {
+        Object.keys(COF.Troupe.TEMPS[t].dit).forEach(function (sit) {
+          COF.Troupe.TEMPS[t].dit[sit].forEach(function (l) { lignes.push(COF.Conteur.dire(l, Object.assign({}, ctx, { x: 'Odon', xe: '', xil: 'il', xlui: 'lui' }))); });
+        });
+      });
+      lignes.forEach(function (l) { if (CASSE.test(l)) pb.push(l); textes.push(l); });
+      for (var i = 0; i < 6; i++) { c = K.actif(); jouerScene(c, proposition(c) || { type: 'explorer', titre: 'Explorer' }, textes); }
+      var y = K.actif().pnj.filter(function (z) { return z.id === x.id; })[0], cp = y.compagnon;
+      var spe = COF.Troupe.specialiste(K.actif(), COF.Troupe.ROLES[cp.talent].caracs[0]);
+      var okRole = ['combattant', 'tireur', 'mystique'].indexOf(cp.role) >= 0;
+      return { ok: !pb.length && !!COF.Troupe.ROLES[cp.talent] && !!COF.Troupe.TEMPS[cp.temp] && (!cp.actif || !!spe) && okRole,
+        detail: COF.Troupe.lib(y) + ' · loyauté ' + cp.loyaute + '/10 · ' + lignes.length + ' répliques' + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+    /* conséquences : chaque type finit par ressurgir */
+    test('Conséquences qui durent', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var x = K.ajouterListe(c, 'pnj', { nom: 'Gaspard', attitude: 'neutre' }); x.lieuId = c.position;
+      var types = Object.keys(COF.Echos.TYPES), vus = {}, pb = [];
+      for (var essai = 0; essai < 60 && Object.keys(vus).length < types.length; essai++) {
+        types.forEach(function (t) { if (!vus[t]) COF.Echos.noter(c, t, { pnjId: /rancune|dette|sauve/.test(t) ? x.id : null, lieuId: c.position }); });
+        c.jour += 4;
+        for (var k = 0; k < 20; k++) {
+          var s = { jeu: { genre: 'libre', prog: 0, progMax: 3, danger: 0, dangerMax: 5, bonus: false } };
+          var r = COF.Echos.reveiller(c, s, COF.Conteur.contexte(c, null));
+          if (r) { textes.push(r.txt); if (CASSE.test(r.txt + r.m)) pb.push(r.txt + ' | ' + r.m); }
+        }
+        COF.Echos.souvenirs(c).forEach(function (e) { vus[e.type] = true; });
+        (c.echos || []).forEach(function (e) { if (e.fait) vus[e.type] = true; });
+      }
+      K.sauver(c);
+      return { ok: Object.keys(vus).length === types.length && !pb.length, detail: Object.keys(vus).length + ' / ' + types.length + ' types ressurgis' + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+    /* saisons, météo, fêtes */
+    test('Saisons, météo et fêtes de village', function () {
+      c = K.actif(); var S = COF.Saisons, j0 = c.jour, noms = [1, 31, 61, 91, 121].map(function (j) { c.jour = j; return S.info(c).nom + (S.info(c).annee > 1 ? '2' : ''); });
+      var okN = noms.join(',') === 'printemps,été,automne,hiver,printemps2';
+      c.jour = 95; var hiver = S.meteos(c, 'plaine'); c.jour = 35; var ete = S.meteos(c, 'plaine');
+      var okM = hiver.indexOf('neige') >= 0 && ete.indexOf('neige') < 0;
+      if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var v = COF.Villes.decouvrir(c); COF.Monde.seRendre(c, v.id); c.jour = 40; c.fetes = {}; K.sauver(c);
+      var pr = COF.Directeur.propositions(c).filter(function (o) { return o.type === 'fete'; })[0];
+      if (pr) { S.marquerFete(c); jouerScene(c, { type: 'loisir', titre: pr.titre, loisir: pr.fete }, textes); }
+      var deja = !COF.Directeur.propositions(K.actif()).some(function (o) { return o.type === 'fete'; });
+      c = K.actif(); c.jour = Math.max(j0, c.jour); K.sauver(c);
+      return { ok: okN && okM && !!pr && deja, detail: noms.join(' → ') + ' · fête : ' + (pr ? pr.titre : 'aucune') };
+    });
+
+    /* 9. campagne : fin d'aventure et chapitre suivant, récit complet */
+    test('Campagne : fin d’aventure, niveau, chapitre suivant', function () {
+      c = K.actif(); var niv = COF.Store.get(p.id).niveau;
+      var fin = COF.Saga.terminerAventure(c), n2 = COF.Saga.suite(K.get(c.id), '');
+      var ok = COF.Store.get(p.id).niveau === niv + 1 && n2.campagne && n2.campagne.numero === 2;
+      var txt = COF.Campagne.texte(n2);
+      return { ok: ok && txt.length > 500, detail: 'épilogue : ' + fin.epilogue.slice(0, 120) + '…' };
+    });
+
+    /* 10. aucune phrase cassée */
+    var casses = textes.filter(function (t) { return CASSE.test(t); });
+    ajouter('Phrases du récit sans gabarit cassé (' + textes.length + ' vérifiées)', !casses.length, casses.slice(0, 5).join('\n'));
+  } catch (e) {
+    ajouter('Erreur générale', false, e.message);
+  } finally {
+    restaurer();
+    resume.textContent = (nbKo ? '❌ ' + nbKo + ' test(s) en échec, ' : '✅ Tout est bon : ') + nbOk + ' réussi(s). Vos données ont été remises à l’identique.';
+    document.getElementById('go').disabled = false;
+  }
+}
+document.getElementById('go').addEventListener('click', function () { if (res.children.length) location.reload(); else lancer(); });
+</script>
+</body>
+</html>

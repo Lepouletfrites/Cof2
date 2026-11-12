@@ -49,7 +49,7 @@ COF.Imprevus = (function () {
   /* [phrase, effet, nom d'objet] */
   var MARCHANDISES = [['des herbes médicinales', 'soin', ''], ['une carte de la région', 'lieu', ''], ['des provisions de voyage', 'rations', ''],
     ['une fiole d’un liquide ambré « qui guérit tout »', 'objet', 'Fiole de liquide ambré (remède douteux)'], ['une amulette « bénie par trois prêtres »', 'objet', 'Amulette « bénie »'],
-    ['un vieux poignard au manche d’os', 'objet', 'Poignard au manche d’os'], ['des torches de résine', 'torches', ''], ['un parchemin couvert de symboles', 'objet', 'Parchemin couvert de symboles'],
+    ['un vieux poignard au manche d’os', 'objet', 'Poignard au manche d’os'], ['une lanterne de cuivre', 'objet', 'Lanterne de cuivre'], ['un parchemin couvert de symboles', 'objet', 'Parchemin couvert de symboles'],
     ['une lanterne sourde', 'objet', 'Lanterne sourde'], ['une boussole naine qui ne montre pas le nord', 'objet', 'Boussole naine (qui ne montre pas le nord)'],
     ['des dés pipés', 'objet', 'Dés pipés'], ['une bague en argent terni', 'objet', 'Bague en argent terni'], ['une corde de soie d’araignée', 'objet', 'Corde de soie d’araignée (15 m)'],
     ['un onguent contre les brûlures', 'soin', ''], ['une gourde de liqueur naine', 'objet', 'Gourde de liqueur naine']];
@@ -94,7 +94,7 @@ COF.Imprevus = (function () {
     { id: 'voyageur', env: N.concat(U), poids: 4, titre: 'Une rencontre', slots: { p: PERSONNES, etat: ETATS, demande: DEMANDES },
       intro: ['{h} croise {p_un} {etat}. {p_le} {demande}.', '{p_un} {etat} s’approche de {h}. Sans préambule, {p_le} {demande}.'],
       choix: [
-        { nom: 'Rendre service', auto: true, aide: '−1 ration, mais un allié de plus', ok: ['{h} partage ce qu’il faut et prête main-forte. {p_le} promet de ne pas l’oublier.'], eff: ['rations-', 'allie'] },
+        { nom: 'Rendre service', auto: true, aide: 'un allié de plus', ok: ['{h} partage ce qu’il faut et prête main-forte. {p_le} promet de ne pas l’oublier.'], eff: ['rations-', 'allie'] },
         { nom: 'Faire parler {p_le}', carac: 'CHA', ok: ['En confiance, {p_le} raconte ce qu’il sait : il est question de {histoire}.', '{p_le} finit par lâcher une information qui pourrait servir.'], eff: ['rumeur', 'prog'],
           ko: ['{p_le} se méfie et coupe court à la conversation.'] },
         { nom: 'Rester sur ses gardes', carac: 'PER', ok: ['{h} remarque à temps la main qui glissait vers sa bourse. {p_le} déguerpit sans demander son reste.'], eff: ['tension-'],
@@ -229,6 +229,249 @@ COF.Imprevus = (function () {
         { nom: 'Déchiffrer', carac: 'INT', ok: ['Le texte révèle un passage secret et ce qu’il protège.'], eff: ['po+', 'prog'], ko: ['En voulant mieux voir, {h} déclenche un vieux mécanisme.'], effKo: ['pv-'] },
         { nom: 'Recopier pour plus tard', auto: true, aide: 'une heure perdue', ok: ['{h} recopie soigneusement l’inscription.'], eff: ['temps', 'indice'] }
       ] },
+    /* ===== Imprévus supplémentaires ===== */
+    { id: 'pont', env: N, poids: 2, titre: 'Le péage', slots: { p: ['m:troll bougon', 'm:vieux passeur', 'f:gardienne du gué', 'm:soldat désœuvré', 'f:sorcière édentée'], prix: ['une chanson', 'une énigme résolue', 'une pièce d’or', 'un secret', 'un objet personnel'] },
+      intro: ['{p_un} garde le seul passage et exige un péage : {prix}.', 'Pour traverser, il faut l’accord {p_de}, qui réclame {prix}.'],
+      choix: [
+        { nom: 'Payer le prix demandé', auto: true, aide: 'quelques pièces', ok: ['{p_le} s’écarte avec un sourire satisfait.'], eff: ['po-petit'] },
+        { nom: 'Ruser', carac: 'INT', ok: ['{h} trouve la faille dans le marché, et passe pour rien.'], eff: ['tension-'], ko: ['{p_le} n’est pas né{p_e} de la dernière pluie.'], effKo: ['po-'] },
+        { nom: 'Passer en force', carac: 'FOR', ok: ['{h} bouscule le gardien et traverse.'], eff: ['rep-'], ko: ['Le gardien n’apprécie pas.'], effKo: ['combat'] }
+      ] },
+    { id: 'colporteur_chanteur', env: N.concat(U), poids: 2, titre: 'Un musicien de passage', slots: { p: ['m:ménestrel aveugle', 'f:joueuse de vielle', 'm:barde fatigué', 'f:chanteuse des rues'], chant: ['une ballade sur un héros oublié', 'une complainte sur la menace qui grandit', 'une chanson grivoise', 'un air que personne ne connaît'] },
+      intro: ['{p_un} joue {chant} au bord du chemin, un chapeau posé devant soi.'],
+      choix: [
+        { nom: 'Écouter attentivement', auto: true, aide: 'une rumeur', ok: ['Les paroles cachent une histoire vraie.'], eff: ['rumeur'] },
+        { nom: 'Donner une pièce', auto: true, aide: '−1 po, tension −1', ok: ['{p_le} remercie {h} d’un air chaleureux.'], eff: ['po-1', 'tension-'] },
+        { nom: 'Chanter avec {p_le}', carac: 'CHA', ok: ['Le duo improvisé attire une petite foule. On applaudit.'], eff: ['allie', 'tension-'], ko: ['Une fausse note gâche tout.'] }
+      ] },
+    { id: 'cadavre_message', env: null, poids: 2, titre: 'Un messager mort', slots: { sceau: ['un sceau de cire noire', 'les armoiries d’une grande famille', 'le symbole d’un temple', 'une marque inconnue'] },
+      intro: ['Un messager gît au bord du chemin, une flèche dans le dos. Sa sacoche porte {sceau}.'],
+      choix: [
+        { nom: 'Lire le message', carac: 'INT', ok: ['Le message est codé, mais {h} en perce le sens : de quoi changer bien des choses.'], eff: ['quete'], ko: ['Le code reste indéchiffrable.'], effKo: ['rumeur'] },
+        { nom: 'Chercher le tireur', carac: 'PER', ok: ['Des traces mènent à un affût abandonné… et à un indice.'], eff: ['indice'], ko: ['Le tireur n’est pas loin, et il a vu {h}.'], effKo: ['combat'] },
+        { nom: 'Enterrer le malheureux', auto: true, aide: 'tension −1', ok: ['{h} offre au messager une sépulture décente.'], eff: ['tension-', 'temps'] }
+      ] },
+    { id: 'caravane', env: ['plaine', 'foret', 'montagne'], poids: 2, titre: 'Une caravane', slots: { chef: ['f:caravanière au chapeau de feutre', 'm:marchand nain', 'm:vieux conducteur de bœufs'] },
+      intro: ['Une caravane de chariots avance lentement. {chef_un} salue {h} et propose de faire route ensemble.'],
+      choix: [
+        { nom: 'Faire un bout de chemin avec elle', auto: true, aide: 'objectif +1, un bon repas', ok: ['Les heures passent vite en bonne compagnie.'], eff: ['prog', 'rations+'] },
+        { nom: 'Offrir sa protection contre paiement', carac: 'CHA', ok: ['Marché conclu : quelques pièces pour veiller sur les chariots.'], eff: ['po+'], ko: ['« On a déjà nos gardes. »'] },
+        { nom: 'Commercer', carac: 'CHA', ok: ['Un échange avantageux.'], eff: ['po+'], ko: ['Les prix sont exorbitants.'] }
+      ] },
+    { id: 'ermite', env: N, poids: 2, titre: 'Un ermite', slots: { lubie: ['parle aux corbeaux', 'collectionne les os', 'prétend avoir cent ans', 'ne parle qu’en énigmes', 'vit dans un arbre creux'] },
+      intro: ['Une cabane de branchages : un ermite y vit, et {lubie}. Il fixe {h} sans un mot.'],
+      choix: [
+        { nom: 'Écouter ses délires', carac: 'INT', ok: ['Au milieu des divagations, une vérité surprenante.'], eff: ['indice', 'indiceSaga'], ko: ['Rien de compréhensible.'] },
+        { nom: 'Lui offrir à manger', auto: true, aide: 'un allié de plus', ok: ['L’ermite partage son feu, et sa reconnaissance.'], eff: ['allie'] },
+        { nom: 'Passer son chemin', auto: true, aide: 'rien ne se passe', ok: ['{h} s’éloigne. L’ermite ricane dans son dos.'] }
+      ] },
+    { id: 'fete_village', env: U, poids: 2, titre: 'Jour de fête', slots: { fete: ['la fête des moissons', 'un mariage', 'la foire aux bestiaux', 'la fête du saint patron', 'le carnaval des masques'] },
+      intro: ['Aujourd’hui, c’est {fete} : lampions, musique, odeurs de grillades.'],
+      choix: [
+        { nom: 'Se mêler à la fête', carac: 'CHA', ok: ['{h} trinque, danse, rit : on se souviendra de ce passage.'], eff: ['rep+', 'tension-'], ko: ['{h} se sent étranger à la liesse.'] },
+        { nom: 'Écouter les conversations', carac: 'PER', ok: ['Entre deux chansons, un nom revient souvent.'], eff: ['rumeur'], ko: ['Trop de bruit.'] },
+        { nom: 'Profiter du repas offert', auto: true, aide: 'un bon repas', ok: ['On ne refuse pas un tel festin.'], eff: ['rations+'] }
+      ] },
+    { id: 'vieux_soldat', env: U.concat(['plaine']), poids: 2, titre: 'Un vétéran', slots: { guerre: ['la guerre des Trois Couronnes', 'le siège de la cité rouge', 'la grande invasion du nord', 'une bataille dont il ne dit pas le nom'] },
+      intro: ['Un vieux soldat amputé d’un bras raconte {guerre} à qui veut l’entendre.'],
+      choix: [
+        { nom: 'Lui payer à boire', auto: true, aide: '−1 po, un conseil', ok: ['Le vétéran lâche un conseil de survie précieux.'], eff: ['po-1', 'indice'] },
+        { nom: 'Lui demander de l’entraîner', carac: 'VOL', ok: ['Une heure de leçons dures, mais utiles.'], eff: ['indice', 'allie'], ko: ['« Reviens quand tu seras prêt. »'] },
+        { nom: 'L’écouter jusqu’au bout', auto: true, aide: 'une rumeur', ok: ['Ses histoires cachent une piste.'], eff: ['rumeur', 'temps'] }
+      ] },
+    { id: 'contrebande', env: U.concat(['marais', 'foret']), poids: 2, titre: 'Des contrebandiers',
+      intro: ['À l’abri des regards, des hommes déchargent des caisses sans marque. On n’aime pas les témoins.'],
+      choix: [
+        { nom: 'Leur proposer ses services', carac: 'CHA', ok: ['Un petit boulot contre de bonnes pièces.'], eff: ['po+', 'rep-', 'fac+pegre'], ko: ['« On ne travaille pas avec des inconnus. »'], effKo: ['danger'] },
+        { nom: 'Les dénoncer à la garde', auto: true, aide: 'la garde apprécie, la pègre beaucoup moins', ok: ['La garde intervient. Les contrebandiers jurent vengeance.'], eff: ['rep+', 'hostile', 'fac+garde', 'fac-pegre'] },
+        { nom: 'Se faire oublier', carac: 'AGI', ok: ['{h} s’éclipse sans un bruit.'], ko: ['Repéré !'], effKo: ['combat'] }
+      ] },
+    { id: 'source_magique', env: N.concat(S), poids: 1, titre: 'Une source étrange', slots: { coul: ['argentée', 'd’un bleu irréel', 'qui scintille', 'tiède et sucrée'] },
+      intro: ['Une source {coul} jaillit d’un rocher couvert de runes effacées.'],
+      choix: [
+        { nom: 'Boire', auto: true, aide: 'à vos risques…', ok: ['L’eau a un goût de lumière.'], eff: ['pv+', 'indice'] },
+        { nom: 'Étudier les runes', carac: 'INT', ok: ['Les runes parlent d’un lieu oublié.'], eff: ['lieu'], ko: ['Les runes restent muettes.'] },
+        { nom: 'Remplir une gourde', auto: true, aide: 'un objet', ok: ['On ne sait jamais.'], eff: ['trouvaille'] }
+      ] },
+    { id: 'noble_carrosse', env: ['plaine', 'foret', 'urbain'], poids: 2, titre: 'Un carrosse en panne', slots: { n: ['f:comtesse hautaine', 'm:baron replet', 'f:jeune héritière', 'm:évêque pressé'] },
+      intro: ['Un carrosse est embourbé, une roue brisée. {n_un} trépigne d’impatience.'],
+      choix: [
+        { nom: 'Réparer la roue', carac: 'FOR', ok: ['Le carrosse repart ; {n_le} glisse une bourse à {h}.'], eff: ['po+', 'allie'], ko: ['La roue casse à nouveau. {n_le} fulmine.'], effKo: ['tension+'] },
+        { nom: 'Lui faire la conversation', carac: 'CHA', ok: ['{n_le} se montre bavard{n_e} sur les intrigues de la cour.'], eff: ['rumeur', 'indice'], ko: ['{n_le} toise {h} avec mépris.'] },
+        { nom: 'L’ignorer', auto: true, aide: 'rien ne se passe', ok: ['Les nobles ne sont pas l’affaire de {h}.'] }
+      ] },
+    { id: 'animal_blesse', env: N, poids: 2, titre: 'Un animal blessé', slots: { a: ['m:faucon à l’aile brisée', 'f:renarde prise au collet', 'm:jeune loup affamé', 'm:corbeau parlant', 'f:chèvre égarée'] },
+      intro: ['{a_un} gémit au bord du sentier.'],
+      choix: [
+        { nom: 'Le soigner', carac: 'INT', ok: ['L’animal se laisse faire, puis suit {h} un moment, comme pour le remercier. Un bon présage.'], eff: ['tension-', 'indice'], ko: ['L’animal mord et s’enfuit.'], effKo: ['pv-'] },
+        { nom: 'L’achever proprement', auto: true, aide: 'un bon repas', ok: ['Un geste dur, mais miséricordieux.'], eff: ['rations+'] },
+        { nom: 'Passer son chemin', auto: true, aide: 'rien ne se passe', ok: ['La nature suit son cours.'] }
+      ] },
+    { id: 'statue_parlante', env: S.concat(['foret']), poids: 1, titre: 'Une statue qui parle',
+      intro: ['Une statue couverte de mousse ouvre les yeux. « Réponds à ma question, voyageur, et je te dirai ce que tu cherches. »'],
+      choix: [
+        { nom: 'Répondre à l’énigme', carac: 'INT', ok: ['« Bien répondu. » La statue révèle un secret.'], eff: ['indiceSaga', 'prog'], ko: ['La statue se tait à jamais. Un frisson parcourt {h}.'], effKo: ['tension+'] },
+        { nom: 'Lui demander son histoire', carac: 'CHA', ok: ['La statue raconte un lieu englouti par le temps.'], eff: ['lieu'], ko: ['Silence.'] },
+        { nom: 'Fuir', auto: true, aide: 'rien ne se passe', ok: ['{h} ne tient pas à discuter avec des pierres.'] }
+      ] },
+    { id: 'pari_route', env: U.concat(['plaine']), poids: 2, titre: 'Un pari', slots: { p: PERSONNES, defi: ['atteindre le prochain arbre avant lui', 'deviner le poids d’un cochon', 'compter les moutons du troupeau', 'faire tomber une pomme d’un caillou'] },
+      intro: ['{p_un} propose un pari idiot : {defi}. Enjeu : quelques pièces.'],
+      choix: [
+        { nom: 'Accepter', carac: 'PER', ok: ['{h} gagne le pari haut la main.'], eff: ['po+'], ko: ['Perdu !'], effKo: ['po-petit'] },
+        { nom: 'Refuser poliment', auto: true, aide: 'rien ne se passe', ok: ['{p_le} hausse les épaules.'] }
+      ] },
+    { id: 'traces_sang', env: null, poids: 2, titre: 'Des traces de sang',
+      intro: ['Une traînée de sang frais part du chemin et s’enfonce dans les fourrés.'],
+      choix: [
+        { nom: 'Suivre la piste', carac: 'PER', ok: ['Un blessé, caché, qui a beaucoup à raconter.'], eff: ['allie', 'rumeur'], ko: ['La piste mène droit à ce qui l’a blessé.'], effKo: ['combat'] },
+        { nom: 'Rester sur ses gardes', auto: true, aide: 'dé bonus au prochain jet', ok: ['{h} avance, la main sur son arme.'], eff: ['indice'] },
+        { nom: 'Faire demi-tour', auto: true, aide: 'une heure perdue', ok: ['Mieux vaut un détour.'], eff: ['temps'] }
+      ] },
+    { id: 'eboulement_mine', env: S.concat(['montagne']), poids: 2, titre: 'Des mineurs piégés',
+      intro: ['Des cris étouffés sous un éboulis : des mineurs sont pris au piège !'],
+      choix: [
+        { nom: 'Dégager les pierres', carac: 'FOR', ok: ['Un à un, les mineurs sortent, couverts de poussière et de reconnaissance.'], eff: ['allie', 'rep+'], ko: ['Les pierres glissent et blessent {h}.'], effKo: ['pv-'] },
+        { nom: 'Étayer la galerie', carac: 'INT', ok: ['Un étai bien placé, et le passage est sûr.'], eff: ['allie', 'po+'], ko: ['L’étai cède.'], effKo: ['pv-', 'temps'] },
+        { nom: 'Aller chercher de l’aide', auto: true, aide: 'une heure perdue, réputation +1', ok: ['{h} revient avec des bras.'], eff: ['temps', 'rep+'] }
+      ] },
+    { id: 'jumeaux', env: U, poids: 1, titre: 'Un sosie',
+      intro: ['Quelqu’un dans la foule ressemble trait pour trait à {h}… et on l’accuse déjà de méfaits commis la veille.'],
+      choix: [
+        { nom: 'Prouver son innocence', carac: 'CHA', ok: ['Les témoins se rétractent ; le sosie a filé.'], eff: ['rep+', 'rumeur'], ko: ['Le doute reste.'], effKo: ['rep-'] },
+        { nom: 'Poursuivre le sosie', carac: 'AGI', ok: ['Rattrapé : c’est un doppelganger, ou un sacré comédien.'], eff: ['indice', 'combat'], ko: ['Il s’évanouit dans la foule.'], effKo: ['rep-'] }
+      ] },
+    /* ===== Rebondissements : retournements en pleine scène (tirés à part) ===== */
+    { id: 'r_trahison', rebond: true, besoin: 'com', poids: 0, titre: 'Rebondissement : un mensonge', slots: { rev: ['la cible n’est pas du tout ce qu’on croyait', 'l’objet convoité appartient en réalité à quelqu’un d’autre', 'le commanditaire cherche une vengeance, pas la justice', 'toute l’affaire sert à couvrir un crime plus grave'] },
+      intro: ['Un détail ne colle pas, puis tout s’éclaire : {com} a menti. En vérité, {rev}.', 'Une lettre oubliée révèle la vérité : {rev}. {com} s’est bien gardé de le dire.'],
+      choix: [
+        { nom: 'Confronter {com}', carac: 'CHA', ok: ['Pris en faute, {com} avoue tout et fournit enfin les vraies informations.'], eff: ['indice', 'prog'], ko: ['{com} nie en bloc et se méfie désormais de {h}.'], effKo: ['tension+'] },
+        { nom: 'Enquêter discrètement', carac: 'INT', ok: ['{h} reconstitue la vérité sans éveiller les soupçons.'], eff: ['prog', 'indice'], ko: ['L’enquête piétine, et le temps file.'], effKo: ['temps', 'danger'] },
+        { nom: 'Faire comme si de rien n’était', auto: true, aide: 'danger +1', ok: ['{h} garde le secret pour soi… pour l’instant.'], eff: ['danger'] }
+      ] },
+    { id: 'r_rival', rebond: true, poids: 0, titre: 'Rebondissement : un rival', slots: { p: ['m:chasseur de primes', 'f:aventurière ambitieuse', 'm:mercenaire sans scrupules', 'f:espionne d’une guilde', 'm:noble ruiné'] },
+      intro: ['{p_un} surgit : {p_il} poursuit exactement le même but que {h}, et n’a pas l’intention de partager.', 'Quelqu’un est déjà passé par ici : {p_un}, qui a une longueur d’avance.'],
+      choix: [
+        { nom: 'Le prendre de vitesse', carac: 'AGI', ok: ['{h} coupe l’herbe sous le pied de son rival.'], eff: ['prog'], ko: ['Le rival prend de l’avance.'], effKo: ['prog-', 'danger'] },
+        { nom: 'Proposer une alliance', carac: 'CHA', ok: ['Le rival accepte de faire équipe — pour cette fois.'], eff: ['allie', 'prog'], ko: ['Le rival éclate de rire et devient un ennemi.'], effKo: ['hostile'] },
+        { nom: 'L’intimider', carac: 'FOR', ok: ['Le rival renonce et s’éclipse.'], eff: ['tension-'], ko: ['Les armes sortent.'], effKo: ['combat'] }
+      ] },
+    { id: 'r_piege', rebond: true, poids: 0, titre: 'Rebondissement : un piège', slots: { pg: ['la porte se referme derrière {h}', 'des archers prennent position sur les toits', 'le sol se dérobe sous les pieds de {h}', 'le guide disparaît, laissant {h} seul{he} face à l’ennemi'] },
+      intro: ['C’était un piège ! {pg}.', 'Trop tard, {h} comprend qu’on l’attendait : {pg}.'],
+      choix: [
+        { nom: 'Se dégager à temps', carac: 'AGI', ok: ['D’un bond, {h} échappe au piège.'], eff: ['indice'], ko: ['{h} s’en sort, mais pas sans mal.'], effKo: ['pv-'] },
+        { nom: 'Faire front', auto: true, aide: 'le combat commence', ok: ['{h} se retourne, arme au poing.'], eff: ['combat'] },
+        { nom: 'Gagner du temps en parlant', carac: 'CHA', ok: ['Quelques mots habiles sèment le doute chez les assaillants.'], eff: ['prog'], ko: ['Personne n’écoute.'], effKo: ['combat'] }
+      ] },
+    { id: 'r_temoin', rebond: true, poids: 0, titre: 'Rebondissement : un témoin', slots: { p: ['m:palefrenier terrifié', 'f:servante qui en sait trop', 'm:gamin des rues', 'f:vieille lavandière'] },
+      intro: ['{p_un} fait signe à {h} : {p_il} a tout vu. Mais deux hommes louches ne {p_lo} quittent pas des yeux.'],
+      choix: [
+        { nom: 'Protéger le témoin', carac: 'FOR', ok: ['{h} met le témoin à l’abri ; {p_il} raconte tout, soulagé{p_e}.'], eff: ['allie', 'prog'], ko: ['Les deux hommes s’interposent.'], effKo: ['combat'] },
+        { nom: 'L’interroger en vitesse', carac: 'CHA', ok: ['En quelques mots, le témoin livre l’essentiel avant de filer.'], eff: ['indice', 'prog'], ko: ['Le témoin panique et s’enfuit.'], effKo: ['danger'] },
+        { nom: 'Le laisser tranquille', auto: true, aide: 'tension +1', ok: ['{h} s’éloigne. Le lendemain, on retrouvera le témoin… muet pour toujours.'], eff: ['tension+'] }
+      ] },
+    { id: 'r_feu', rebond: true, poids: 0, titre: 'Rebondissement : le feu',
+      intro: ['Une odeur de fumée, puis des cris : le feu prend tout près, et des gens sont pris au piège.'],
+      choix: [
+        { nom: 'Se jeter dans les flammes pour les sauver', carac: 'CON', ok: ['{h} ressort de la fumée avec un enfant dans les bras. On l’acclame.'], eff: ['rep+', 'allie'], ko: ['{h} sauve qui {hil} peut, mais les flammes laissent leur marque.'], effKo: ['pv-', 'rep+'] },
+        { nom: 'Organiser une chaîne de seaux', carac: 'CHA', ok: ['Sous la direction de {h}, le feu est maîtrisé.'], eff: ['rep+', 'tension-'], ko: ['La panique l’emporte.'], effKo: ['temps'] },
+        { nom: 'Profiter de la confusion', auto: true, aide: 'objectif +1, mais réputation −1', ok: ['Pendant que tout le monde court, {h} avance dans son affaire.'], eff: ['prog', 'rep-'] }
+      ] },
+    { id: 'r_agents', rebond: true, besoin: 'menace', poids: 0, titre: 'Rebondissement : la main de la menace',
+      intro: ['Des silhouettes portant la marque de {menace} rôdent : elles cherchent la même chose que {h}. Ce n’est pas un hasard.'],
+      choix: [
+        { nom: 'Les suivre en secret', carac: 'AGI', ok: ['{h} file les agents jusqu’à un lieu de rendez-vous et surprend leurs plans.'], eff: ['indiceSaga'], ko: ['Repéré !'], effKo: ['combat'] },
+        { nom: 'Les affronter', auto: true, aide: 'le combat commence', ok: ['{h} leur barre la route.'], eff: ['combat'] },
+        { nom: 'Les laisser passer', auto: true, aide: 'la menace avance', ok: ['{h} se fait discret. Les agents repartent avec ce qu’ils cherchaient.'], eff: ['sagaAvance'] }
+      ] },
+    { id: 'r_deplace', rebond: true, poids: 0, titre: 'Rebondissement : tout est à refaire',
+      intro: ['Mauvaise nouvelle : ce que {h} cherchait a été déplacé il y a peu. Il va falloir reprendre la piste.'],
+      choix: [
+        { nom: 'Retrouver la nouvelle piste', carac: 'PER', ok: ['Les traces sont fraîches : {h} sait où chercher.'], eff: ['indice'], ko: ['La piste s’est refroidie.'], effKo: ['prog-'] },
+        { nom: 'Questionner les gens du coin', carac: 'CHA', ok: ['Un habitant a tout vu passer.'], eff: ['indice'], ko: ['Personne ne sait rien.'], effKo: ['prog-'] }
+      ] },
+    { id: 'r_complice', rebond: true, poids: 0, titre: 'Rebondissement : une aide inattendue', slots: { p: ['m:contrebandier', 'f:voleuse repentie', 'm:garde corrompu', 'f:informatrice de la pègre'] },
+      intro: ['{p_un} aborde {h} : {p_il} connaît un raccourci… contre une part du butin.'],
+      choix: [
+        { nom: 'Accepter le marché', auto: true, aide: 'objectif +1, quelques pièces', ok: ['Le marché est conclu ; le raccourci existe bel et bien.'], eff: ['prog', 'po-petit'] },
+        { nom: 'Marchander', carac: 'CHA', ok: ['Pour presque rien, {h} obtient l’information.'], eff: ['prog'], ko: ['Vexé, l’informateur va vendre l’information à d’autres.'], effKo: ['danger'] },
+        { nom: 'Refuser', auto: true, aide: 'rien ne se passe', ok: ['{h} refuse. On ne fait pas confiance à n’importe qui.'] }
+      ] },
+    { id: 'r_foule', rebond: true, poids: 0, titre: 'Rebondissement : la foule',
+      intro: ['Une rumeur court : {h} serait responsable des malheurs du coin. Une foule en colère se forme.'],
+      choix: [
+        { nom: 'Calmer les esprits', carac: 'CHA', ok: ['La foule se disperse, convaincue.'], eff: ['rep+'], ko: ['Les pierres volent.'], effKo: ['pv-', 'rep-'] },
+        { nom: 'Tenir tête', carac: 'VOL', ok: ['Le regard de {h} suffit à faire reculer les plus hardis.'], eff: ['tension-'], ko: ['La foule s’enhardit.'], effKo: ['rep-', 'danger'] },
+        { nom: 'S’éclipser', carac: 'AGI', ok: ['{h} disparaît dans une ruelle.'], eff: ['temps'], ko: ['Rattrapé, {h} est malmené.'], effKo: ['pv-'] }
+      ] },
+    { id: 'r_dilemme', rebond: true, poids: 0, titre: 'Rebondissement : un dilemme',
+      intro: ['{h} comprend qu’en allant plus loin, un innocent paiera à sa place. Personne ne le saura jamais… sauf {h}.'],
+      choix: [
+        { nom: 'Épargner l’innocent', auto: true, aide: 'tension −1, mais l’objectif recule', ok: ['{h} choisit la voie juste, quoi qu’il en coûte.'], eff: ['tension-', 'prog-', 'rep+'] },
+        { nom: 'Continuer coûte que coûte', auto: true, aide: 'objectif +1, mais tension +1', ok: ['{h} serre les dents et continue. Il faudra vivre avec.'], eff: ['prog', 'tension+'] },
+        { nom: 'Chercher une autre voie', carac: 'INT', ok: ['{h} trouve un moyen d’épargner l’innocent sans renoncer.'], eff: ['prog'], ko: ['Pas d’autre issue…'], effKo: ['tension+'] }
+      ] },
+    { id: 'r_enleve', rebond: true, poids: 0, titre: 'Rebondissement : un enlèvement', slots: { p: ['m:jeune garçon d’écurie', 'f:fille de l’aubergiste', 'm:vieux guide', 'f:herboriste du coin'] },
+      intro: ['Des cris : {p_un}, qui avait aidé {h}, vient d’être enlevé{p_e} sous ses yeux. Un message est resté sur place : « Laissez tomber. »'],
+      choix: [
+        { nom: 'Se lancer à sa poursuite', carac: 'AGI', ok: ['{h} rattrape les ravisseurs avant qu’ils ne disparaissent.'], eff: ['combat'], ko: ['Ils ont trop d’avance… pour l’instant.'], effKo: ['danger', 'tension+'] },
+        { nom: 'Interroger les témoins', carac: 'CHA', ok: ['Un témoin a vu la direction prise.'], eff: ['indice', 'prog'], ko: ['La peur scelle les lèvres.'], effKo: ['danger'] },
+        { nom: 'Obéir au message', auto: true, aide: 'tension +1', ok: ['{h} fait profil bas. Mais cette histoire ne s’arrêtera pas là.'], eff: ['tension+', 'rumeur'] }
+      ] },
+    { id: 'r_tempete', rebond: true, poids: 0, titre: 'Rebondissement : les éléments',
+      intro: ['Le ciel se déchire : une tempête d’une violence inouïe s’abat d’un coup, au pire moment.'],
+      choix: [
+        { nom: 'Chercher un abri et attendre', auto: true, aide: 'une heure perdue', ok: ['Blotti sous un surplomb, {h} attend que ça passe.'], eff: ['temps'] },
+        { nom: 'Profiter de la tempête pour avancer', carac: 'CON', ok: ['Personne ne surveille par un temps pareil : {h} en profite.'], eff: ['prog', 'prog'], ko: ['Les éléments sont plus forts.'], effKo: ['pv-'] }
+      ] },
+    { id: 'r_faux', rebond: true, poids: 0, titre: 'Rebondissement : un faux',
+      intro: ['Ce que {h} croyait authentique est un faux grossier. Quelqu’un a voulu brouiller les pistes.'],
+      choix: [
+        { nom: 'Remonter au faussaire', carac: 'INT', ok: ['Le faussaire a laissé sa signature : une piste toute fraîche.'], eff: ['prog', 'indice'], ko: ['Impossible de savoir d’où vient la contrefaçon.'], effKo: ['prog-'] },
+        { nom: 'Utiliser le faux comme appât', carac: 'CHA', ok: ['Le piège fonctionne : quelqu’un mord à l’hameçon.'], eff: ['prog', 'allie'], ko: ['Personne n’y croit.'] }
+      ] },
+    { id: 'r_jalousie', rebond: true, besoin: 'compagnon', poids: 0, titre: 'Rebondissement : une dispute',
+      intro: ['Un compagnon de {h} conteste sa façon de mener l’affaire. Le ton monte.'],
+      choix: [
+        { nom: 'Écouter ses arguments', auto: true, aide: 'loyauté, mais l’objectif recule', ok: ['{h} reconnaît avoir eu tort. L’atmosphère s’apaise.'], eff: ['prog-', 'tension-'] },
+        { nom: 'Imposer son point de vue', carac: 'VOL', ok: ['L’autorité de {h} ne se discute pas.'], eff: ['prog'], ko: ['Le compagnon s’éloigne, vexé.'], effKo: ['tension+'] }
+      ] },
+    { id: 'r_offre', rebond: true, besoin: 'menace', poids: 0, titre: 'Rebondissement : une offre',
+      intro: ['Un émissaire de {menace} aborde {h} : « Mon maître admire votre talent. Rejoignez-nous, et vous serez riche. »'],
+      choix: [
+        { nom: 'Feindre d’accepter', carac: 'CHA', ok: ['L’émissaire repart confiant, et {h} en sait désormais beaucoup plus.'], eff: ['indiceSaga'], ko: ['L’émissaire n’est pas dupe.'], effKo: ['combat'] },
+        { nom: 'Refuser net', auto: true, aide: 'la menace se méfie', ok: ['« Dites à votre maître que je viendrai le chercher moi-même. »'], eff: ['sagaAvance', 'tension-'] },
+        { nom: 'Capturer l’émissaire', carac: 'FOR', ok: ['Ligoté, l’émissaire finit par parler.'], eff: ['indiceSaga', 'prog'], ko: ['Il appelle ses gardes.'], effKo: ['combat'] }
+      ] },
+    { id: 'r_vieille_dette', rebond: true, poids: 0, titre: 'Rebondissement : une vieille dette', slots: { p: ['m:usurier', 'f:ancienne compagne d’armes', 'm:frère d’armes trahi', 'f:marchande flouée'] },
+      intro: ['{p_un} surgit du passé de {h} : « Tu me dois quelque chose. Et c’est maintenant que je viens le réclamer. »'],
+      choix: [
+        { nom: 'Payer sa dette', auto: true, aide: 'des pièces', ok: ['La dette est réglée. Une page se tourne.'], eff: ['po-', 'tension-'] },
+        { nom: 'Négocier un service', carac: 'CHA', ok: ['{p_le} accepte une aide en échange, et devient un allié.'], eff: ['allie'], ko: ['{p_le} repart, rancunier.'], effKo: ['hostile'] }
+      ] },
+    { id: 'r_maladie', rebond: true, poids: 0, titre: 'Rebondissement : la fièvre',
+      intro: ['{h} sent la fièvre monter : une mauvaise eau, une piqûre, un mauvais sort ? Les jambes deviennent lourdes.'],
+      choix: [
+        { nom: 'Serrer les dents', carac: 'CON', ok: ['La fièvre tombe aussi vite qu’elle était venue.'], eff: ['prog'], ko: ['Des heures de délire.'], effKo: ['pv-', 'temps'] },
+        { nom: 'Se reposer un peu', auto: true, aide: 'une heure perdue', ok: ['Une courte sieste, et ça va mieux.'], eff: ['temps', 'pv+'] }
+      ] },
+    { id: 'r_carte', rebond: true, poids: 0, titre: 'Rebondissement : une carte',
+      intro: ['Dans une poche, un tiroir, un coffre : une carte annotée de la main de quelqu’un qui cherchait la même chose que {h}.'],
+      choix: [
+        { nom: 'Suivre la carte', carac: 'PER', ok: ['La carte mène à un lieu qu’on croyait légendaire.'], eff: ['lieu', 'prog'], ko: ['La carte est fausse… ou incomplète.'], effKo: ['temps'] },
+        { nom: 'L’étudier tranquillement', carac: 'INT', ok: ['Les annotations révèlent un secret.'], eff: ['indice', 'indiceSaga'], ko: ['Des gribouillis.'] }
+      ] },
+    { id: 'r_innocent', rebond: true, poids: 0, titre: 'Rebondissement : un faux coupable',
+      intro: ['La garde vient d’arrêter quelqu’un pour l’affaire que suit {h}… mais {h} sait que ce n’est pas le bon.'],
+      choix: [
+        { nom: 'Prouver son innocence', carac: 'INT', ok: ['Les preuves sont accablantes : on libère l’innocent, qui jure fidélité à {h}.'], eff: ['allie', 'rep+'], ko: ['Personne ne veut entendre.'], effKo: ['tension+'] },
+        { nom: 'Laisser faire', auto: true, aide: 'objectif +1, tension +1', ok: ['Le vrai coupable baisse sa garde : une chance à saisir.'], eff: ['prog', 'tension+'] }
+      ] },
+    { id: 'r_trahison_allie', rebond: true, besoin: 'allie', poids: 0, titre: 'Rebondissement : un allié douteux',
+      intro: ['Un allié de {h} a été vu en compagnie des ennemis. Coïncidence, ou double jeu ?'],
+      choix: [
+        { nom: 'Le confronter', carac: 'CHA', ok: ['Malentendu : il espionnait pour {h}, et rapporte des informations.'], eff: ['indice', 'prog'], ko: ['Il nie, et la confiance est brisée.'], effKo: ['tension+'] },
+        { nom: 'Le suivre en secret', carac: 'AGI', ok: ['La vérité éclate : il est fidèle.'], eff: ['tension-'], ko: ['Repéré : l’allié est vexé.'], effKo: ['tension+'] }
+      ] },
     /* PNJ déjà rencontrés qui reviennent (tirés à part, voir declencher) */
     { id: 'retourAmi', env: null, poids: 0, titre: 'Un visage connu',
       intro: ['« {h} ! » Une voix familière : c’est {x}, croisé{xe} au jour {xj}.', '{x} ! {h} reconnaît aussitôt ce visage ami, et la rencontre fait chaud au cœur.'],
@@ -271,7 +514,7 @@ COF.Imprevus = (function () {
     Object.keys(m.slots || {}).forEach(function (k) {
       var x = p(m.slots[k]);
       if (Array.isArray(x)) { v[k + '0'] = x[0]; v[k + '1'] = x[1]; v[k + '2'] = x[2]; }
-      else if (/^[mf]:/.test(x)) { var g = np(x); v[k + '_un'] = g.un; v[k + '_le'] = g.le; v[k + '_de'] = g.de; v[k + '_a'] = g.a; v[k + '_e'] = g.e; }
+      else if (/^[mf]:/.test(x)) { var g = np(x); v[k + '_un'] = g.un; v[k + '_le'] = g.le; v[k + '_de'] = g.de; v[k + '_a'] = g.a; v[k + '_e'] = g.e; v[k + '_il'] = g.e ? 'elle' : 'il'; v[k + '_lo'] = g.e ? 'la' : 'le'; }
       else v[k] = x;
     });
     if (v.g1 && v.g1 === v.g2) v.g2 = 'des gardes';
@@ -280,12 +523,19 @@ COF.Imprevus = (function () {
   function ctxEvt(c, s, evt) { return Object.assign(T().contexte(c, s), evt.v); }
 
   /* Fait surgir un imprévu dans la scène. Renvoie l'événement. */
-  function declencher(c, s, force) {
+  /* opts.rebond : un retournement de situation (modèles « rebond » adaptés à la scène) */
+  function declencher(c, s, opts) {
     var j = s && s.jeu; if (!j || j.fini || j.evt || c.rencontre) return null;
     var ctx0 = T().contexte(c, s), m = tirerModele(ctx0.env), v = remplir(m);
+    if (opts && opts.rebond) {
+      var rb = MODELES.filter(function (x) { return x.rebond && (x.besoin !== 'com' || ctx0.com) && (x.besoin !== 'menace' || (c.saga && !c.saga.fini)) && (x.besoin !== 'compagnon' || (c.pnj || []).some(function (y) { return y.compagnon && y.compagnon.actif; })) && (x.besoin !== 'allie' || (c.pnj || []).some(function (y) { return y.attitude === 'allié'; })) && (j.rebondsVus || []).indexOf(x.id) < 0; });
+      if (!rb.length) return null;
+      m = rb[Math.floor(Math.random() * rb.length)]; v = remplir(m);
+      j.rebondsVus = (j.rebondsVus || []).concat([m.id]);
+    }
     /* un PNJ déjà rencontré peut revenir (allié, ou ennemi qui devient une némésis) */
     var connus = (c.pnj || []).filter(function (x) { return (x.attitude === 'allié' || x.attitude === 'hostile') && !(x.compagnon && x.compagnon.actif) && x.jour !== c.jour; });
-    if (connus.length && Math.random() < 0.3) {
+    if (!(opts && opts.rebond) && connus.length && Math.random() < 0.3) {
       var x = p(connus), ami = x.attitude === 'allié';
       m = modele(ami ? 'retourAmi' : 'retourEnnemi');
       v = { x: x.nom, xid: x.id, xj: x.jour || '?', xe: x.genre === 'féminin' ? 'e' : '' };
@@ -325,9 +575,9 @@ COF.Imprevus = (function () {
           if (hP) { hP.bourse = hP.bourse || { po: 0, pa: 0, pc: 0 }; n = Math.min(n, hP.bourse.po || 0); hP.bourse.po -= n; COF.Store.sauver(hP); x = n ? '−' + n + ' po' : 'bourse vide'; }
           break;
         }
-        case 'rations+': { var r = COF.Expedition.ressources(c), g = 1 + d(3); r.rations += g; x = '+' + g + ' rations'; break; }
-        case 'rations-': { var r2 = COF.Expedition.ressources(c); if (r2.rations > 0) { r2.rations--; x = '−1 ration'; } break; }
-        case 'torches': { COF.Expedition.ressources(c).torches += 3; x = '+3 torches'; break; }
+        case 'rations+': x = T().repas(c); break;   /* de quoi manger : un bon repas */
+        case 'rations-': break;
+        case 'torches': break;
         case 'pv-': x = T().blesser(c, d(4) + Math.floor(niv / 3)); break;
         case 'pv+': case 'soin': {
           if (!hP) break;
@@ -345,7 +595,10 @@ COF.Imprevus = (function () {
           var g = evt.v.p_e !== undefined ? (evt.v.p_e ? 'féminin' : 'masculin') : null;
           var pn = AV().pnj(g ? { genre: g } : {});
           var nx = K().ajouterListe(c, 'pnj', { nom: pn.nom, genre: g || undefined, lieuId: (M().ici(c) || {}).id || null, jour: c.jour, attitude: code === 'allie' ? 'allié' : 'hostile', note: 'Rencontré le jour ' + c.jour + (evt.v.p_un ? ' : ' + evt.v.p_un + (evt.v.etat ? ' ' + evt.v.etat : '') : '') + '.\n' + pn.texte });
-          x = (code === 'allie' ? '🤝 ' : '⚔️ ') + pn.nom + ' ajouté aux PNJ'; break;
+          x = (code === 'allie' ? '🤝 ' : '⚔️ ') + pn.nom + ' ajouté aux PNJ';
+          /* on s'en souviendra : un obligé, ou un ennemi qui reviendra */
+          if (COF.Echos && Math.random() < 0.45) COF.Echos.noter(c, code === 'allie' ? 'sauve' : 'rancune', { pnjId: nx.id });
+          break;
         }
         case 'rumeur': { var ru = AV().rumeur(); K().ajouterListe(c, 'fils', { nom: ru.nom, note: ru.texte }); x = '🧵 ' + ru.nom; break; }
         case 'quete': { var q = COF.Directeur.creerQuete(c); x = '📜 Nouvelle quête : ' + q.nom; out.quete = q; break; }
@@ -359,13 +612,16 @@ COF.Imprevus = (function () {
         case 'achat': {
           var e = evt.v.m1;
           if (e === 'soin') { var r3 = appliquer(c, s, ['pv+'], ctx, evt); x = r3.m; }
-          else if (e === 'rations') { COF.Expedition.ressources(c).rations += 3; x = '+3 rations'; }
-          else if (e === 'torches') { COF.Expedition.ressources(c).torches += 3; x = '+3 torches'; }
+          else if (e === 'rations') { x = T().repas(c); }
+
           else if (e === 'lieu') { var l2 = T().decouvrirLieu(c, null); x = l2 ? '🗺️ ' + l2.nom + ' ajouté à la carte' : ''; }
           else if (hP && evt.v.m2) { COF.Store.ajouterObjet(hP, { nom: evt.v.m2, qte: 1, prix: d(10) }); COF.Store.sauver(hP); x = '🎒 ' + evt.v.m2; }
           break;
         }
         case 'combat': out.combat = true; break;
+        case 'prog-': if (j.prog > 0) { j.prog--; x = 'objectif −1'; } break;
+        case 'indiceSaga': if (COF.Saga && c.saga && !c.saga.fini) x = COF.Saga.indice(c); else { j.bonus = true; x = 'dé bonus au prochain jet'; } break;
+        case 'sagaAvance': if (COF.Saga && c.saga && !c.saga.fini) x = COF.Saga.avancer(c, 1); break;
         case 'recruter': case 'apaiser': case 'nemesis': {
           var px = (c.pnj || []).filter(function (y) { return y.id === evt.v.xid; })[0]; if (!px) break;
           if (code === 'recruter') { px.compagnon = { actif: true, role: 'combattant', niveau: niv }; x = '🤝 ' + px.nom + ' rejoint le héros'; }
@@ -373,6 +629,7 @@ COF.Imprevus = (function () {
           else { px.vus = (px.vus || 0) + 1; if (px.vus >= 2 && !px.nemesis) { px.nemesis = true; x = '☠️ ' + px.nom + ' devient la némésis du héros'; } }
           px.jour = c.jour; break;
         }
+        default: { var fm = /^fac([+-])(\w+)$/.exec(code); if (fm && COF.Factions) x = COF.Factions.changer(c, fm[2], fm[1] === '+' ? 1 : -1); break; }
         case 'rep+': case 'rep-': if (COF.Saga) x = COF.Saga.changerRep(M().ici(c), code === 'rep+' ? 1 : -1); break;
       }
       if (x) m.push(x);
@@ -412,5 +669,5 @@ COF.Imprevus = (function () {
       return tot + n;
     }, 0);
   }
-  return { declencher: declencher, choix: choix, resoudre: resoudre, combinaisons: combinaisons, MODELES: MODELES, np: np };
+  return { declencher: declencher, choix: choix, resoudre: resoudre, appliquer: appliquer, combinaisons: combinaisons, MODELES: MODELES, np: np };
 })();

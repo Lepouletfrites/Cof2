@@ -155,7 +155,13 @@ COF.UI.Marche = (function () {
   function rendre() {
     var n = document.getElementById('vue-marche'); if (!n) return;
     var p = heros(), l = lieuActuel(), T = taille(), v = visite();
-    var h = '<div class="carte"><h2>🛒 Marché' + (l ? ' — ' + esc(l.nom) : '') + '</h2><div class="carte-corps">';
+    /* mode aventure : on vient ici par le récit, et on y retourne */
+    var avent = !!campagne(), retour = avent ? '<button class="btn btn-bloc mc-retour" data-mc="retour">◀ Retour au récit</button>' : '';
+    if (avent && l && !(l.ville || l.env === 'urbain')) {
+      n.innerHTML = retour + '<div class="carte"><h2>🛒 Pas de marché ici</h2><div class="carte-corps"><div class="vide">' + esc(l.nom) + ' n’a ni étals ni échoppes. Il faut rejoindre un village ou une ville pour faire ses achats.</div></div></div>';
+      return;
+    }
+    var h = retour + '<div class="carte"><h2>🛒 Marché' + (l ? ' — ' + esc(l.nom) : '') + '</h2><div class="carte-corps">';
     if (!p) return void (n.innerHTML = h + '<div class="vide">Aucun personnage actif.</div></div></div>');
     h += '<div class="mc-bourse"><span>💰 ' + esc(p.nom) + '</span><b>' + esc(bourseTexte(p)) + '</b></div>';
     var vI = villeIci(), spI = specialite();
@@ -220,6 +226,7 @@ COF.UI.Marche = (function () {
   function action(act, node) {
     var p = heros(); if (!p) return;
     var v = node.getAttribute('data-v');
+    if (act === 'retour') { COF.UI.aller('carnet'); return; }
     if (act === 'onglet') etat.onglet = v;
     else if (act === 'cat') etat.cat = v;
     else if (act === 'taille') etat.taille = v;

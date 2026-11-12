@@ -28,7 +28,7 @@ COF.UI.Carnet = (function () {
     solo: 'journal', rencontre: 'journal' };
 
   function $(s, r) { return (r || document).querySelector(s); }
-  var dockCourant = '';
+  var dockCourant = '', outilsOuverts = false;   /* outils du MJ (oracle, test…) repliés par défaut */
   /* Le Carnet occupe exactement l'écran entre l'en-tête et la barre du bas. */
   function ajusterHauteur() {
     var top = document.querySelector('.topbar');
@@ -48,14 +48,16 @@ COF.UI.Carnet = (function () {
     var c = K.actif();
     if (!c) { n.innerHTML = htmlAccueil(); return; }
     var h = htmlTete(c) + htmlRessources(c);
-    h += '<div class="cn-onglets">' + [
-      ['scene', '🎬', 'Scène', ''], ['expe', c.expedition ? (c.expedition.type === 'donjon' ? '🗝️' : '🧭') : '🗺️', 'Expé.', c.expedition ? '•' : ''],
-      ['fils', '🧵', 'Fils', K.filsOuverts(c).length],
-      ['pnj', '👥', 'PNJ', c.pnj.length], ['lieux', '📍', 'Lieux', c.lieux.length], ['journal', '📖', 'Journal', c.scenes.length]
-    ].map(function (o) {
-      return '<button data-cn="onglet" data-v="' + o[0] + '" class="' + (onglet === o[0] ? 'on' : '') + '">' +
-        '<span class="ic">' + o[1] + '</span><span class="tx">' + o[2] + (o[3] ? ' <b>' + o[3] + '</b>' : '') + '</span></button>';
-    }).join('') + '</div>';
+    /* L'aventure se vit dans la scène. Fils, PNJ, carte, journal et expédition
+       ne sont plus que des récapitulatifs, rangés dans une barre discrète. */
+    var recaps = [['fils', '🧵', 'Fils', K.filsOuverts(c).length], ['pnj', '👥', 'PNJ', c.pnj.length], ['factions', '🏛️', 'Factions', ''], ['lieux', '🗺️', 'Carte', c.lieux.length],
+      ['journal', '📖', 'Journal', c.scenes.length]];
+    if (c.expedition) recaps.push(['expe', c.expedition.type === 'donjon' ? '🗝️' : '🧭', 'Expé.', '•']);
+    h += '<div class="cn-recapbar' + (onglet !== 'scene' ? ' ouvert' : '') + '">' +
+      (onglet !== 'scene' ? '<button class="cn-retour" data-cn="onglet" data-v="scene">◀ Retour à l’aventure</button>' : '<span class="cn-recap-lbl">Carnet</span>') +
+      recaps.map(function (o) {
+        return '<button data-cn="onglet" data-v="' + o[0] + '" class="' + (onglet === o[0] ? 'on' : '') + '" title="' + o[2] + '">' + o[1] + (o[3] ? '<b>' + o[3] + '</b>' : '') + '</button>';
+      }).join('') + '</div>';
     /* Zone centrale : seule partie qui défile (en-tête, onglets et barre
        de saisie restent en place). On conserve sa position de défilement. */
     var ancien = $('#cn-corps'), pos = ancien && rendre.onglet === onglet ? ancien.scrollTop : 0;
@@ -64,6 +66,7 @@ COF.UI.Carnet = (function () {
     if (onglet === 'scene') corps = htmlScene(c);
     else if (onglet === 'expe') corps = htmlExpedition(c);
     else if (onglet === 'journal') corps = htmlJournal(c);
+    else if (onglet === 'factions') corps = htmlFactions(c);
     else corps = htmlListe(c, onglet);
     h += '<div class="cn-corps" id="cn-corps">' + corps + '</div>' + dockCourant;
     n.innerHTML = h;
@@ -126,7 +129,7 @@ COF.UI.Carnet = (function () {
     return '<div class="cn-res">' +
       (e ? tuile('❤️', e.pv + '/' + e.pvMax, pct <= 0.25 ? 'ko' : (pct <= 0.5 ? 'mod' : '')) +
         (e.pmMax ? tuile('🔮', e.pm + '/' + e.pmMax) : '') + tuile('🎲', 'DR ' + e.dr) : tuile('🛡️', 'Lier un héros')) +
-      tuile('🍖', r.rations, r.rations ? '' : 'ko') + tuile('🔥', r.torches, r.torches ? '' : 'mod') + '</div>';
+      '</div>';
   }
   function sheetRessources() {
     var c = K.actif(), p = perso(c), e = etatHeros(p), r = X.ressources(c);
@@ -139,11 +142,11 @@ COF.UI.Carnet = (function () {
           ' <small>/ ' + e.pmMax + '</small></span><button data-cn="res-pm" data-v="1">+</button></div></div>' : '') +
         '<div class="note" style="margin:2px 0 10px">Dés de récupération : ' + e.dr + ' / ' + e.drMax + ' (d' + e.drType + ')</div>';
     } else h += '<div class="note" style="margin-bottom:10px">Aucun héros lié : ouvrez le menu de l’aventure (titre) pour lier le personnage actif.</div>';
-    h += '<label class="cn-lbl2">Provisions</label>' +
+    if (false) h += '<label class="cn-lbl2">Provisions</label>' +
       '<div class="cn-resl"><span>🍖 Rations</span>' + compteur('r-rations', r.rations, '') + '</div>' +
       '<div class="cn-resl"><span>🔥 Torches</span>' + compteur('r-torches', r.torches, '') + '</div>';
     if (e) h += '<button class="btn btn-bloc cn-gros ok" data-cn="recup-rapide">⏸️ Récupération rapide<small>30 min · 1 DR : 1d' + e.drType + ' + ½ niveau PV</small></button>' +
-      '<button class="btn btn-bloc cn-gros" data-cn="recup-nuit">🌙 Nuit de repos<small>+1 DR, PM restaurés, états effacés · jour +1 · 1 ration</small></button>';
+      '<button class="btn btn-bloc cn-gros" data-cn="recup-nuit">🌙 Nuit de repos<small>+1 DR, PM restaurés, états effacés · jour +1</small></button>';
     ouvrir('🎒 Ressources', h, { type: 'ressources' });
   }
 
@@ -174,6 +177,8 @@ COF.UI.Carnet = (function () {
   /* ---------- Onglet Scène ---------- */
   function bandeauTest(t) {
     if (!t) return '';
+    /* scène « comme prévu » : une simple ligne, pour laisser la place au récit */
+    if (t.resultat === 'normale') return '<div class="cn-test-mini">🎲 ' + esc(t.label) + (t.roll ? ' (d10 : ' + t.roll + ')' : '') + '</div>';
     var cls = t.resultat === 'normale' ? 'ok' : (t.resultat === 'interrompue' ? 'ko' : 'mod');
     var txt = t.resultat === 'normale' ? 'La scène se déroule comme prévu.' :
       (t.resultat === 'modifiee' ? 'La scène est modifiée : quelque chose ne colle pas à ce que vous attendiez.' :
@@ -226,7 +231,7 @@ COF.UI.Carnet = (function () {
       '<div class="s">Vous pouvez aussi finir les affaires en cours avant de clore.</div></div>';
     var j = ''; for (var i = 1; i <= s.max; i++) j += '<span class="' + (i <= s.horloge ? 'on' : '') + '"></span>';
     return '<div class="cn-saga"><div class="t">🌑 La menace : <b>' + esc(maj(s.nom)) + '</b></div><div class="cn-saga-j">' + j + '</div>' +
-      '<div class="s">' + (s.horloge >= 5 ? 'Ses plans avancent dangereusement. ' : '') + 'Indices : ' + s.indices + '/2' + (s.lieu ? ' · repaire connu : ' + esc((COF.Monde.lieu(c, s.lieu) || {}).nom || '?') : ' · repaire inconnu') + '</div></div>';
+      '<div class="s">' + (s.horloge >= 5 ? 'Ses plans avancent dangereusement. ' : '') + 'Indices : ' + Math.min(2, s.indices) + '/2' + (s.lieu ? ' · repaire connu : ' + esc((COF.Monde.lieu(c, s.lieu) || {}).nom || '?') : ' · repaire inconnu') + '</div></div>';
   }
   /* ---------- Choix du héros (scène jouée par le Conteur) ---------- */
   function chance(mod, diff, bonus) {
@@ -251,8 +256,14 @@ COF.UI.Carnet = (function () {
     if (!l.length && j.genre === 'confrontation') h += '<button class="cn-opt ko" data-cn="provoquer"><b>⚔️ Aller au-devant du danger</b><small>les adversaires se montrent</small></button>';
     h += l.map(function (o) {
       return '<button class="cn-opt" data-cn="choix" data-v="' + o.i + '"><b>' + esc(o.nom) + '</b><small>' +
-        (o.auto ? 'sans jet · ' + esc(o.aide || 'réussite assurée') : o.carac + ' ' + sgn(o.mod) + ' · difficulté ' + o.diff + ' · ≈ ' + chance(o.mod, o.diff, j.bonus) + ' %') + '</small></button>';
+        (o.auto ? 'sans jet · ' + esc(o.aide || 'réussite assurée') : o.carac + ' ' + sgn(o.mod) + ' · difficulté ' + o.diff + ' · ≈ ' + chance(o.mod, o.diff, j.bonus || o.deBonus) + ' %' +
+          (o.voies && o.voies.length ? ' · <span class="cn-voiebonus">' + esc(o.voies.join(', ')) + '</span>' : '')) + '</small></button>';
     }).join('');
+    /* magie et capacités hors combat du héros */
+    COF.Conteur.capacitesHorsCombat(c, s).forEach(function (k) {
+      h += '<button class="cn-opt cn-opt-cap" data-cn="cap" data-v="' + esc(k.cle) + '"' + (k.possible ? '' : ' disabled') + '><b>' + (k.soin ? '💚 ' : '✨ ') + esc(k.nom) + '</b><small>' +
+        (k.cout ? k.cout + ' PM' + (k.possible ? '' : ' (pas assez de PM)') + ' · ' : '') + esc(k.voie) + ' · ' + (k.soin ? 'soigne le héros' : 'objectif +1 et dé bonus') + '</small></button>';
+    });
     if (j.genre === 'ville' && !j.evt) h += '<button class="cn-opt" data-cn="aller" data-v="marche"><b>🛒 Parcourir les échoppes</b><small>le marché du village : sa spécialité, ses objets rares</small></button>';
     return h + '<button class="cn-opt autre" data-cn="libre"><b>✍️ Autre chose…</b><small>écrivez ce que fait ' + esc(nom) + ' : l’app comprend et lance le dé</small></button></div>';
   }
@@ -277,31 +288,44 @@ COF.UI.Carnet = (function () {
       h += htmlSaga(c);
       /* Le directeur propose les scènes qui découlent de l'aventure */
       h += '<div class="carte"><h2>🎬 Et maintenant ?</h2><div class="carte-corps"><div class="cn-props">' +
-        COF.Directeur.propositions(c).map(function (pr, i) {
-          return '<button class="cn-prop t-' + pr.type + '" data-cn="jouer-prop" data-v="' + i + '"><span class="ic">' + pr.ic + '</span><span class="tx"><b>' + esc(pr.titre) + '</b>' +
-            (pr.fil && pr.type !== 'fil' ? '<em>🧵 ' + esc(pr.fil) + (pr.etape ? ' · ' + esc(pr.etape) : '') + '</em>' : '') +
-            '<small>' + esc(pr.attendu.length > 150 ? pr.attendu.slice(0, 150) + '…' : pr.attendu) + '</small></span></button>';
-        }).join('') + '</div>' +
+        (function () {
+          /* les 4 premières propositions (quêtes, affaires…) en avant ; les autres repliées */
+          var l = COF.Directeur.propositions(c).map(function (pr, i) {
+            return '<button class="cn-prop t-' + pr.type + '" data-cn="jouer-prop" data-v="' + i + '"><span class="ic">' + pr.ic + '</span><span class="tx"><b>' + esc(pr.titre) + '</b>' +
+              (pr.fil && pr.type !== 'fil' ? '<em>🧵 ' + esc(pr.fil) + (pr.etape ? ' · ' + esc(pr.etape) : '') + '</em>' : '') +
+              '<small>' + esc(pr.attendu.length > 150 ? pr.attendu.slice(0, 150) + '…' : pr.attendu) + '</small></span></button>';
+          });
+          return l.slice(0, 4).join('') + (l.length > 4 ? '<details class="cn-autres"><summary>Autres possibilités (' + (l.length - 4) + ')</summary>' + l.slice(4).join('') + '</details>' : '');
+        })() + '</div>' +
         '<div class="note" style="margin-top:6px">La scène est testée selon la tension (' + c.tension + ') : comme prévu, modifiée ou interrompue par un événement qui agit sur l’aventure.</div>' +
         '<details class="cn-libre"><summary>✍️ Scène libre</summary>' +
         '<div class="champ"><label>Titre (facultatif)</label><input id="cn-sc-titre" placeholder="Scène ' + (c.scenes.length + 1) + '"></div>' +
         '<div class="champ"><label>Ce que vous attendez</label><textarea id="cn-sc-attendu" rows="3" placeholder="Le héros arrive au village à la tombée de la nuit et cherche l’auberge…"></textarea></div>' +
         '<button class="btn btn-plein btn-bloc" data-cn="jouer">🎬 Jouer la scène</button></details></div></div>';
-      h += htmlTableau(c);
+      /* les gens à qui parler ici */
+      if (COF.Dialogues) { var gens = COF.Dialogues.interlocuteurs(c); if (gens.length) h += '<div class="carte"><h2>💬 Parler à…</h2><div class="carte-corps"><div class="cn-loisirs">' + gens.map(function (x) {
+        COF.Dialogues.profil(x);
+        return '<button class="cn-loisir" data-cn="parler" data-v="' + x.id + '"><span class="ic">' + (x.compagnon && x.compagnon.actif ? '🤝' : (x.rel >= 2 ? '💚' : (x.rel <= -2 ? '💢' : '👤'))) + '</span><span>' + esc(x.nom) + '<small>' + esc(x.attitude || 'neutre') + (x.perso ? ' · ' + esc(String(x.perso.trait).toLowerCase()) : '') + '</small></span></button>';
+      }).join('') + '</div></div></div>'; }
+      /* temps libre : de quoi passer le temps ici (3 activités tirées selon le lieu) */
+      if (COF.Loisirs) h += '<div class="carte"><h2>☕ Temps libre</h2><div class="carte-corps"><div class="cn-loisirs">' + COF.Loisirs.offres(c).map(function (o, i) {
+        return '<button class="cn-loisir" data-cn="loisir-go" data-v="' + i + '"><span class="ic">' + o.ic + '</span><span>' + esc(o.titre) + (o.v.mise ? '<small>mise ' + o.v.mise + ' po</small>' : '') + '</span></button>';
+      }).join('') + '</div></div></div>';
       return h;
     }
     var fS = s.filId ? c.fils.filter(function (f) { return f.id === s.filId; })[0] : null;
     h += '<div class="carte cn-scene"><h2>' + s.n + '. ' + esc(s.titre) + '<span class="h2-action" data-cn="clore">🏁 Clore</span></h2><div class="carte-corps">' +
       (fS ? '<div class="cn-filtag">🧵 ' + esc(fS.nom) + (fS.quete && fS.quete.etape < 5 ? ' · ' + COF.Directeur.ETAPES[fS.quete.etape].ic + ' ' + esc(COF.Directeur.ETAPES[fS.quete.etape].nom) : '') + '</div>' : '') +
-      (function () { var t = COF.Conteur.infoTemps(c); return '<div class="cn-temps">' + t.heure + (t.meteo ? ' · ' + esc(t.meteo) : '') + ' · Jour ' + c.jour + '</div>'; })() +
+      (function () { var t = COF.Conteur.infoTemps(c); return '<div class="cn-temps">' + t.heure + (t.meteo ? ' · ' + esc(t.meteo) : '') + (t.saison ? ' · ' + esc(t.saison) : '') + ' · Jour ' + c.jour + '</div>'; })() +
       (s.attendu && !s.jeu ? '<div class="note" style="margin-bottom:8px">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) + '</div></div>';
     h += '<div id="cn-fil" class="cn-fil">' + (s.entrees.length ? s.entrees.map(htmlEntree).join('') :
       '<div class="vide" style="padding:14px">Racontez ce qui se passe, ou interrogez l’oracle.</div>') + htmlChoix(c, s) + '</div>';
     /* La barre de saisie et d'actions reste fixe sous la zone qui défile. */
     dockCourant = '<div class="cn-dock"><div class="cn-compose">' +
       '<textarea id="cn-texte" rows="2" placeholder="Que se passe-t-il ?"></textarea>' +
-      '<button class="btn btn-plein" data-cn="ecrire" aria-label="Ajouter au récit">➤</button></div>' +
-      '<div class="cn-actions">' +
+      '<button class="btn btn-plein" data-cn="ecrire" aria-label="Ajouter au récit">➤</button>' +
+      '<button class="btn cn-outils-btn' + (outilsOuverts ? ' on' : '') + '" data-cn="outils-toggle" aria-label="Outils">🧰</button></div>' +
+      '<div class="cn-actions' + (outilsOuverts ? '' : ' ferme') + '">' +
       [['oracle', '🔮', 'Oracle'], ['test', '🎲', 'Test'], ['rencontre', '⚔️', 'Rencontre'],
        ['inspirer', '✨', 'Inspirer'], ['generer', '🧰', 'Générer'], ['clore', '🏁', 'Clore']].map(function (a) {
         return '<button data-cn="' + a[0] + '"><span class="ic">' + a[1] + '</span><span class="tx">' + a[2] + '</span></button>';
@@ -319,7 +343,7 @@ COF.UI.Carnet = (function () {
   var monde = { deplacer: null, ajouter: false, cible: null, jours: 2, env: 'plaine', vue: null, vueId: null };
   /* Vue courante (zone visible du monde) : recadrée sur les lieux au besoin. */
   function vueMonde(c) {
-    if (!monde.vue || monde.vueId !== c.id) { monde.vue = COF.Monde.cadre(c); monde.vueId = c.id; }
+    if (!monde.vue || monde.vueId !== c.id) { monde.vue = COF.Monde.cadre(c, true); monde.vueId = c.id; }
     return monde.vue;
   }
   function htmlCarteMonde(c) {
@@ -347,18 +371,22 @@ COF.UI.Carnet = (function () {
       h += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" class="rt" style="stroke-width:' + (0.7 * u) + ';stroke-dasharray:' + (1.6 * u) + ' ' + (1.2 * u) + '"/>' +
         '<text x="' + mx + '" y="' + (my - 1.2 * u) + '" class="rtl" style="font-size:' + (2.8 * u) + 'px">' + (envIc[r.env] || '') + ' ' + r.jours + ' j</text>';
     });
+    var mq = marqueursLieux(c);
     c.lieux.forEach(function (l) {
-      var ici = l.id === c.position, dep = monde.deplacer === l.id;
-      h += '<g data-cn="monde-lieu" data-id="' + l.id + '" class="lieu' + (ici ? ' ici' : '') + (dep ? ' dep' : '') + '">' +
+      var ici = l.id === c.position, dep = monde.deplacer === l.id, mk = mq[l.id], ics = mk ? mk.ic.filter(function (k) { return k !== '👤'; }) : [];
+      var but = ics.some(function (k) { return k === '❗' || k === '📌' || k === '☠️'; });
+      h += '<g data-cn="monde-lieu" data-id="' + l.id + '" class="lieu' + (ici ? ' ici' : '') + (dep ? ' dep' : '') + (but ? ' but' : '') + (l.ville ? ' ville' : '') + '">' +
+        (but ? '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + (4.6 * u) + '" class="halo" style="stroke-width:' + (0.5 * u) + '"/>' : '') +
         '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + (5.5 * u) + '" class="zone"/>' +
         '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + ((ici ? 3.4 : 2.9) * u) + '" class="pt" style="stroke-width:' + (0.6 * u) + '"/>' +
         '<text x="' + l.x + '" y="' + (l.y + 0.2 * u) + '" class="ic-lieu" style="font-size:' + (3.4 * u) + 'px">' + ((M.envDe(l.env) || {}).ic || '•') + '</text>' +
         (ici ? '<text x="' + l.x + '" y="' + (l.y - 4.6 * u) + '" class="pin" style="font-size:' + (3.8 * u) + 'px">📍</text>' : '') +
-        '<text x="' + l.x + '" y="' + (l.y + 5.6 * u) + '" class="nm" style="font-size:' + (3.2 * u) + 'px;stroke-width:' + (0.8 * u) + 'px">' + esc(l.nom.length > 20 ? l.nom.slice(0, 19) + '…' : l.nom) + '</text></g>';
+        '<text x="' + l.x + '" y="' + (l.y + 5.6 * u) + '" class="nm" style="font-size:' + (3.2 * u) + 'px;stroke-width:' + (0.8 * u) + 'px">' + esc(l.nom.length > 20 ? l.nom.slice(0, 19) + '…' : l.nom) + '</text>' +
+        (ics.length ? '<text x="' + (l.x + 3.6 * u) + '" y="' + (l.y - 2.4 * u) + '" class="mq" style="font-size:' + (2.8 * u) + 'px">' + ics.slice(0, 3).join('') + '</text>' : '') + '</g>';
     });
     h += '</svg>';
     h += '<div class="cn-monde-ctl"><button data-cn="monde-zoom" data-v="0.7" aria-label="Zoomer">＋</button><button data-cn="monde-zoom" data-v="1.4" aria-label="Dézoomer">−</button>' +
-      '<button data-cn="monde-cadrer" aria-label="Recentrer">⤢</button></div>';
+      '<button data-cn="monde-cadrer" aria-label="Autour de moi">📍</button><button data-cn="monde-tout" aria-label="Tout le monde connu">🌍</button></div>';
     h += '</div>';
     h += '<div class="cn-grille cn-g3" style="margin-top:8px"><button data-cn="monde-ajouter" class="' + (monde.ajouter ? 'on' : '') + '">' + (monde.ajouter ? '✕ Annuler' : '➕ Lieu') + '</button>' +
       '<button data-cn="monde-ajouter-region" class="' + (monde.ajouterRegion ? 'on' : '') + '">' + (monde.ajouterRegion ? '✕ Annuler' : '🗺️ Région') + '</button>' +
@@ -366,9 +394,10 @@ COF.UI.Carnet = (function () {
     if (M.regions(c).length) h += '<div class="cn-mini" style="margin-top:6px">' + M.regions(c).map(function (rg) {
       return '<span class="chip" data-cn="monde-reg-suppr" data-id="' + rg.id + '">' + ((M.envDe(rg.env) || {}).ic || '') + ' ' + esc(rg.nom) + ' ✕</span>';
     }).join('') + '</div>';
+    h += '<div class="cn-legende">❗ quête · 📌 affaire · ☠️ menace · ⚔️ ennemi · 📍 vous</div>';
     h += '<div class="note" style="margin-top:6px">' + (monde.ajouterRegion ? '🗺️ Touchez le centre de la nouvelle région.' : monde.ajouter ? '➕ Touchez la carte à l’endroit du nouveau lieu.'
       : monde.deplacer ? '✋ Touchez la carte pour placer <b>' + esc((M.lieu(c, monde.deplacer) || {}).nom || '') + '</b>.'
-      : 'Faites glisser pour vous déplacer, pincez (ou ＋ −) pour zoomer. Touchez un lieu pour y aller, le relier ou le déplacer.') + '</div>';
+      : 'Touchez un lieu pour voir ce qui vous y attend et partir en voyage. Glissez pour vous déplacer, pincez (ou ＋ −) pour zoomer.') + '</div>';
     return h + '</div></div>';
   }
   /* Point du monde sous un clic/toucher. */
@@ -471,9 +500,15 @@ COF.UI.Carnet = (function () {
   function sheetLieu(id) {
     var c = K.actif(), M = COF.Monde, l = M.lieu(c, id); if (!l) return;
     var ici = M.ici(c), vois = M.voisins(c, id), routeIci = ici && ici.id !== id ? M.route(c, ici.id, id) : null;
-    var h = '<label class="cn-lbl2">Type de terrain</label>' + chipsType(l.env, 'monde-type', ' data-l="' + id + '"') +
-      (l.note ? '<div class="note" style="margin:8px 0 10px;white-space:pre-line">' + esc(l.note.length > 300 ? l.note.slice(0, 300) + '…' : l.note) + '</div>' : '');
-    if (routeIci) h += '<button class="btn btn-plein btn-bloc" data-cn="monde-voyager" data-id="' + id + '">🧭 Voyager jusqu’ici (' + routeIci.jours + ' j depuis ' + esc(ici.nom) + ')</button>';
+    var mk = marqueursLieux(c)[id], envL = M.envDe(l.env) || {};
+    var h = '<div class="cn-lieu-tete">' + (envL.ic || '📍') + ' ' + esc(envL.nom || '') + (l.ville ? ' · ' + esc(l.ville.type || 'village') + (COF.Saga ? ' · réputation : ' + esc(COF.Saga.libRep(COF.Saga.reputation(l))) : '') : '') + '</div>';
+    if (mk && mk.txt.length) h += '<label class="cn-lbl2">Ce qui vous attend ici</label><div class="cn-attend">' + mk.txt.slice(0, 8).map(function (t) { return '<div>' + esc(t) + '</div>'; }).join('') + '</div>';
+    if (l.note) h += '<div class="note" style="margin:8px 0 10px;white-space:pre-line">' + esc(l.note.length > 300 ? l.note.slice(0, 300) + '…' : l.note) + '</div>';
+    if (ici && ici.id !== id) {
+      var jEst = routeIci ? routeIci.jours : Math.max(1, Math.min(6, Math.round(Math.hypot(ici.x - l.x, ici.y - l.y) / 15)));
+      h += '<button class="btn btn-plein btn-bloc" data-cn="monde-recit" data-id="' + id + '">🧭 Partir pour ce lieu (' + jEst + ' j de route' + (routeIci ? '' : ', hors des sentiers') + ')</button>';
+    }
+    h += '<details class="cn-details"><summary>✏️ Modifier la carte</summary><label class="cn-lbl2">Type de terrain</label>' + chipsType(l.env, 'monde-type', ' data-l="' + id + '"');
     h += '<div class="cn-grille" style="margin-top:8px">' +
       (c.position === id ? '<button disabled>📍 Vous êtes ici</button>' : '<button data-cn="monde-ici" data-id="' + id + '">📍 Je suis ici</button>') +
       '<button data-cn="monde-deplacer" data-id="' + id + '">✋ Déplacer sur la carte</button></div>';
@@ -493,7 +528,7 @@ COF.UI.Carnet = (function () {
           '<button class="btn btn-bloc btn-or" data-cn="monde-relier" data-l="' + id + '">🔗 Tracer la route</button>';
       }
     }
-    h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="editer" data-l="lieux" data-id="' + id + '">✏️ Nom et notes</button>';
+    h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="editer" data-l="lieux" data-id="' + id + '">✏️ Nom et notes</button></details>';
     ouvrir('📍 ' + l.nom, h, { type: 'lieu', id: id });
   }
 
@@ -730,6 +765,24 @@ COF.UI.Carnet = (function () {
       '<button class="btn btn-bloc" style="margin-top:8px" data-cn="fermer">Pas encore</button>', { type: 'fin' });
   }
 
+  /* ---------- Récap des factions ---------- */
+  function htmlFactions(c) {
+    if (!COF.Factions) return '';
+    return '<div class="carte"><h2>🏛️ Factions</h2><div class="carte-corps">' + COF.Factions.liste(c).map(function (f) {
+      var j = ''; for (var i = -3; i <= 3; i++) j += '<span class="' + (i === 0 ? 'z ' : '') + ((f.rep > 0 && i > 0 && i <= f.rep) || (f.rep < 0 && i < 0 && i >= f.rep) ? (f.rep > 0 ? 'on' : 'neg') : '') + '"></span>';
+      return '<div class="cn-fac"><div class="t">' + f.ic + ' ' + esc(f.nom) + ' <small>' + COF.Factions.lib(f.rep) + '</small></div><div class="cn-fac-j">' + j + '</div></div>';
+    }).join('') + '<div class="note" style="margin-top:8px">Les petites affaires, les imprévus et les conversations font bouger ces réputations. À +2, une faction accorde une faveur ; à −2, elle agit contre le héros. Aider l’une fâche parfois sa rivale.</div></div></div>' + htmlEchos(c);
+  }
+  /* Ce que le monde n'a pas oublié (conséquences à venir et passées). */
+  function htmlEchos(c) {
+    if (!COF.Echos) return '';
+    var att = COF.Echos.enAttente(c), vus = COF.Echos.souvenirs(c);
+    var h = '<div class="carte"><h2>🕯️ Ce qu’on n’a pas oublié</h2><div class="carte-corps">';
+    if (!att.length && !vus.length) h += '<div class="vide">Rien pour l’instant. Les actes marquants du héros (menaces, dettes, villages aidés ou abandonnés…) auront des suites.</div>';
+    if (att.length) h += '<div class="cn-attend">' + att.slice(-8).map(function (e) { return '<div>' + esc(COF.Echos.libelle(c, e)) + '</div>'; }).join('') + '</div>';
+    if (vus.length) h += '<label class="cn-lbl2" style="margin-top:8px">Déjà arrivé</label><div class="cn-attend passe">' + vus.map(function (e) { return '<div>' + esc(COF.Echos.libelle(c, e)) + ' → jour ' + (e.quand || '?') + '</div>'; }).join('') + '</div>';
+    return h + '<div class="note" style="margin-top:8px">Ces souvenirs ressurgissent quelques jours plus tard, au détour d’une scène.</div></div></div>';
+  }
   /* ---------- Onglet Journal ---------- */
   function htmlJournal(c) {
     var h = '<div class="cn-export"><button class="btn btn-or" data-cn="export-aventure">📜 Récit complet (texte)</button>' +
@@ -879,6 +932,7 @@ COF.UI.Carnet = (function () {
       (c.termine ? '' : '<button class="btn btn-bloc" style="margin-top:6px" data-cn="fin-aventure">🏁 Terminer cette aventure</button>') +
       '<button class="btn btn-bloc" style="margin-top:6px" data-cn="rencontres-auto">🎲 Rencontres aléatoires en début de scène : <b>' + (c.rencontresAuto === false ? 'désactivées' : 'activées') + '</b></button>' +
       '<div class="cn-grille" style="margin-top:6px"><button data-rg="sauver">💾 Tout sauvegarder</button><button data-rg="ouvrir">⚙️ Réglages</button></div>' +
+      '<a class="btn btn-bloc" style="margin-top:6px;text-align:center" href="tests.html">🧪 Vérifier que l’app fonctionne (tests)</a>' +
       '<button class="btn btn-bloc" style="margin-top:10px" data-cn="reinit-camp">♻️ Recommencer cette aventure à zéro</button>' +
       '<button class="btn btn-bloc btn-sang" style="margin-top:8px" data-cn="supprimer-camp">🗑️ Supprimer cette aventure</button>';
     ouvrir('📖 Aventure', h, { type: 'menu' });
@@ -1069,16 +1123,49 @@ COF.UI.Carnet = (function () {
      directeur la préparer : modification concrète, confrontation de
      quête, découverte en exploration, test de rencontre selon le
      terrain (sauf repos, quête et pendant une expédition). */
+  /* Voyage raconté vers un lieu de la carte (route tracée au besoin, durée selon la distance). */
+  function lancerVoyage(c, destId, filId) {
+    if (c.expedition) { flash('Terminez d’abord l’expédition en cours'); return; }
+    if (K.sceneCourante(c)) { flash('Terminez d’abord la scène en cours'); return; }
+    var M = COF.Monde, iciV = M.ici(c), destV = M.lieu(c, destId);
+    if (!destV) return;
+    if (!iciV) { M.seRendre(c, destV.id); K.sauver(c); flash('📍 ' + destV.nom); rendre(); return; }
+    if (iciV.id === destV.id) { flash('Vous y êtes déjà'); return; }
+    var rtV = M.route(c, iciV.id, destV.id) || M.relier(c, iciV.id, destV.id, Math.max(1, Math.min(6, Math.round(Math.hypot(iciV.x - destV.x, iciV.y - destV.y) / 15))));
+    /* le voyage se joue comme une scène racontée, jour après jour */
+    fermer(); onglet = 'scene';
+    demarrerScene(c, 'En route pour ' + COF.Conteur.formes(destV.nom).n, '', { type: 'voyage', filId: filId,
+      voyage: { dest: destV.id, destNom: destV.nom, departNom: iciV.nom, jours: rtV.jours, env: rtV.env || destV.env } });
+  }
+  /* Ce qui attend sur chaque lieu (quêtes, affaires, menace, gens connus, souvenirs). */
+  function marqueursLieux(c) {
+    var out = {}, add = function (id, k, t) { if (!id) return; (out[id] = out[id] || { ic: [], txt: [] }); if (k && out[id].ic.indexOf(k) < 0) out[id].ic.push(k); if (t) out[id].txt.push(t); };
+    (c.fils || []).forEach(function (f) {
+      if (!f.ouvert) return;
+      if (f.quete && f.quete.lieu) add(f.quete.lieu, '❗', '❗ Quête : ' + f.nom);
+      if (f.mission && f.mission.v && f.mission.v.lieuId) add(f.mission.v.lieuId, '📌', '📌 Affaire : ' + f.nom.replace(/^📌 /, ''));
+    });
+    if (c.saga && c.saga.lieu && !c.saga.fini) add(c.saga.lieu, '☠️', '☠️ Repaire de ' + c.saga.nom);
+    (c.pnj || []).forEach(function (x) {
+      if (!x.lieuId || (x.compagnon && x.compagnon.actif)) return;
+      add(x.lieuId, x.attitude === 'hostile' ? '⚔️' : '👤', (x.attitude === 'hostile' ? '⚔️ ' : '👤 ') + x.nom + (x.attitude ? ' (' + x.attitude + ')' : ''));
+    });
+    if (COF.Echos) COF.Echos.enAttente(c).forEach(function (e) { if (e.lieuId) add(e.lieuId, '', COF.Echos.libelle(c, e)); });
+    return out;
+  }
   function demarrerScene(c, titre, attendu, prop) {
     prop = prop || {};
     var s = K.nouvelleScene(c, titre, attendu, { filId: prop.filId, type: prop.type });
     c = K.actif(); s = K.sceneCourante(c);
     if (prop.voyage) s.voyage = prop.voyage;
+    if (prop.loisir) s.loisir = prop.loisir;
+    if (prop.dialogue) s.dialogue = prop.dialogue;
     var entrees = COF.Directeur.preparerScene(c, s, prop);
+    if (prop.type === 'mission' && COF.Missions) entrees = entrees.concat(COF.Missions.preparer(c, s, (c.fils || []).filter(function (f) { return f.id === prop.filId; })[0]));
     /* le conteur raconte l'ouverture (le détail sensoriel y est intégré) */
     var ouv = COF.Conteur.ouvrir(c, s);
     if (ouv.length) entrees = ouv.concat(entrees.filter(function (e) { return e.t !== 'detail'; }));
-    if (c.rencontresAuto !== false && !c.expedition && !c.rencontre && ['repos', 'quete', 'ville', 'voyage', 'donjon'].indexOf(prop.type) < 0) {
+    if (c.rencontresAuto !== false && !c.expedition && !c.rencontre && ['repos', 'quete', 'ville', 'voyage', 'donjon', 'mission', 'loisir', 'dialogue'].indexOf(prop.type) < 0) {
       var tr = A.testRencontre(c);
       if (prop.type === 'explorer' && !tr.rencontre && tr.n > 2) tr.rencontre = Math.random() < 1 / tr.n;   /* explorer : deux chances */
       if (tr.rencontre) {
@@ -1109,16 +1196,18 @@ COF.UI.Carnet = (function () {
       case 'jouer': demarrerScene(c, val('cn-sc-titre'), val('cn-sc-attendu'), null); return;
       case 'jouer-prop': {
         var pr = COF.Directeur.propositions(c)[+v]; if (!pr) return;
-        if (pr.type === 'voyage') {
-          if (c.expedition) { flash('Terminez d’abord l’expédition en cours'); return; }
-          var iciV = COF.Monde.ici(c), destV = COF.Monde.lieu(c, pr.lieu);
-          if (!destV) return;
-          if (!iciV) { COF.Monde.seRendre(c, destV.id); K.sauver(c); flash('📍 ' + destV.nom); rendre(); return; }
-          var rtV = COF.Monde.route(c, iciV.id, destV.id) || COF.Monde.relier(c, iciV.id, destV.id, 2);
-          /* le voyage se joue comme une scène racontée, jour après jour */
-          demarrerScene(c, 'En route pour ' + COF.Conteur.formes(destV.nom).n, '', { type: 'voyage', filId: pr.filId,
-            voyage: { dest: destV.id, destNom: destV.nom, departNom: iciV.nom, jours: rtV.jours, env: rtV.env || destV.env } });
-          return;
+        if (pr.type === 'voyage') { lancerVoyage(c, pr.lieu, pr.filId); return; }
+        if (pr.type === 'nuit') { var on = COF.Loisirs.nuit(c); demarrerScene(c, on.titre, '', { type: 'loisir', loisir: on }); return; }
+        if (pr.type === 'fete') { COF.Saisons.marquerFete(c); demarrerScene(c, pr.fete.titre, '', { type: 'loisir', loisir: pr.fete }); return; }
+        if (pr.type === 'faveur') {
+          var tf = COF.Factions.faveur(c, pr.faction); c = K.actif();
+          if (tf) { var dF = c.scenes[c.scenes.length - 1]; if (dF) dF.entrees.push({ id: 'e' + Date.now().toString(36), quand: Date.now(), t: 'evt', txt: tf, clot: true }); K.sauver(c); flash(tf.slice(0, 90)); }
+          rendre(); return;
+        }
+        if (pr.type === 'offre') {
+          var fm = COF.Missions.accepter(c); if (!fm) return;
+          c = K.actif(); flash('📌 ' + fm.nom.replace(/^📌 /, ''));
+          pr = { type: 'mission', filId: fm.id, titre: fm.nom.replace(/^📌 /, ''), attendu: '' };
         }
         if (pr.type === 'fumees') {
           var vl = COF.Villes.decouvrir(c); if (!vl) return;
@@ -1138,6 +1227,7 @@ COF.UI.Carnet = (function () {
         var scC = K.sceneCourante(c); if (!scC) return;
         rendre.ancre = scC.entrees.length;
         var res = COF.Conteur.agir(c, scC, +v); rendre();
+        if (res.marche) { COF.UI.aller('marche'); return; }   /* « faire le tour des étals » ouvre le marché du lieu */
         if (res.menace) flash('⚠️ Le danger se concrétise !');
         return;
       }
@@ -1154,6 +1244,7 @@ COF.UI.Carnet = (function () {
         return;
       }
       case 'genre-heros': { var hg2 = perso(c); if (hg2) { hg2.genre = v; COF.Store.sauver(hg2); } sheetMenu(); return; }
+      case 'outils-toggle': outilsOuverts = !outilsOuverts; rendre(); return;
       case 'rencontres-auto': c.rencontresAuto = c.rencontresAuto === false; K.sauver(c); sheetMenu(); return;
       case 'ecrire': { var t = val('cn-texte'); if (!t) return; K.ajouterEntree(c, { t: 'texte', txt: t }); apresEntree(); return; }
       case 'oracle': sheetOracle(); return;
@@ -1310,6 +1401,15 @@ COF.UI.Carnet = (function () {
         };
         inp.click(); return;
       }
+      case 'parler': {
+        var xp = (c.pnj || []).filter(function (y) { return y.id === v; })[0]; if (!xp) return;
+        demarrerScene(c, 'Conversation avec ' + xp.nom, '', { type: 'dialogue', dialogue: { pnjId: xp.id } }); return;
+      }
+      case 'loisir-go': {
+        var ol = COF.Loisirs.offres(c)[+v]; if (!ol) return;
+        demarrerScene(c, ol.titre, '', { type: 'loisir', loisir: ol }); return;
+      }
+      case 'cap': { var scK = K.sceneCourante(c); if (!scK) return; rendre.ancre = scK.entrees.length; COF.Conteur.utiliserCapacite(c, scK, v); rendre(); return; }
       case 'libre': libre = { texte: '', carac: null }; sheetLibre(); return;
       case 'libre-analyser': libre.texte = val('cn-libre-txt'); sheetLibre(); return;
       case 'libre-carac': libre.texte = val('cn-libre-txt'); libre.carac = libre.carac === v ? null : v; sheetLibre(); return;
@@ -1588,7 +1688,8 @@ COF.UI.Carnet = (function () {
         return;
       }
       case 'monde-zoom': zoomMonde(+v); rendre(); return;
-      case 'monde-cadrer': monde.vue = COF.Monde.cadre(c); rendre(); return;
+      case 'monde-cadrer': monde.vue = COF.Monde.cadre(c, true); rendre(); return;
+      case 'monde-tout': monde.vue = COF.Monde.cadre(c); rendre(); return;
       case 'monde-deplacer': monde.deplacer = node.getAttribute('data-id'); fermer(); onglet = 'lieux'; rendre(); return;
       case 'monde-ici': {
         COF.Monde.seRendre(c, node.getAttribute('data-id')); K.sauver(c);
@@ -1602,6 +1703,7 @@ COF.UI.Carnet = (function () {
         var lid = node.getAttribute('data-l'); monde.cible = null; rendre(); sheetLieu(lid); return;
       }
       case 'monde-delier': COF.Monde.delier(c, node.getAttribute('data-id')); K.sauver(c); rendre(); sheetLieu(node.getAttribute('data-l')); return;
+      case 'monde-recit': lancerVoyage(c, node.getAttribute('data-id')); return;
       case 'monde-voyager': {
         if (c.expedition) { flash('Terminez d’abord l’expédition en cours'); return; }
         var ici0 = COF.Monde.ici(c), dest = COF.Monde.lieu(c, node.getAttribute('data-id')), rt = COF.Monde.route(c, ici0.id, dest.id);
@@ -1630,11 +1732,9 @@ COF.UI.Carnet = (function () {
         pn.dr = Math.min(en.drMax, (pn.dr || 0) + 1); pn.pm = en.pmMax; pn.dmTemp = 0; pn.etats = [];
         COF.Store.sauver(pn);
         c.jour++;
-        var faim = rs2.rations <= 0; if (!faim) rs2.rations--;
         var partis = COF.UI.Compagnie ? COF.UI.Compagnie.nuit(c) : [];
         if (partis.length) K.ajouterEntree(c, { t: 'evt', txt: 'Au réveil, ' + partis.join(' et ') + ' a disparu : sa loyauté était trop faible.' });
-        K.ajouterEntree(c, { t: 'note', titre: 'Nuit', txt: 'Nuit de repos — jour ' + c.jour + ' : +1 DR (' + pn.dr + '/' + en.drMax + '), PM restaurés.' +
-          (faim ? ' Pas de ration : le héros a faim.' : ' Rations : ' + rs2.rations + '.') });
+        K.ajouterEntree(c, { t: 'note', titre: 'Nuit', txt: 'Nuit de repos — jour ' + c.jour + ' : +1 DR (' + pn.dr + '/' + en.drMax + '), PM restaurés.' });   void rs2;
         rendre(); fermer(); flash('🌙 Jour ' + c.jour); return;
       }
       case 'fab': sheetFab(); return;

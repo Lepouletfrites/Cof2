@@ -61,16 +61,19 @@ COF.UI = COF.UI || {};
   ];
   var POLES_AVENTURE = [
     { id: 'recit', ic: '📖', tx: 'Récit', subs: [['carnet', '📖 Récit', 'carnet']] },
-    { id: 'combat', ic: '⚔️', tx: 'Combat', subs: [['arene', '⚔️ Combat', 'arene'], ['bestiaire', '🐉 Bestiaire', 'bestiaire']] },
+    /* Combat : plus de bouton en aventure (les rencontres ouvrent l'Arène d'elles-mêmes) */
+    { id: 'combat', ic: '⚔️', tx: 'Combat', cache: true, subs: [['arene', '⚔️ Combat', 'arene']] },
     { id: 'heros', ic: '🛡️', tx: 'Héros', subs: [
       ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'], ['artisanat', '⚒️ Artisanat', 'artisanat'], ['persos', '👥 Mes héros', 'persos']] },
-    { id: 'marche', ic: '🛒', tx: 'Marché', subs: [['marche', '🛒 Marché', 'marche']] },
-    { id: 'outils', ic: '🧰', tx: 'Outils', subs: [
+    /* Marché : plus de bouton en aventure ; on y entre par le récit (village, temps libre) */
+    { id: 'marche', ic: '🛒', tx: 'Marché', cache: true, subs: [['marche', '🛒 Marché', 'marche']] },
+    /* Outils : plus de bouton en aventure (tout passe par le récit ; oracle et tests restent dans le 🧰 de la scène) */
+    { id: 'outils', ic: '🧰', tx: 'Outils', cache: true, subs: [
       ['oracle', '🔮 Oracle', 'generateurs'], ['rencontre', '🎯 Rencontres', 'generateurs'], ['pnj', '👤 PNJ', 'generateurs'],
       ['lieux', '🏘️ Lieux', 'generateurs'], ['quetes', '📜 Quêtes', 'generateurs'], ['intrigue', '🎭 Intrigue', 'generateurs'],
       ['voyage', '🧭 Voyage', 'generateurs'], ['donjon', '🗝️ Donjon', 'generateurs'], ['solo', '🕰️ Vie & temps', 'generateurs'],
       ['butin', '💰 Butin', 'generateurs'], ['objmagie', '🪄 Objets magiques', 'generateurs'], ['catalogue', '📚 Catalogue', 'generateurs'],
-      ['des', '🎲 Dés', 'des'], ['regles', '📖 Règles', 'plus']] }
+      ['bestiaire', '🐉 Bestiaire', 'bestiaire'], ['des', '🎲 Dés', 'des'], ['regles', '📖 Règles', 'plus']] }
   ];
   function lireMode() { try { return localStorage.getItem('cof2.mode') === 'aventure' ? 'aventure' : 'normal'; } catch (e) { return 'normal'; } }
   var MODE = lireMode();
@@ -91,7 +94,7 @@ COF.UI = COF.UI || {};
     dernierSous = DERNIERS[MODE];
     document.body.classList.toggle('mode-aventure', MODE === 'aventure');
     var nav = $('.nav');
-    if (nav) nav.innerHTML = POLES.map(function (p) {
+    if (nav) nav.innerHTML = POLES.filter(function (p) { return !p.cache; }).map(function (p) {
       return '<button id="nav-' + p.id + '" data-pole="' + p.id + '"><span class="ic">' + p.ic + '</span><span class="tx">' + esc(p.tx) + '</span></button>';
     }).join('');
     var bm = $('#btn-mode');
@@ -222,7 +225,7 @@ COF.UI = COF.UI || {};
     var defautAtt = cfg.attaqueTypes &&
       (cfg.attaqueTypes.filter(function (t) { return t.id === cfg.attaqueDefaut; })[0] || cfg.attaqueTypes[0]);
     var modInitial = defautAtt ? defautAtt.mod : (cfg.mod || 0);
-    var etat = { bonus: false, malus: false, mod: modInitial, diff: cfg.difficulte || null };
+    var etat = { bonus: !!cfg.bonus, malus: false, mod: modInitial, diff: cfg.difficulte || null };   /* cfg.bonus : dé bonus d'office (voie) */
 
     var html = '';
     html += '<div class="note" style="margin-bottom:12px">' + esc(cfg.sousTitre || '') + '</div>';
@@ -369,6 +372,10 @@ COF.UI = COF.UI || {};
     if (w.type === 'contact' && !w.noFor) d += '+FOR';
     if (w.type === 'contact' && C.bonus && C.bonus.dmC) d += '+' + C.bonus.dmC;
     if (w.type === 'distance' && C.bonus && C.bonus.dmD) d += '+' + C.bonus.dmD;
+    /* bonus de DM des voies (moteur COF.Effets, conditions cochées comprises) */
+    var ev = COF.Calc.effets ? COF.Calc.effets(C) : null;
+    if (ev && w.type === 'contact' && ev.dmC) d += '+' + ev.dmC;
+    if (ev && w.type === 'distance' && ev.dmD) d += '+' + ev.dmD;
     if (w.bonus) d += '+' + w.bonus;
     (w.elementaires || []).forEach(function (e) { d += '+' + e.formule; });
     return d;

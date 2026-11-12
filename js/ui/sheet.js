@@ -42,6 +42,7 @@ COF.UI.Fiche = (function () {
     var h = '';
     h += blocCaracs(pr);
     h += blocCombat();
+    h += blocEffets();
     h += blocJauges();
     h += blocEtats();
     h += blocArmes();
@@ -74,7 +75,7 @@ COF.UI.Fiche = (function () {
       '<span class="h2-action" data-act="edit-carac">' + (editCarac ? 'Terminé' : 'Modifier') + '</span></h2>' +
       '<div class="carte-corps"><div class="caracs">';
     COF.RULES.caracs.forEach(function (c) {
-      var v = C.carac[c.id] || 0;
+      var v = editCarac ? (C.carac[c.id] || 0) : COF.Calc.carac(C, c.id), bv = COF.Calc.carac(C, c.id) - (C.carac[c.id] || 0);
       var cle = pr.caracs.indexOf(c.id) >= 0;
       if (editCarac) {
         h += '<div class="carac ' + (cle ? 'cle' : '') + '">' +
@@ -87,11 +88,11 @@ COF.UI.Fiche = (function () {
         h += '<div class="carac ' + (cle ? 'cle' : '') + '" data-act="test-carac" data-c="' + c.id + '">' +
           '<div class="nom">' + c.id + '</div>' +
           '<div class="val">' + sgn(v) + '</div>' +
-          '<div class="mod">' + esc(COF.RULES.echelle[String(v)] ? '' : '') + 'test</div></div>';
+          '<div class="mod">' + (bv ? sgn(bv) + ' voie' : 'test') + '</div></div>';
       }
     });
     h += '</div>';
-    if (editCarac) h += '<div class="aide note" style="margin-top:10px">Valeurs finales, modificateurs de peuple inclus. Les capacités « héroïques » (rang 4) ajoutent +1 : reportez-le ici.</div>';
+    if (editCarac) h += '<div class="aide note" style="margin-top:10px">Valeurs finales, modificateurs de peuple inclus. Sans les bonus de voie : les capacités « héroïques » (+1 en CON…) s’ajoutent d’elles-mêmes (voir « Bonus des voies »).</div>';
     h += '</div></div>';
     return h;
   }
@@ -115,6 +116,27 @@ COF.UI.Fiche = (function () {
       (K.bouclier(C).def ? ' · ' + esc(K.bouclier(C).nom) : '') + '</div>';
     h += '</div></div>';
     return h;
+  }
+
+  /* ---------------- Bonus des voies (moteur COF.Effets) ---------------- */
+  function blocEffets() {
+    if (!COF.Effets) return '';
+    var l = COF.Effets.liste(C); if (!l.length) return '';
+    var a = COF.Effets.actifs(C), res = [];
+    if (a.def) res.push('DEF ' + sgn(a.def)); if (a.init) res.push('Init. ' + sgn(a.init));
+    if (a.attC || a.attD || a.attM) res.push('attaque ' + [a.attC, a.attD, a.attM].map(sgn).join(' / '));
+    if (a.dmC || a.dmD) res.push('DM ' + sgn(a.dmC) + ' / ' + sgn(a.dmD));
+    if (a.pv) res.push('PV ' + sgn(a.pv)); if (a.pm) res.push('PM ' + sgn(a.pm)); if (a.rd) res.push('RD ' + a.rd);
+    Object.keys(a.carac).forEach(function (k) { if (a.carac[k]) res.push(k + ' ' + sgn(a.carac[k])); });
+    Object.keys(a.debonus).forEach(function (k) { if (a.debonus[k]) res.push('dé bonus ' + k); });
+    var h = '<div class="carte pliable ferme"><h2>Bonus des voies <small style="text-transform:none;letter-spacing:0;color:var(--text-mute);font-weight:normal">· ' + l.filter(function (e) { return e.on; }).length + ' actif(s)</small></h2><div class="carte-corps">' +
+      '<div class="note" style="margin-bottom:8px">Déjà comptés dans la fiche : ' + (res.length ? esc(res.join(' · ')) : 'aucun') + '.<br>Les bonus sans condition sont actifs d’office ; cochez les conditionnels quand leur condition est remplie (bouclier, en selle, 1×/combat…). Décochez un bonus si vous l’aviez déjà ajouté à la main.</div>';
+    h += l.map(function (e) {
+      return '<button class="cb-bv' + (e.on ? ' on' : '') + '" data-act="effet" data-k="' + esc(e.cle) + '" data-v="' + (e.on ? 0 : 1) + '">' +
+        '<b>' + (e.on ? '☑' : '☐') + ' ' + esc(COF.Effets.libelle(e)) + '</b> · ' + esc(e.cap) + ' <i>(' + esc(e.voie) + ', rang ' + e.r + ')</i>' + (e.cond ? ' <i>— conditionnel</i>' : '') +
+        '<small>' + esc(e.texte.length > 140 ? e.texte.slice(0, 140) + '…' : e.texte) + '</small></button>';
+    }).join('');
+    return h + '</div></div>';
   }
 
   /* ---------------- Jauges ---------------- */
@@ -454,12 +476,15 @@ COF.UI.Fiche = (function () {
       case 'carac+': C.carac[node.getAttribute('data-c')]++; sauver(); rendre(); break;
       case 'carac-': C.carac[node.getAttribute('data-c')]--; sauver(); rendre(); break;
 
+      case 'effet': COF.Effets.basculer(C, node.getAttribute('data-k'), node.getAttribute('data-v') === '1'); sauver(); rendre(); break;
+
       case 'test-carac': {
         var c = node.getAttribute('data-c');
         var def = COF.RULES.caracs.filter(function (x) { return x.id === c; })[0];
+        var bt = COF.Effets ? COF.Effets.bonusTest(C, c, null) : { bonus: 0, deBonus: false, sources: [] };
         COF.UI.jet({
-          titre: 'Test de ' + c, sousTitre: def.desc,
-          mod: C.carac[c] || 0, difficulte: 15, ctx: K.ctx(C)
+          titre: 'Test de ' + c, sousTitre: def.desc + (bt.sources.length ? ' · voies : ' + bt.sources.join(', ') : ''),
+          mod: K.carac(C, c) + bt.bonus, bonus: bt.deBonus, difficulte: 15, ctx: K.ctx(C)
         });
         break;
       }

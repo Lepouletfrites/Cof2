@@ -39,7 +39,15 @@ COF.Saga = (function () {
     { type: 'demon', noms: ['Azhrak l’Affamé', 'la Dame aux Mille Voix', 'le Prince des Mouches'], chefs: ['m:démon enchaîné', 'f:démone aux mille voix'],
       buts: ['briser les sceaux qui l’emprisonnent', 'corrompre toutes les âmes de la région', 'ouvrir les portes des abysses'], env: 'ruines', repaires: ['le Puits des Sceaux', 'l’Abbaye Profanée', 'la Faille Hurlante'] },
     { type: 'marais', noms: ['la Sorcière des Tourbières', 'le Roi-Crapaud', 'la Mère des Brumes'], chefs: ['f:sorcière centenaire', 'm:roi-crapaud monstrueux'],
-      buts: ['noyer la région sous les eaux noires', 'répandre une peste qui change les gens en bêtes', 'voler la jeunesse de tous les enfants du pays'], env: 'marais', repaires: ['la Hutte sur Pilotis', 'l’Îlot des Pendus', 'le Cœur du Marais'] }
+      buts: ['noyer la région sous les eaux noires', 'répandre une peste qui change les gens en bêtes', 'voler la jeunesse de tous les enfants du pays'], env: 'marais', repaires: ['la Hutte sur Pilotis', 'l’Îlot des Pendus', 'le Cœur du Marais'] },
+    { type: 'geant', noms: ['le Roi des Géants de Givre', 'la Mère des Monts', 'le Titan Enchaîné'], chefs: ['m:géant couronné de glace', 'f:géante millénaire'],
+      buts: ['écraser les vallées sous la glace', 'briser ses chaînes et marcher sur les cités', 'reprendre les terres volées à son peuple'], env: 'montagne', repaires: ['la Citadelle de Glace', 'le Trône des Nuées', 'la Forge des Titans'] },
+    { type: 'peste', noms: ['le Seigneur des Pustules', 'la Confrérie de la Peste Grise', 'l’Ordre du Masque Blanc'], chefs: ['m:médecin masqué', 'f:prêtresse de la pourriture'],
+      buts: ['répandre une épidémie dans toute la région', 'transformer les malades en serviteurs', 'purifier le monde par la maladie'], env: 'urbain', repaires: ['le Lazaret Abandonné', 'les Catacombes Pourrissantes', 'le Moulin des Masques'] },
+    { type: 'pirates', noms: ['la Flotte du Corsaire Rouge', 'la Bande des Pillards des Brumes', 'la Reine des Récifs'], chefs: ['m:capitaine borgne', 'f:reine pirate aux dents d’or'],
+      buts: ['piller chaque port de la côte', 'couler la flotte du roi', 'retrouver le trésor englouti d’un empire'], env: 'marais', repaires: ['la Crique aux Épaves', 'le Navire Fantôme', 'l’Île du Crâne'] },
+    { type: 'machine', noms: ['l’Automate Souverain', 'la Forge Vivante', 'le Cœur de Bronze'], chefs: ['m:automate pensant', 'f:inventrice folle'],
+      buts: ['remplacer les vivants par des machines', 'éveiller une armée de golems', 'fondre toute la région dans sa forge'], env: 'souterrain', repaires: ['l’Usine Engloutie', 'le Labyrinthe d’Engrenages', 'la Cathédrale de Cuivre'] }
   ];
   var AVANCEES = [
     ['Des rumeurs inquiétantes circulent : on parle de {menace}.', 'Des voyageurs évoquent à mi-voix {menace}.', 'Un symbole inconnu apparaît sur les murs de {ville} : la marque de {menace}.'],
@@ -47,7 +55,9 @@ COF.Saga = (function () {
     ['À {ville}, plus personne n’ose défier {menace}.', 'Les routes autour de {ville} ne sont plus sûres : {menace} les contrôle.', 'Des réfugiés fuient sur les routes : {menace} gagne du terrain.'],
     ['Le ciel lui-même semble s’assombrir : {menace} touche presque au but ({but}).', 'Il ne reste plus beaucoup de temps avant que {menace} ne parvienne à {but}.']
   ];
-  var SIGNES = ['Sur un mur, quelqu’un a gravé la marque de {menace}.', 'Un voyageur parle à voix basse de {menace}, puis se tait en voyant {h}.',
+  var SIGNES = ['Un enfant dessine dans la poussière la marque de {menace}, puis s’enfuit en courant.', 'Au marché, les prix ont doublé : on dit que {menace} rançonne les routes.',
+    'Un vieil homme crache par terre en entendant parler de {menace}.', 'Une maison brûlée, encore fumante : un avertissement de {menace}, murmure-t-on.',
+    'Les chiens hurlent toute la nuit. Les anciens disent que {menace} approche.','Sur un mur, quelqu’un a gravé la marque de {menace}.', 'Un voyageur parle à voix basse de {menace}, puis se tait en voyant {h}.',
     'Des traces récentes rappellent que {menace} n’est jamais très loin.', 'Une affiche arrachée promet une récompense contre toute information sur {menace}.',
     'Quelque part, une cloche sonne le glas. On murmure le nom de {menace}.', 'Un corbeau aux yeux rouges observe {h}. On dit que {menace} voit par leurs yeux.'];
 
@@ -69,7 +79,7 @@ COF.Saga = (function () {
   }
   /* ================= Finales : pas toujours un chef à abattre ================= */
   var ARTEFACTS = ['une couronne de fer noir', 'un cœur de cristal qui bat encore', 'un grimoire relié de peau', 'une pierre qui boit la lumière', 'un sceptre d’os', 'un miroir fêlé où rien ne se reflète'];
-  var FINALE_DE = { culte: ['rituel', 'intrigue', 'boss'], necro: ['rituel', 'siege', 'boss'], dragon: ['siege', 'vol', 'evacuation', 'boss'], seigneur: ['siege', 'alliance', 'intrigue'],
+  var FINALE_DE = { geant: ['siege', 'evacuation', 'boss'], peste: ['remede', 'evacuation', 'intrigue'], pirates: ['siege', 'vol', 'boss'], machine: ['vol', 'rituel', 'boss'], culte: ['rituel', 'intrigue', 'boss'], necro: ['rituel', 'siege', 'boss'], dragon: ['siege', 'vol', 'evacuation', 'boss'], seigneur: ['siege', 'alliance', 'intrigue'],
     fee: ['rituel', 'remede', 'alliance'], guilde: ['intrigue', 'vol', 'alliance'], demon: ['rituel', 'vol', 'boss'], marais: ['remede', 'evacuation', 'rituel'] };
   /* lieu : 'repaire' (dans l'antre de la menace) ou 'ville' (un lieu habité à sauver) */
   var FINALES = {
@@ -184,6 +194,10 @@ COF.Saga = (function () {
 
   /* ================= Serviteurs de la menace ================= */
   var SERVITEURS = {
+    geant: /géant|ogre|troll|loup du givre|golem de glace|cyclope/i,
+    peste: /zombie|goule|rat|nuée|pestif|vermine|nécro|âme damnée/i,
+    pirates: /bandit|merrow|requin|crabe|pieuvre|calmar|mercenaire|capitaine|vétéran/i,
+    machine: /golem|armure animée|arme animée|garde animé|automate|kobold|fourmi de fer/i,
     culte: /sorcier|prêtre|nécromage|démonet|âme damnée|garde du corps|assassin|chevalier des ténèbres|ombre|fanatique|cultiste|doppleganger|chien des ténèbres/i,
     necro: /squelette|zombie|goule|momie|vampir|fantôme|banshee|âme damnée|nécro|mort-vivant|hurlemort|guerrier maudit|chevalier des ténèbres|abomination|ombre|esprit/i,
     dragon: /kobold|dragon|linnorm|lézard|wyvern|drake|bébé dragon/i,
@@ -250,6 +264,9 @@ COF.Saga = (function () {
     n = K().get ? K().get(n.id) || n : n;
     var copie = function (x) { return JSON.parse(JSON.stringify(x || null)); };
     ['lieux', 'routes', 'regions', 'pnj'].forEach(function (k) { n[k] = copie(c[k]) || []; });
+    /* les factions et les rancunes survivent d'une aventure à l'autre */
+    if (c.factions) n.factions = copie(c.factions);
+    if (c.echos) n.echos = copie(c.echos.filter(function (e) { return !e.fait; }));
     n.pnj.forEach(function (x) { if (x.compagnon) x.compagnon.actif = !!x.compagnon.actif; });
     n.position = c.position; n.ressources = copie(c.ressources) || { rations: 3, torches: 2 };
     n.jour = c.jour + 7 + d(14); n.jourDebut = n.jour; n.tension = 5;

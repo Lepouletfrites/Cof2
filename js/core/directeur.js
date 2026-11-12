@@ -76,6 +76,8 @@ COF.Directeur = (function () {
     K().sauver(c);
     return f;
   }
+  /* Les tables de quêtes sont écrites pour une table de jeu : « les PJ » → le héros. */
+  function pj(s) { return String(s || '').replace(/l['’]un des PJ/g, 'le héros').replace(/\bdes PJ\b/g, 'du héros').replace(/\baux PJ\b/g, 'au héros').replace(/\bles PJ\b/g, 'le héros').replace(/\bPJ\b/g, 'héros'); }
   /* La scène que propose l'étape courante d'une quête. */
   function sceneDe(c, f) {
     var q = f.quete, e = q.etape;
@@ -94,7 +96,7 @@ COF.Directeur = (function () {
     if (q.etape >= ETAPES.length) return terminer(c, f);
     var sc = sceneDe(c, f);
     K().sauver(c);
-    return '🧵 « ' + f.nom + ' » : ' + ETAPES[q.etape].ic + ' ' + ETAPES[q.etape].nom + '. ' + sc.attendu;
+    return pj('🧵 « ' + f.nom + ' » : ' + ETAPES[q.etape].ic + ' ' + ETAPES[q.etape].nom + '. ' + sc.attendu);
   }
   /* Quête menée à bien : récompense, commanditaire allié, tension −1. */
   function terminer(c, f) {
@@ -121,6 +123,13 @@ COF.Directeur = (function () {
   /* ================= Prochaine scène ================= */
   function propositions(c) {
     var out = [], ici = M().ici(c);
+    /* la nuit tombe : trouver où dormir passe en premier */
+    if (c.conteur && c.conteur.heure === 3) out.push({ type: 'nuit', ic: '🌙', titre: 'La nuit tombe : ' + (ici && (ici.ville || ici.env === 'urbain') ? 'trouver une auberge' : 'dresser le camp'), attendu: 'Dormir pour récupérer (DR, PM, PV)… mais les nuits ne sont pas toujours paisibles.' });
+    /* les factions amies accordent une faveur */
+    /* la fête de la saison au village */
+    var szF = COF.Saisons && COF.Loisirs ? COF.Saisons.feteDispo(c) : null;
+    if (szF) { var fF = COF.Loisirs.fete(c, szF.i); if (fF) out.push({ type: 'fete', ic: fF.ic, titre: fF.titre, fete: fF, attendu: 'C’est la fête de la saison (' + szF.nom + ') : tout le village est dehors. Une fois par saison.' }); }
+    if (COF.Factions) COF.Factions.faveursDispo(c).slice(0, 1).forEach(function (f) { out.push({ type: 'faveur', ic: f.ic, titre: 'Demander une faveur : ' + f.nom, faction: f.id, attendu: 'La faction est ' + COF.Factions.lib(f.rep) + ' envers le héros. Une faveur tous les 3 jours.' }); });
     quetesOuvertes(c).slice(0, 3).forEach(function (f) {
       var sc = sceneDe(c, f), et = ETAPES[f.quete.etape];
       if (sc.lieu && ici && ici.id !== sc.lieu) {
@@ -128,7 +137,9 @@ COF.Directeur = (function () {
           attendu: 'La quête mène ' + fl(f.quete.lieuNom).a + ' (' + et.nom.toLowerCase() + ').' });
       } else out.push({ type: 'quete', ic: et.ic, titre: sc.titre, attendu: sc.attendu, filId: f.id, fil: f.nom, lieu: sc.lieu, combat: sc.combat, etape: et.nom });
     });
-    (c.fils || []).filter(function (f) { return f.ouvert && !f.quete; }).slice(0, 2).forEach(function (f) {
+    /* petites affaires : celles acceptées, et une nouvelle offre */
+    if (COF.Missions) COF.Missions.propositions(c).forEach(function (o) { out.push(o); });
+    (c.fils || []).filter(function (f) { return f.ouvert && !f.quete && !f.mission; }).slice(0, 2).forEach(function (f) {
       out.push({ type: 'fil', ic: '🧵', titre: f.nom, filId: f.id, fil: f.nom, attendu: 'Le héros s’occupe de cette affaire' + (f.note ? ' : ' + f.note.slice(0, 120) : '.') });
     });
     if (!quetesOuvertes(c).length) out.push({ type: 'nouvelle', ic: '📜', titre: 'Une nouvelle affaire', attendu: 'Quelqu’un a besoin du héros. Le directeur crée une quête, son commanditaire et son lieu.' });
@@ -223,13 +234,13 @@ COF.Directeur = (function () {
       case 'heroNeg': {
         var r1 = d(3);
         if (r1 === 1 && p) { var dm = d(6); if (p.pv === null || p.pv === undefined) COF.Store.reinitialiser(p); p.pv = Math.max(1, p.pv - dm); COF.Store.sauver(p); return 'Blessure : −' + dm + ' PV (' + p.pv + ' PV).'; }
-        if (r1 === 2) { var rs = COF.Expedition.ressources(c); if (rs.rations > 0) { rs.rations--; return 'Une ration est perdue ou gâchée (' + rs.rations + ' restante(s)).'; } }
+        if (r1 === 2 && p) { p.bourse = p.bourse || { po: 0 }; var perte = Math.min(p.bourse.po || 0, d(4)); p.bourse.po -= perte; COF.Store.sauver(p); if (perte) return 'Une bourse percée : −' + perte + ' po.'; }
         c.tension = Math.min(9, c.tension + 1); return 'Une rumeur défavorable court sur le héros (tension +1).';
       }
       case 'heroPos': {
         var r2 = d(3);
         if (r2 === 1 && p) { var po = d(6) * Math.max(1, p.niveau || 1); p.bourse = p.bourse || { po: 0, pa: 0, pc: 0 }; p.bourse.po = (p.bourse.po || 0) + po; COF.Store.sauver(p); return 'Une bourse oubliée : +' + po + ' po.'; }
-        if (r2 === 2) { var rs2 = COF.Expedition.ressources(c); rs2.rations += 2; return 'Des provisions offertes : +2 rations.'; }
+        if (r2 === 2 && COF.Conteur) return 'Un repas offert par un inconnu : ' + COF.Conteur.repas(c) + '.';
         return 'Un inconnu glisse une information précieuse au héros (dé bonus au prochain test lié).';
       }
       case 'ambiance': return sansPoint(AV().temps().texte) + '.';

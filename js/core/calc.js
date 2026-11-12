@@ -17,7 +17,12 @@ COF.Calc = (function () {
     return COF.RULES.familles[pr.famille];
   }
 
-  function carac(p, id) { return (p.carac && typeof p.carac[id] === 'number') ? p.carac[id] : 0; }
+  /* Valeur saisie sur la fiche (peuple compris), sans les bonus de voie. */
+  function caracBase(p, id) { return (p.carac && typeof p.carac[id] === 'number') ? p.carac[id] : 0; }
+  /* Effets des voies (moteur COF.Effets) : sommes des bonus actifs. */
+  function ev(p) { return COF.Effets ? COF.Effets.actifs(p) : null; }
+  /* Valeur effective : + bonus de caractéristique des voies (« +1 en CON »…). */
+  function carac(p, id) { var e = ev(p); return caracBase(p, id) + (e ? (e.carac[id] || 0) : 0); }
 
   /* Une armure/un bouclier trouvé en jeu (voir Objets) occupe le même
      emplacement qu'une armure/un bouclier du catalogue plutôt que de s'y
@@ -54,7 +59,8 @@ COF.Calc = (function () {
        psionique : 4 quelle que soit la famille choisie). */
     var pr = profil(p);
     var pvNiv = (pr && pr.pv) || f.pv;
-    return (n + 1) * pvNiv + n * carac(p, 'CON') + (p.bonus && p.bonus.pv || 0);
+    var e = ev(p);
+    return (n + 1) * pvNiv + n * carac(p, 'CON') + (p.bonus && p.bonus.pv || 0) + (e ? e.pv : 0);
   }
 
   function drMax(p) {
@@ -156,25 +162,28 @@ COF.Calc = (function () {
   function pmMax(p) {
     var n = sorts(p).length;
     if (n === 0) return 0;
-    return carac(p, 'VOL') + n + (p.bonus && p.bonus.pm || 0);
+    var e = ev(p);
+    return carac(p, 'VOL') + n + (p.bonus && p.bonus.pm || 0) + (e ? e.pm : 0);
   }
 
   function def(p) {
-    return 10 + agiEffective(p) + armure(p).def + bouclier(p).def + (p.bonus && p.bonus.def || 0);
+    var e = ev(p);
+    return 10 + agiEffective(p) + armure(p).def + bouclier(p).def + (p.bonus && p.bonus.def || 0) + (e ? e.def : 0);
   }
 
   function init(p) {
-    return 10 + carac(p, 'PER') + (p.bonus && p.bonus.init || 0);
+    var e = ev(p);
+    return 10 + carac(p, 'PER') + (p.bonus && p.bonus.init || 0) + (e ? e.init : 0);
   }
 
   function nivAttaque(p) { return Math.min(p.niveau || 1, 10); }
 
   function attaques(p) {
-    var n = nivAttaque(p), b = p.bonus || {};
+    var n = nivAttaque(p), b = p.bonus || {}, e = ev(p) || { attC: 0, attD: 0, attM: 0 };
     return {
-      contact: n + carac(p, 'FOR') + (b.attC || 0),
-      distance: n + carac(p, 'AGI') + (b.attD || 0),
-      magique: n + carac(p, 'VOL') + (b.attM || 0)
+      contact: n + carac(p, 'FOR') + (b.attC || 0) + e.attC,
+      distance: n + carac(p, 'AGI') + (b.attD || 0) + e.attD,
+      magique: n + carac(p, 'VOL') + (b.attM || 0) + e.attM
     };
   }
 
@@ -252,7 +261,7 @@ COF.Calc = (function () {
   }
 
   return {
-    profil: profil, famille: famille, carac: carac,
+    profil: profil, famille: famille, carac: carac, caracBase: caracBase, effets: ev,
     armure: armure, bouclier: bouclier, objetEquipe: objetEquipe, agiEffective: agiEffective,
     pvMax: pvMax, pmMax: pmMax, pcMax: pcMax, drMax: drMax, drType: drType,
     def: def, init: init, attaques: attaques, deEvo: deEvo, ctx: ctx,

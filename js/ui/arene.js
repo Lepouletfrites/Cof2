@@ -334,47 +334,13 @@ COF.UI.Arene = (function () {
   var COND = /\b(si|avec|sans|quand|lorsqu|en selle|dans|contre|tant qu|sur un|une fois|choisit|catégorie|prédilection|des armes à|des dagues|à deux mains|monture|navire|ennemi juré|proie)\b/i;
   /* Capacité activable ou liée à autre chose que le héros : jamais comptée d'office. */
   var ACTIVABLE = /×|par combat|par jour|pendant|en forme|forme d|\bPC\b|dépens|invoqu|appel|compagnon|loup|golem|familier|monture|animal|esprit de|rage|transe|furie|pour le round|ce round|au début du round/i;
+  /* Bonus des voies : moteur commun COF.Effets. La fiche (Calc) les inclut déjà
+     dans l'attaque, la DEF, l'Initiative et les DM des armes : l'Arène ne les
+     rajoute pas (bonusActifs renvoie 0), elle les liste seulement pour les cocher. */
   function bonusVoies(p) {
-    var out = [];
-    COF.Calc.capacites(p).forEach(function (x) {
-      var c = x.cap; if (c.a || !c.d) return;
-      var re = /\+\s?(\d+)\s+(?:en |aux |à l['’]|à la |à son )?(attaque|DM|DEF|défense|Initiative|Init\.?)(?:\s+(au contact|à distance|magique|des armes à distance))?([^.;]*)/gi, m;
-      while ((m = re.exec(c.d)) !== null) {
-        var val = +m[1], suite = c.d.slice(m.index, m.index + 160);
-        var prog = /\(\s*\+\s?(\d+)\s+au rang\s+(\d)(?:\s*,\s*\+\s?(\d+)\s+au rang\s+(\d))?/i.exec(suite);
-        if (prog) { if (x.rang >= +prog[2]) val = +prog[1]; if (prog[4] && x.rang >= +prog[4]) val = +prog[3]; }
-        var phrase = c.d.slice(Math.max(0, c.d.lastIndexOf('.', m.index) + 1), c.d.indexOf('.', m.index) > 0 ? c.d.indexOf('.', m.index) : undefined);
-        var scope = /contact/i.test(m[3] || '') ? 'C' : (/distance/i.test(m[3] || '') ? 'D' : (/magique/i.test(m[3] || '') ? 'M' : 'tous'));
-        var ty = /^DM$/i.test(m[2]) ? 'dm' : (/DEF|défense/i.test(m[2]) ? 'def' : (/^Init/i.test(m[2]) ? 'init' : 'att'));
-        if (ty === 'def' || ty === 'init') scope = 'tous';
-        var cond = COND.test(phrase) || ACTIVABLE.test(c.n + ' ' + c.d);
-        out.push({ cle: x.voieKey + '|' + c.r + '|' + out.length, cap: c.n, voie: x.voie.nom, type: ty, val: val, scope: scope, cond: cond, texte: phrase.trim() });
-        /* « +2 en DEF et en Initiative » : le même bonus s'applique au second terme */
-        var et2 = /^\s*et\s+(?:en |aux |à l['’]|à la |à son )?(attaque|DM|DEF|défense|Initiative|Init\.?)/i.exec(m[4] || '');
-        if (et2) {
-          var ty2 = /^DM$/i.test(et2[1]) ? 'dm' : (/DEF|défense/i.test(et2[1]) ? 'def' : (/^Init/i.test(et2[1]) ? 'init' : 'att'));
-          out.push({ cle: x.voieKey + '|' + c.r + '|' + out.length, cap: c.n, voie: x.voie.nom, type: ty2, val: val, scope: 'tous', cond: cond, texte: phrase.trim() });
-        }
-      }
-    });
-    return out;
+    return COF.Effets.liste(p).filter(function (e) { return ['att', 'dm', 'def', 'init'].indexOf(e.type) >= 0; });
   }
-  var cacheBonus = {};
-  function bonusActifs(p) {
-    var cle = p.id + '|' + JSON.stringify(p.voies || []) + '|' + JSON.stringify(p.bonusVoies || {});
-    if (cacheBonus[cle]) return cacheBonus[cle];
-    var choix = p.bonusVoies || {}, r = { attC: 0, attD: 0, attM: 0, dmC: 0, dmD: 0, def: 0, init: 0 };
-    bonusVoies(p).forEach(function (b) {
-      var on = choix.hasOwnProperty(b.cle) ? choix[b.cle] : !b.cond;
-      if (!on) return;
-      if (b.type === 'def' || b.type === 'init') { r[b.type] += b.val; return; }
-      var cles = b.scope === 'tous' ? ['C', 'D', 'M'] : [b.scope];
-      cles.forEach(function (k) { if (b.type === 'att') r['att' + k] += b.val; else if (k !== 'M') r['dm' + k] += b.val; });
-    });
-    cacheBonus = {}; cacheBonus[cle] = r;
-    return r;
-  }
-  function ctxCreature(cb) { var n = Math.floor(cb.nc) || 1; return { carac: {}, niveau: n, deEvo: COF.deEvolutif(n) }; }
+  function bonusActifs(p) { void p; return { attC: 0, attD: 0, attM: 0, dmC: 0, dmD: 0, def: 0, init: 0 }; }  function ctxCreature(cb) { var n = Math.floor(cb.nc) || 1; return { carac: {}, niveau: n, deEvo: COF.deEvolutif(n) }; }
   function zonePortee(opt) { return opt.portee ? A().zonePortee(opt) : 0; }
   function nomZone(z) { return A().ZONES[z].nom.toLowerCase(); }
   /* Cibles possibles pour une option : adversaires (ou alliés pour un soin).
@@ -780,13 +746,12 @@ COF.UI.Arene = (function () {
       '<div class="cb-adj"><span>Dommages</span><button data-cb="adj" data-k="adjDm" data-v="-1">−</button><b>' + sgn(cb.adjDm || 0) + '</b><button data-cb="adj" data-k="adjDm" data-v="1">+</button></div>' +
       '<div class="note">S’ajoute à toutes les attaques de ' + esc(cb.nom) + ' pendant ce combat (bénédiction, terrain, objet non saisi…).</div>';
     if (cb.type === 'pj') {
-      var p = COF.Store.get(cb.refId), bv = p ? bonusVoies(p) : [], choix = (p && p.bonusVoies) || {};
+      var p = COF.Store.get(cb.refId), bv = p ? bonusVoies(p) : [];
       if (bv.length) {
         h += '<label class="cn-lbl2" style="margin-top:8px">Bonus des voies</label>' + bv.map(function (b) {
-          var on = choix.hasOwnProperty(b.cle) ? choix[b.cle] : !b.cond;
+          var on = b.on;
           return '<button class="cb-bv' + (on ? ' on' : '') + '" data-cb="bv" data-k="' + esc(b.cle) + '" data-v="' + (on ? 0 : 1) + '">' +
-            '<b>' + (on ? '☑' : '☐') + ' ' + sgn(b.val) + ' ' + ({ att: 'attaque', dm: 'DM', def: 'DEF', init: 'Initiative' }[b.type]) +
-            (b.type === 'att' || b.type === 'dm' ? (b.scope === 'C' ? ' au contact' : b.scope === 'D' ? ' à distance' : b.scope === 'M' ? ' magique' : '') : '') +
+            '<b>' + (on ? '☑' : '☐') + ' ' + esc(COF.Effets.libelle(b)) +
             '</b> · ' + esc(b.cap) + (b.cond ? ' <i>(conditionnel)</i>' : '') + '<small>' + esc(b.texte.length > 120 ? b.texte.slice(0, 120) + '…' : b.texte) + '</small></button>';
         }).join('');
         h += '<div class="note">Les bonus sans condition sont comptés d’office ; cochez les autres quand leur condition est remplie. Ce choix est gardé sur la fiche.</div>';
@@ -965,7 +930,7 @@ COF.UI.Arene = (function () {
       case 'adj': { if (cb) { var k = node.getAttribute('data-k'); cb[k] = Math.max(-10, Math.min(10, (cb[k] || 0) + (+v))); A().ecrire(s); } break; }
       case 'bv': {
         var pb = cb && COF.Store.get(cb.refId);
-        if (pb) { pb.bonusVoies = pb.bonusVoies || {}; pb.bonusVoies[node.getAttribute('data-k')] = v === '1'; COF.Store.sauver(pb); }
+        if (pb) { COF.Effets.basculer(pb, node.getAttribute('data-k'), v === '1'); COF.Store.sauver(pb); }
         break;
       }
       case 'bonus': ui.bonus = !ui.bonus; if (ui.bonus) ui.malus = false; break;

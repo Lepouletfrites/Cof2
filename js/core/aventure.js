@@ -137,7 +137,7 @@ COF.Aventure = (function () {
     opts = opts || {};
     var env = opts.env || envCourant(c), nb = 1 + nbAllies(c), niv = niveau(c);
     /* opts.theme : serviteurs de la menace de l'aventure ; opts.chef : nom du chef */
-    var filtre = opts.theme && COF.Saga ? COF.Saga.filtreServiteurs(c) : null;
+    var filtre = opts.filtreFn || (opts.theme && COF.Saga ? COF.Saga.filtreServiteurs(c) : null);
     var r = COF.Rencontre.generer({ env: env, nbPJ: nb, niveau: niv, difficulte: opts.difficulte || 'ordinaire', style: opts.style || 'auto', filtre: filtre });
     if (!r || r.erreur) return { erreur: (r && r.erreur) || 'Aucune rencontre possible ici.' };
     var chefLot = null;

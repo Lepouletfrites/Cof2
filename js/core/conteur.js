@@ -90,14 +90,14 @@ COF.Conteur = (function () {
 
   /* ================= Décor, heure, météo ================= */
   var DECOR = {
-    foret: ['Les grands arbres filtrent une lumière verte et mouvante.', 'L’humus craque sous les pas et l’air sent la résine.', 'Un pic-vert martèle un tronc quelque part, puis se tait.', 'Des racines noueuses courent sur le sentier comme des serpents figés.', 'Les fougères frémissent, comme si quelque chose venait d’y passer.'],
-    plaine: ['Le vent couche les herbes hautes en longues vagues.', 'L’horizon s’étire, piqué de quelques fermes isolées.', 'Un faucon tournoie très haut au-dessus de la lande.', 'Une haie de ronces longe un chemin creusé d’ornières.', 'Un vieux calvaire penche au bord du chemin.'],
-    montagne: ['L’air est vif et chaque pas fait rouler des cailloux.', 'Des nuages s’accrochent aux sommets tout proches.', 'Le sentier serpente entre les rochers, au-dessus du vide.', 'Un torrent gronde au fond d’un ravin invisible.', 'Un aigle crie, quelque part entre les pics.'],
-    marais: ['L’eau noire clapote entre les touffes de roseaux.', 'Une odeur de vase et de pourriture flotte dans l’air lourd.', 'Des nuées de moustiques dansent au-dessus des mares.', 'Les planches d’une vieille passerelle gémissent sous le poids.', 'Des bulles crèvent à la surface de l’eau, sans raison apparente.'],
-    souterrain: ['L’eau suinte des parois et goutte dans le noir.', 'L’écho renvoie chaque bruit, déformé.', 'L’air est froid, immobile, chargé de poussière.', 'Des marques anciennes griffent la roche à hauteur d’homme.', 'Au loin, quelque chose racle la pierre, puis plus rien.'],
-    arctique: ['La neige crisse et le froid mord le visage.', 'Le vent soulève des rideaux de poudre blanche.', 'La glace craque sourdement, très loin.', 'Tout est blanc, silencieux, aveuglant.', 'Des traces de pas à demi effacées se perdent dans la neige.'],
-    urbain: ['Les rues grouillent de marchands, de charrettes et de chiens errants.', 'Des odeurs de pain chaud et d’égout se disputent la ruelle.', 'Une cloche sonne l’heure au-dessus des toits.', 'Des volets claquent, des voix s’interpellent d’une fenêtre à l’autre.', 'Deux gardes passent en traînant les pieds, la hallebarde sur l’épaule.'],
-    ruines: ['Des colonnes brisées se dressent comme des dents cariées.', 'Le lierre a envahi les pierres sculptées.', 'Un silence de tombeau pèse sur les décombres.', 'Des inscriptions effacées courent encore sur un linteau.', 'Un corbeau s’envole d’une arche effondrée en croassant.']
+    foret: ['Les grands arbres filtrent une lumière verte et mouvante.', 'L’humus craque sous les pas et l’air sent la résine.', 'Un pic-vert martèle un tronc quelque part, puis se tait.', 'Des racines noueuses courent sur le sentier comme des serpents figés.', 'Les fougères frémissent, comme si quelque chose venait d’y passer.', 'Un cerf traverse le sentier sans se presser, puis disparaît.', 'Des champignons géants poussent sur un tronc abattu.', 'La canopée est si dense qu’il fait presque nuit.', 'Un ruisseau murmure quelque part sous les fougères.', 'Des toiles d’araignée brillent de rosée entre les branches.'],
+    plaine: ['Le vent couche les herbes hautes en longues vagues.', 'L’horizon s’étire, piqué de quelques fermes isolées.', 'Un faucon tournoie très haut au-dessus de la lande.', 'Une haie de ronces longe un chemin creusé d’ornières.', 'Un vieux calvaire penche au bord du chemin.', 'Des corbeaux picorent un champ moissonné.', 'Un moulin à vent grince au sommet d’une colline.', 'Des coquelicots tachent de rouge les blés.', 'Une charrette abandonnée rouille au bord de la route.', 'Au loin, la fumée d’un hameau monte droit dans le ciel.'],
+    montagne: ['L’air est vif et chaque pas fait rouler des cailloux.', 'Des nuages s’accrochent aux sommets tout proches.', 'Le sentier serpente entre les rochers, au-dessus du vide.', 'Un torrent gronde au fond d’un ravin invisible.', 'Un aigle crie, quelque part entre les pics.', 'Des chamois observent depuis une corniche inaccessible.', 'Le vent siffle entre les pics comme une flûte géante.', 'Un cairn marque le chemin, ou une tombe.', 'La neige éternelle brille sur les sommets.', 'Un pont de cordes oscille au-dessus d’un gouffre.'],
+    marais: ['L’eau noire clapote entre les touffes de roseaux.', 'Une odeur de vase et de pourriture flotte dans l’air lourd.', 'Des nuées de moustiques dansent au-dessus des mares.', 'Les planches d’une vieille passerelle gémissent sous le poids.', 'Des bulles crèvent à la surface de l’eau, sans raison apparente.', 'Un héron immobile guette dans l’eau stagnante.', 'Des feux follets dansent au loin, au ras de l’eau.', 'Un tronc pourri ressemble à s’y méprendre à un crocodile.', 'Les grenouilles se taisent toutes en même temps.', 'Une barque abandonnée pourrit entre les joncs.'],
+    souterrain: ['L’eau suinte des parois et goutte dans le noir.', 'L’écho renvoie chaque bruit, déformé.', 'L’air est froid, immobile, chargé de poussière.', 'Des marques anciennes griffent la roche à hauteur d’homme.', 'Au loin, quelque chose racle la pierre, puis plus rien.', 'Des stalactites gouttent comme des larmes de pierre.', 'Des champignons phosphorescents éclairent faiblement la galerie.', 'Un courant d’air froid annonce une autre ouverture.', 'Des os anciens jonchent le sol, rongés.', 'Le plafond s’abaisse : il faut avancer courbé.'],
+    arctique: ['La neige crisse et le froid mord le visage.', 'Le vent soulève des rideaux de poudre blanche.', 'La glace craque sourdement, très loin.', 'Tout est blanc, silencieux, aveuglant.', 'Des traces de pas à demi effacées se perdent dans la neige.', 'Une aurore verte ondule dans le ciel pâle.', 'Des traces d’ours blanc croisent la piste.', 'Le souffle gèle aussitôt dans l’air.', 'Une carcasse de baleine dépasse de la glace.', 'Le soleil bas allonge des ombres bleues sur la neige.'],
+    urbain: ['Les rues grouillent de marchands, de charrettes et de chiens errants.', 'Des odeurs de pain chaud et d’égout se disputent la ruelle.', 'Une cloche sonne l’heure au-dessus des toits.', 'Des volets claquent, des voix s’interpellent d’une fenêtre à l’autre.', 'Deux gardes passent en traînant les pieds, la hallebarde sur l’épaule.', 'Un crieur public annonce les nouvelles à grands cris.', 'Des enfants courent entre les étals en volant des pommes.', 'Une procession religieuse bloque la rue.', 'Un mendiant aveugle joue de la flûte au coin d’une ruelle.', 'L’odeur de la tannerie prend à la gorge.'],
+    ruines: ['Des colonnes brisées se dressent comme des dents cariées.', 'Le lierre a envahi les pierres sculptées.', 'Un silence de tombeau pèse sur les décombres.', 'Des inscriptions effacées courent encore sur un linteau.', 'Un corbeau s’envole d’une arche effondrée en croassant.', 'Une fresque à demi effacée montre une bataille oubliée.', 'Des racines ont soulevé les dalles d’une ancienne place.', 'Un escalier mène vers des étages qui n’existent plus.', 'Une statue décapitée monte la garde depuis des siècles.', 'Le vent fait chanter les fenêtres vides.']
   };
   var HEURES = ['À l’aube', 'En pleine journée', 'Au crépuscule', 'À la nuit tombée'];
   var METEO = {
@@ -120,7 +120,8 @@ COF.Conteur = (function () {
     var co = etat(c);
     if (!co.meteo || co.meteo.jour !== c.jour) {
       var l = ['clair', 'clair', 'gris', 'gris', 'pluie', 'vent', 'brume', 'orage'];
-      if (env === 'arctique') l = ['neige', 'neige', 'clair', 'gris', 'vent'];
+      if (COF.Saisons) l = COF.Saisons.meteos(c, env);   /* la saison choisit le temps qu'il fait */
+      else if (env === 'arctique') l = ['neige', 'neige', 'clair', 'gris', 'vent'];
       else if (env === 'montagne') l.push('neige', 'vent');
       else if (env === 'marais') l.push('brume', 'brume');
       co.meteo = { jour: c.jour, id: p(l) };
@@ -197,6 +198,13 @@ COF.Conteur = (function () {
       ouv: ['{moment} {h} [arrive à|entre dans|franchit les abords de] {lieu_n} : {taille_un} de {pop}, qui vit de {specialite}. [La population est|Il suffit de quelques pas pour découvrir une communauté|On y trouve une population] {ambiance}. [On murmure que|Dans toutes les conversations, un sujet revient :|Les visages sont soucieux, et pour cause :] {probleme}.'],
       ok: ['{h} quitte {lieu_n} avec des nouvelles fraîches et l’esprit plus clair.', '{lieu_n} n’a plus de secrets pour {h}. La route appelle.'],
       ko: ['{h} quitte {lieu_n} sous les regards méfiants. Mieux vaut ne pas s’y attarder.'] },
+    /* temps libre : les choix viennent de l'activité (module Loisirs), 3 manches */
+    /* conversation avec un PNJ (module Dialogues), 3 répliques */
+    dialogue: { prog: 3, danger: 3, social: true, actions: [], ouv: ['{moment} {dialogueIntro}'],
+      ok: ['{h} prend congé. La conversation a été fructueuse.', 'On se quitte sur une poignée de main.'], ko: ['La conversation tourne court.', '{h} s’en va, sans avoir obtenu grand-chose.'] },
+    loisir: { prog: 3, danger: 3, social: true, actions: [], ouv: ['{moment} {loisirIntro}'],
+      ok: ['{h} profite de ce moment de répit. La journée a été bonne.', 'Une parenthèse bienvenue avant de reprendre l’aventure.'],
+      ko: ['La journée tourne court. Il est temps de passer à autre chose.', 'Pas de chance aujourd’hui. On ne gagne pas à tous les coups.'] },
     repos: { prog: 0, danger: 0, actions: [],
       ouv: ['{moment} {h} trouve un coin abrité et s’accorde un moment de répit. [Le feu crépite doucement.|Les muscles se dénouent enfin.|Pour la première fois depuis longtemps, rien ne presse.] {decor}'],
       ok: ['{h} a repris des forces.'] }
@@ -293,8 +301,8 @@ COF.Conteur = (function () {
     notable: { nom: 'Rencontrer {notable_n}', carac: 'CHA', effet: 'queteVille', fin: false,
       ok: ['{notable_n}, {notableMetier}, reçoit {h} et ne tarde pas à parler du problème qui ronge {lieu_n}. Une offre suit.'],
       ko: ['{notable_n} n’a pas de temps à perdre avec un inconnu.', 'On fait attendre {h} des heures, pour rien.'] },
-    marche: { nom: 'Faire des provisions au marché', auto: true, effet: 'marche', aide: 'quelques pièces contre rations et torches',
-      ok: ['Entre les étals, {h} remplit son sac : pain, viande séchée, torches.', 'Le marché est animé. {h} marchande et repart les bras pleins de provisions.'] },
+    marche: { nom: 'Prendre un bon repas à l’auberge', auto: true, effet: 'marche', aide: 'quelques pièces, quelques PV',
+      ok: ['Une soupe épaisse, du pain chaud, un pichet de cidre : {h} reprend des forces.', 'L’aubergiste sert une tourte fumante. Rien de tel pour se remettre d’aplomb.'] },
     temple: { nom: 'Se faire soigner', auto: true, effet: 'soins', aide: 'une offrande contre des soins',
       ok: ['Au temple, une prêtresse panse les plaies de {h} contre une modeste offrande.', 'Un guérisseur du coin applique un onguent qui sent fort, mais qui fait des merveilles.'] },
     flaner: { nom: 'Flâner dans les rues', auto: true, effet: 'flaner', aide: 'laisser venir l’imprévu',
@@ -305,6 +313,43 @@ COF.Conteur = (function () {
       ok: ['Le vieux sentier mène {h} jusqu’à {decouverte}.'],
       ko: ['Le sentier se perd dans les broussailles et {h} s’égare.'] }
   };
+
+  /* ================= Variantes supplémentaires (moins de redites) ================= */
+  var VARIANTES = {
+    fouiller: { ok: ['Un tiroir à double fond, une latte disjointe : {h} trouve {indice}.', 'Méthodiquement, pièce après pièce, {h} finit par dénicher {indice}.'],
+      ko: ['Rien. Juste de la poussière, et le sentiment d’être observé.', '{h} renverse une étagère : tout le quartier a dû l’entendre.'] },
+    interroger: { ok: ['Un aubergiste bavard, une pièce glissée sur le comptoir, et la langue se délie : {indice}.', 'Un gamin des rues en sait plus que tout le monde : il parle de {indice}.'],
+      ko: ['On répond à {h} par des haussements d’épaules.', 'Un homme fait mine de parler, puis s’éclipse. Quelqu’un le surveillait.'] },
+    pister: { ok: ['Une branche cassée, une empreinte dans la boue : {h} remonte la piste jusqu’à {indice}.', 'La piste est vieille de deux jours, mais {h} la suit sans faillir jusqu’à {indice}.'],
+      ko: ['La pluie a tout effacé.', 'Les traces tournent en rond : quelqu’un a brouillé la piste exprès.'] },
+    savoir: { ok: ['Un vieux livre lu il y a longtemps revient en mémoire de {h} : {indice}.', '{h} fait le lien entre deux détails que personne n’avait rapprochés.'],
+      ko: ['Le souvenir est là, sur le bout de la langue… puis s’envole.', 'Plus {h} réfléchit, plus tout s’embrouille.'] },
+    guetter: { ok: ['Des heures d’immobilité, puis la récompense : {h} surprend {indice}.', 'Caché derrière un tonneau, {h} entend tout de la conversation.'],
+      ko: ['Une crampe, un faux mouvement : la cachette est éventée.', 'Rien ne bouge. Le temps passe, lentement.'] },
+    forcer: { ok: ['Un grognement, un effort, et la voie est libre.', 'La porte vole en éclats sous l’épaule de {h}.'],
+      ko: ['{h} s’épuise contre un obstacle qui ne bouge pas d’un pouce.', 'Un craquement sinistre : c’est l’épaule de {h}, pas la porte.'] },
+    contourner: { ok: ['Par les toits, par une cave, par un trou dans la haie : {h} trouve toujours un chemin.', 'Un passage étroit, une contorsion, et {h} se retrouve de l’autre côté.'],
+      ko: ['Un cul-de-sac, encore.', 'Le chemin de traverse mène droit dans un buisson d’épines.'] },
+    parlementer: { ok: ['Une plaisanterie au bon moment désamorce la situation.', 'Le ton calme de {h} apaise les plus agités.'],
+      ko: ['Un mot de trop, et tout s’envenime.', 'On coupe la parole à {h} : personne n’est d’humeur à discuter.'] },
+    tenir: { ok: ['{h} ferme les yeux, respire, et tient.', 'La douleur, la peur, la fatigue : rien n’entame la résolution de {h}.'],
+      ko: ['Le doute s’insinue, et {h} vacille.', 'Il y a des limites, même pour {h}.'] },
+    observer: { ok: ['Le paysage se déploie : {h} repère {decouverte}.', 'Une fumée lointaine trahit {decouverte}.'],
+      ko: ['La brume monte et cache tout.', 'Le vent fait pleurer les yeux de {h} : impossible de voir quoi que ce soit.'] },
+    marcher: { ok: ['Le chemin défile, régulier, sous les pas de {h}.', 'Une bonne étape, sans mauvaise surprise.'],
+      ko: ['Une ampoule, puis deux : chaque pas devient une épreuve.', 'La route monte, monte encore, et les jambes de {h} protestent.'] },
+    orienter: { ok: ['Les étoiles, la mousse, le vent : tout indique le bon chemin.', 'Un ancien panneau à demi effacé confirme la direction.'],
+      ko: ['Tous les arbres se ressemblent…', 'Le sentier se divise en trois, et {h} choisit le mauvais.'] }
+  };
+  Object.keys(VARIANTES).forEach(function (k) {
+    if (!ACTIONS[k]) return;
+    ACTIONS[k].ok = ACTIONS[k].ok.concat(VARIANTES[k].ok);
+    if (ACTIONS[k].ko) ACTIONS[k].ko = ACTIONS[k].ko.concat(VARIANTES[k].ko);
+  });
+  INDICES.push('un tatouage aperçu sur un poignet', 'une odeur de poudre et d’huile', 'un fer à cheval forgé à l’envers', 'un message gravé sous une table',
+    'une plume noire laissée en évidence', 'une dette inscrite dans un registre', 'un témoin qui a vu un homme boiter', 'une cape abandonnée, encore humide',
+    'un sceau brisé', 'des pièces neuves, trop neuves', 'une clé qui n’ouvre aucune porte connue', 'un nom rayé sur une liste', 'des traces de roues lourdement chargées',
+    'une chanson que tout le monde fredonne et qui en dit long');
 
   /* ================= Finales de quête majeure ================= */
   /* Chaque finale (hors « abattre le chef ») est une grande scène à 4 étapes
@@ -374,8 +419,9 @@ COF.Conteur = (function () {
   function heros(c) { return AV() ? AV().heros(c) : null; }
   function genreDe(c, s) {
     if (!s) return 'libre';
-    if (['repos', 'explorer', 'fil', 'ville', 'voyage', 'donjon'].indexOf(s.type) >= 0) return s.type;
+    if (['repos', 'explorer', 'fil', 'ville', 'voyage', 'donjon', 'loisir', 'dialogue'].indexOf(s.type) >= 0) return s.type;
     var f = s.filId ? fil(c, s.filId) : null;
+    if (f && f.mission && GENRES['mission_' + f.mission.type]) return 'mission_' + f.mission.type;
     if (f && f.quete && f.quete.etape === 3 && f.quete.finale && GENRES['finale_' + f.quete.finale]) return 'finale_' + f.quete.finale;
     if (f && f.quete && f.quete.etape < 5) return ['accroche', 'piste', 'complication', 'confrontation', 'denouement'][f.quete.etape];
     if (f) return 'fil';
@@ -407,6 +453,7 @@ COF.Conteur = (function () {
       ctx.tresor = s.donjon.tresor || 'un trésor oublié';
     }
     if (f) { ctx.fil = f.nom; ctx.note = f.note && !q ? sansPoint(f.note.split('\n')[0]) + '.' : ''; }
+    if (f && f.mission && COF.Missions) Object.assign(ctx, COF.Missions.contexte(f));
     if (q) {
       var com = pnj(c, q.commanditaire), mt = com && /Commanditaire — ([^\n]*)/.exec(com.note || '');
       Object.assign(ctx, { com: q.comNom, com_il: q.fem ? 'elle' : 'il', com_ilm: q.fem ? 'Elle' : 'Il', e: q.fem ? 'e' : '', eu: q.fem ? 'se' : 'x',
@@ -438,7 +485,8 @@ COF.Conteur = (function () {
   }
   function difficulte(c, a, g) {
     var rep = g === 'ville' && COF.Saga ? COF.Saga.reputation(M().ici(c)) : 0;   /* une bonne réputation ouvre les portes */
-    return difficulteBase(c) + (g === 'complication' || g === 'donjon' ? 1 : 0) + (a.diff || 0) - rep;
+    /* les affaires et les finales sont plus exigeantes */
+    return difficulteBase(c) + (g === 'complication' || g === 'donjon' || /^mission_|^finale_/.test(g) ? 1 : 0) + (a.diff || 0) - rep;
   }
   /* Compagnons du héros (alliés du Carnet et compagnons de voie). */
   function compagnons(c) {
@@ -462,7 +510,10 @@ COF.Conteur = (function () {
       x.vus = (x.vus || 0) + 1;
     }
     if (ici && ici.ville && COF.Saga) { var ph = COF.Saga.phraseRep(COF.Saga.reputation(ici)); if (ph) t.push(dire(ph, ctx)); }
-    if (comp.length && Math.random() < 0.35) t.push(dire(REMARQUES, Object.assign({}, ctx, { x: p(comp) })));
+    var rqT = COF.Troupe ? COF.Troupe.replique(c, ici && (ici.ville || ici.env === 'urbain') ? 'ville' : (s && s.loisir && s.loisir.nuit ? 'nuit' : 'ouverture'), ctx, 0.5) : '';
+    if (rqT) t.push(rqT);
+    else if (comp.length && Math.random() < 0.35) t.push(dire(REMARQUES, Object.assign({}, ctx, { x: p(comp) })));
+    if (COF.Saisons) { var sz = COF.Saisons.ambiance(c, ctx); if (sz) t.push(sz); }
     if (COF.Saga) {
       if (!c.saga) { COF.Saga.assurer(c); t.push(dire('Partout, une même rumeur court sur les lèvres : on parle de {menace} et de ses sombres desseins.', Object.assign({}, ctx, { menace: c.saga.nom }))); }
       else { var sg = COF.Saga.signe(c); if (sg) t.push(sg); }
@@ -499,6 +550,8 @@ COF.Conteur = (function () {
     var g = genreDe(c, s), G0 = GENRES[g], ctx = contexte(c, s, g);
     var der = c.scenes.filter(function (x) { return x.close && x.resume; }).slice(-1)[0];
     if (g === 'explorer') ctx.detail = sansPoint(COF.Oracle.detailSensoriel(null).detail) + '.';
+    if (g === 'loisir' && COF.Loisirs && s.loisir) ctx.loisirIntro = COF.Loisirs.intro(c, s, ctx);
+    if (g === 'dialogue' && COF.Dialogues && s.dialogue) ctx.dialogueIntro = COF.Dialogues.intro(c, s, ctx);
     var txt = dire(G0.ouv, ctx);
     if (s.test && s.test.resultat === 'modifiee' && s.test.modif) txt += ' ' + polir('Pourtant, quelque chose cloche : ' + min1(s.test.modif));
     if (s.test && s.test.resultat === 'interrompue') txt += ' ' + interruption(s.test.histoire, ctx);
@@ -509,21 +562,33 @@ COF.Conteur = (function () {
     else s.jeu.choix = tirerChoix(c, g);
     /* un imprévu peut surgir dès l'ouverture (exploration surtout) */
     s.jeu.evtDiffere = Math.random() < ({ explorer: 0.45, voyage: 0.4, fil: 0.25, libre: 0.25, piste: 0.15, donjon: 0.2 }[g] || 0);
+    /* la saison pèse sur la route (neige, orage : un jour de plus) */
+    if (COF.Saisons && g !== 'repos') { var sj = COF.Saisons.ajuster(c, s, ctx); if (sj) txt += ' ' + sj; }
+    /* les actes passés ont des suites : une vieille rancune, une dette, de la gratitude */
+    var echo = COF.Echos && g !== 'repos' && !/^finale_/.test(g) ? COF.Echos.reveiller(c, s, ctx) : null;
     var out = [];
     if (der && s.n > 1) out.push({ t: 'recit', rappel: true, txt: 'Précédemment : ' + der.resume });
     else if (s.n === 1 && c.precedent && c.precedent.epilogue) out.push({ t: 'recit', rappel: true, txt: 'Précédemment, dans la campagne (« ' + c.precedent.titre + ' ») : ' + c.precedent.epilogue });
     out.push({ t: 'recit', txt: txt });
+    if (echo) out.push({ t: 'recit', txt: echo.txt, m: echo.m, ok: echo.ok });
     return out;
   }
   /* Liste des choix affichables. */
   function choix(c, s) {
     if (!s || !s.jeu || s.jeu.fini) return [];
     if (s.jeu.evt && COF.Imprevus) return COF.Imprevus.choix(c, s);
+    if (s.jeu.genre === 'loisir' && COF.Loisirs && s.loisir) return COF.Loisirs.choix(c, s);
+    if (s.jeu.genre === 'dialogue' && COF.Dialogues && s.dialogue) return COF.Dialogues.choix(c, s);
     var ctx = contexte(c, s, s.jeu.genre);
     return s.jeu.choix.map(function (id, i) {
       var a = ACTIONS[id]; if (!a) return null;
       var o = { i: i, id: id, nom: nomAction(id, ctx), auto: !!a.auto, aide: a.aide };
-      if (!a.auto) { o.carac = a.carac; o.mod = caracHeros(c, a.carac); o.diff = difficulte(c, a, s.jeu.genre); }
+      if (!a.auto) {
+        if (id === 'concours' && ctx.caracConcours) a = Object.assign({}, a, { carac: ctx.caracConcours });
+        o.carac = a.carac; o.mod = caracHeros(c, a.carac); o.diff = difficulte(c, a, s.jeu.genre);
+        var hC = heros(c), bt = hC && COF.Effets ? COF.Effets.bonusTest(hC, a.carac, motsPour(id, a.carac)) : null;
+        if (bt) { o.mod += bt.bonus; o.deBonus = bt.deBonus; o.voies = bt.sources; }
+      }
       return o;
     }).filter(Boolean);
   }
@@ -546,10 +611,10 @@ COF.Conteur = (function () {
       case 'indice': s.jeu.bonus = true; return 'dé bonus au prochain jet';
       case 'avance': return payer(c, d(6) * niveau(c));
       case 'prime': return payer(c, (d(6) + d(6)) * niveau(c));
-      case 'rations': { var n = 1 + d(3), rs = COF.Expedition.ressources(c); rs.rations += n; return '+' + n + ' rations'; }
+      case 'rations': return repas(c);   /* un bon repas : quelques PV */
       case 'trouvaille': {
         if (Math.random() < 0.5) { var po = d(6) * niveau(c) + d(6); ctx.trouvaille = p(['une bourse oubliée', 'un petit coffret rongé par le temps', 'une cache de contrebandier']); return payer(c, po); }
-        var rs2 = COF.Expedition.ressources(c); rs2.torches += 2; ctx.trouvaille = 'un vieux sac contenant des torches encore sèches'; return '+2 torches';
+        ctx.trouvaille = p(['un vieux sac contenant quelques pièces', 'une bague de cuivre oubliée', 'une petite bourse de cuir']); return payer(c, d(4) + niveau(c));
       }
       case 'decouverte': {
         var l = Math.random() < 0.3 && COF.Villes ? COF.Villes.decouvrir(c) : decouvrirLieu(c);
@@ -564,7 +629,7 @@ COF.Conteur = (function () {
       case 'marche': {
         var cout = Math.max(1, 2 + niveau(c) - (COF.Saga ? COF.Saga.reputation(M().ici(c)) : 0)), hP = heros(c), rs3 = COF.Expedition.ressources(c);
         if (hP) { hP.bourse = hP.bourse || { po: 0 }; cout = Math.min(cout, hP.bourse.po || 0); hP.bourse.po -= cout; COF.Store.sauver(hP); }
-        rs3.rations += 3; rs3.torches += 2; return '−' + cout + ' po · +3 rations · +2 torches';
+        void rs3; return '−' + cout + ' po · ' + repas(c);
       }
       case 'soins': {
         var h2 = heros(c); if (!h2) return '';
@@ -577,6 +642,13 @@ COF.Conteur = (function () {
     }
     return '';
   }
+  /* Un bon repas (chasse, cueillette, auberge) : quelques PV. */
+  function repas(c) {
+    var hP = heros(c); if (!hP) return '';
+    if (hP.pv === null || hP.pv === undefined) COF.Store.reinitialiser(hP);
+    var av = hP.pv; hP.pv = Math.min(COF.Calc.pvMax(hP), hP.pv + d(4) + Math.floor(niveau(c) / 3)); COF.Store.sauver(hP);
+    return 'bon repas : +' + (hP.pv - av) + ' PV';
+  }
   /* Nouveau lieu sur la carte, près du héros (relié par une route). */
   function decouvrirLieu(c) {
     var ici = M().ici(c); if (!ici) return null;
@@ -585,18 +657,50 @@ COF.Conteur = (function () {
     return l;
   }
   /* La difficulté suit la tension, le niveau du héros et le chapitre de la campagne. */
+  /* Mots-clés des actions : ils désignent les compétences de voie qui s'appliquent
+     (« Survie : +2 + rang » pour pister, « discrétion » pour se faufiler…). */
+  var SOCIAL = ['social', 'persua', 'convain', 'négoc', 'baratin', 'renseign', 'séduction', 'diplom', 'marchand', 'éloquen', 'charme'];
+  var MOTS_ACTION = {
+    fouiller: ['fouill', 'cherch', 'repér', 'perception', 'vigilan', 'piège', 'observ'], interroger: SOCIAL.concat(['taverne', 'rumeur']),
+    pister: ['pist', 'trac', 'survie', 'chasse', 'orientation', 'nature'], savoir: ['érudi', 'connaiss', 'savoir', 'histoire', 'légende', 'magie', 'religion', 'arcan', 'lire'],
+    guetter: ['discré', 'furtiv', 'cacher', 'observ', 'vigilan'], forcer: ['force', 'athlé', 'briser', 'enfonc', 'soulev'],
+    contourner: ['acrobat', 'équilibre', 'escalad', 'saut', 'course', 'agil'], parlementer: SOCIAL, tenir: ['volonté', 'résist', 'peur', 'endur'],
+    observer: ['perception', 'vigilan', 'observ', 'escalad'], fourrager: ['chasse', 'survie', 'nature', 'cueill', 'herbor'], recoin: ['fouill', 'mécan', 'piège', 'serrure', 'crochet'],
+    sentier: ['survie', 'orientation', 'pist', 'nature'], marcher: ['endurance', 'marche', 'voyage', 'survie', 'course'], orienter: ['orientation', 'survie', 'nature', 'navig'],
+    chasserV: ['chasse', 'survie', 'nature'], avancerD: ['piège', 'perception', 'vigilan', 'mécan'], fouillerD: ['fouill', 'cherch', 'piège', 'mécan'],
+    forcerD: ['force', 'athlé', 'enfonc'], faufilerD: ['discré', 'furtiv', 'cacher'], taverne: SOCIAL.concat(['taverne', 'boire', 'alcool']), notable: SOCIAL,
+    questionner: SOCIAL.concat(['intuition', 'psycho']), jauger: ['intuition', 'psycho', 'perception'], negocier: ['négoc', 'marchand', 'baratin', 'persua'],
+    reclamer: SOCIAL, exiger: ['intimid', 'négoc', 'persua']
+  };
+  /* À défaut, les mots typiques d'une caractéristique. */
+  var MOTS_CARAC = { FOR: ['force', 'athlé'], AGI: ['acrobat', 'discré', 'crochet', 'agil'], CON: ['endur', 'résist'], PER: ['perception', 'vigilan', 'survie'],
+    CHA: SOCIAL, INT: ['érudi', 'connaiss', 'savoir', 'mécan'], VOL: ['volonté', 'résist', 'concentr'] };
+  function motsPour(id, carac, texte) {
+    var l = (MOTS_ACTION[id] || []).slice();
+    if (texte) String(texte).toLowerCase().split(/[^a-zàâäéèêëîïôöûüç]+/).forEach(function (w) { if (w.length >= 5) l.push(w.slice(0, 6)); });
+    return l.length ? l : (MOTS_CARAC[carac] || []);
+  }
   function difficulteBase(c) { return 10 + Math.floor((c.tension || 5) / 2) + Math.floor((niveau(c) - 1) / 3) + ((COF.Saga ? COF.Saga.chapitre(c) : 1) - 1); }
   /* Jet d'une caractéristique du héros (dé bonus consommé). */
-  function jet(c, s, carac, diff) {
-    var j = s.jeu, mod = caracHeros(c, carac), aide = null, comp = compagnons(c);
+  function jet(c, s, carac, diff, mots) {
+    var j = s.jeu, mod = caracHeros(c, carac), aide = null, comp = compagnons(c), hJ = heros(c), voie = null;
+    /* bonus des voies : compétence correspondante, +N aux tests, dé bonus (héroïque…) */
+    if (hJ && COF.Effets) {
+      voie = COF.Effets.bonusTest(hJ, carac, mots || MOTS_CARAC[carac]);
+      mod += voie.bonus;
+      if (voie.deBonus) j.bonus = true;
+    }
     /* un compagnon prête main-forte de temps en temps : dé bonus */
-    if (!j.bonus && comp.length && Math.random() < 0.3) { aide = p(comp); j.bonus = true; }
+    /* le spécialiste du groupe (éclaireur pour la perception, érudit pour le savoir…) aide plus souvent */
+    var spe = COF.Troupe ? COF.Troupe.specialiste(c, carac) : null;
+    if (!j.bonus && spe && Math.random() < 0.5) { aide = spe.nom; j.bonus = true; }
+    else if (!j.bonus && comp.length && Math.random() < 0.3) { aide = p(comp); j.bonus = true; }
     var r = COF.Dice.test({ mod: mod, difficulte: diff, bonus: j.bonus });
     var bonus = j.bonus; j.bonus = false;
     var reussi = !!r.reussite;
     return { r: r, reussi: reussi, diff: diff, aide: aide, m: carac + ' ' + (mod >= 0 ? '+' : '') + mod + ' : ' + r.des.join('/') + (r.des.length > 1 ? ' (garde ' + r.garde + ')' : '') +
       ' → ' + r.total + ' contre ' + diff + ' · ' + (r.crit ? 'réussite critique' : r.fumble ? 'échec critique' : reussi ? (r.total - diff <= 1 ? 'de justesse' : 'réussite') : 'échec') +
-      (bonus ? ' (dé bonus' + (aide ? ' : aide de ' + aide : '') + ')' : '') };
+      (bonus ? ' (dé bonus' + (aide ? ' : aide de ' + aide : '') + ')' : '') + (voie && voie.sources.length ? ' · voies : ' + voie.sources.join(', ') : '') };
   }
   /* Conséquence concrète d'un échec (scènes physiques). */
   var MENTALES = ['savoir', 'interroger', 'parlementer', 'questionner', 'jauger', 'negocier', 'reclamer', 'exiger'];
@@ -604,9 +708,10 @@ COF.Conteur = (function () {
     if (GENRES[s.jeu.genre].social) return '';
     var r = Math.random(), mentale = MENTALES.indexOf(id) >= 0;
     if (mentale) r = 0.4 + r * 0.6;
-    if (!mentale && (fumble || r < 0.4)) {
-      var dm = d(4) + Math.floor(niveau(c) / 3);
-      return { txt: p(['{h} s’en tire avec une vilaine blessure.', 'Le prix à payer : une entaille qui saigne abondamment.', '{h} se relève, le corps couvert d’égratignures.', '{h} se relève, couvert{he} de boue et de bleus.']), m: blesser(c, dm) };
+    if (!mentale && (fumble || r < 0.55)) {
+      var dm = d(6) + Math.floor(niveau(c) / 2), gu = COF.Troupe ? COF.Troupe.guerisseur(c) : null;
+      if (gu && Math.random() < 0.5) dm = Math.max(1, dm - d(4)); else gu = null;   /* le guérisseur du groupe panse la plaie */
+      return { txt: p(['{h} s’en tire avec une vilaine blessure.', 'Le prix à payer : une entaille qui saigne abondamment.', '{h} se relève, le corps couvert d’égratignures.', '{h} se relève, couvert{he} de boue et de bleus.']) + (gu ? ' ' + gu.nom.replace(/[{}]/g, '') + ' panse aussitôt la plaie.' : ''), m: blesser(c, dm) };
     }
     if (r < 0.7) { avancerTemps(c, 1); return { txt: 'Le temps file, et chaque heure perdue compte.', m: 'une heure perdue' }; }
     return '';
@@ -616,8 +721,11 @@ COF.Conteur = (function () {
   function agir(c, s, i) {
     if (!s || !s.jeu || s.jeu.fini) return {};
     if (s.jeu.evt && COF.Imprevus) return COF.Imprevus.resoudre(c, s, i);
+    if (s.jeu.genre === 'loisir' && COF.Loisirs && s.loisir) return COF.Loisirs.agir(c, s, i);
+    if (s.jeu.genre === 'dialogue' && COF.Dialogues && s.dialogue) return COF.Dialogues.agir(c, s, i);
     var id = s.jeu.choix[i], a = ACTIONS[id]; if (!a) return {};
     var j = s.jeu, ctx = contexte(c, s, j.genre), out = {}, m = [], txt, reussi;
+    if (id === 'concours' && ctx.caracConcours) a = Object.assign({}, a, { carac: ctx.caracConcours });   /* l'épreuve du concours */
     if (a.auto) {
       reussi = true;
       var efA = effet(c, s, a, ctx);
@@ -628,7 +736,7 @@ COF.Conteur = (function () {
       m.push('sans jet' + (a.danger ? ' · danger +' + a.danger : ''));
       if (efA) m.push(efA);
     } else {
-      var diff = difficulte(c, a, j.genre), jt = jet(c, s, a.carac, diff), r = jt.r;
+      var diff = difficulte(c, a, j.genre), jt = jet(c, s, a.carac, diff, motsPour(id, a.carac)), r = jt.r;
       reussi = jt.reussi; m.push(jt.m);
       if (reussi) {
         var ef = effet(c, s, a, ctx); if (ef) m.push(ef);
@@ -640,7 +748,8 @@ COF.Conteur = (function () {
         txt = dire(a.ko, ctx);
         if (a.fin) { j.prog = j.progMax; m.push('l’affaire se conclut quand même'); }
         else {
-          j.danger += r.fumble ? 2 : 1;
+          /* quand la tension est haute, les ennuis s'accumulent plus vite */
+          j.danger += r.fumble ? 2 : (c.tension >= 7 && Math.random() < 0.35 ? 2 : 1);
           var cs = consequence(c, s, ctx, r.fumble, id);
           if (cs) { txt += ' ' + dire(cs.txt, ctx); if (cs.m) m.push(cs.m); }
         }
@@ -650,9 +759,14 @@ COF.Conteur = (function () {
     /* en voyage, chaque choix est une journée de route : une ration par jour */
     if (j.genre === 'voyage') {
       avancerTemps(c, 4);
-      var rv = COF.Expedition.ressources(c);
-      if (rv.rations > 0) { rv.rations--; m.push('un jour passe · −1 ration'); }
-      else { m.push('un jour passe · plus de rations : ' + blesser(c, d(4))); txt += ' ' + dire('La faim tenaille {h}.', ctx); }
+      m.push('un jour passe');
+      if (COF.Saisons) { var sv = COF.Saisons.journeeRoute(c, s, ctx); if (sv) { txt += ' ' + sv.txt; if (sv.m) m.push(sv.m); } }
+    }
+    /* les compagnons réagissent : réplique, approbation ou désaccord */
+    if (COF.Troupe) {
+      var rq = COF.Troupe.replique(c, j.danger >= j.dangerMax - 1 ? 'danger' : (reussi ? 'succes' : 'echec'), ctx, 0.22);
+      if (rq) txt += ' ' + rq;
+      COF.Troupe.reagir(c, a.effet === 'flaner' ? 'flaner' : id, ctx).forEach(function (n) { txt += ' ' + n.txt; m.push(n.m); });
     }
     K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · '), ok: reussi });
     s = K().sceneCourante(c);
@@ -668,12 +782,66 @@ COF.Conteur = (function () {
     else {
       s.jeu.choix = tirerChoix(c, s.jeu.genre, id);
       /* l'imprévu : flâner le provoque, sinon il surgit au hasard (plus souvent quand la tension monte) */
-      var calme = ['accroche', 'denouement', 'confrontation', 'repos'].indexOf(s.jeu.genre) >= 0;
-      if (COF.Imprevus && (a.effet === 'flaner' || (!calme && (s.jeu.nbEvt || 0) < 2 && Math.random() < 0.2 + (c.tension || 5) * 0.02))) COF.Imprevus.declencher(c, s);
+      var calme = ['accroche', 'denouement', 'confrontation', 'repos', 'loisir', 'dialogue'].indexOf(s.jeu.genre) >= 0;
+      /* rebondissement : une fois par scène d'enquête, de quête ou d'affaire, une fois l'objectif entamé */
+      var avecRebond = /^(piste|complication|fil|libre|mission_)/.test(s.jeu.genre);
+      if (COF.Imprevus && avecRebond && !s.jeu.rebondFait && s.jeu.prog >= 1 && Math.random() < 0.45) { s.jeu.rebondFait = true; COF.Imprevus.declencher(c, s, { rebond: true }); }
+      else if (COF.Imprevus && (a.effet === 'flaner' || (!calme && (s.jeu.nbEvt || 0) < 2 && Math.random() < 0.2 + (c.tension || 5) * 0.02))) COF.Imprevus.declencher(c, s);
     }
     K().sauver(c);
     return out;
   }
+  /* ================= Magie et capacités hors combat ================= */
+  /* Sorts utilitaires et soins du héros, proposés comme choix dans la scène.
+     Un sort coûte son rang en PM. Une fois par scène pour chaque capacité. */
+  var OFFENSIF = /\bDM\b|attaque|dégâts|blesse|brûle|foudr|projectile|frappe/i;
+  var COMPAGNON_CAP = /loup|golem|familier|compagnon|monture|invoqu|serviteur|destrier|élémentaire|esprit animal/i;
+  function capacitesHorsCombat(c, s) {
+    var hP = heros(c); if (!hP || !s || !s.jeu || s.jeu.fini || s.jeu.evt) return [];
+    if (hP.pv === null || hP.pv === undefined) COF.Store.reinitialiser(hP);
+    var faites = s.jeu.caps || {}, pvMax = COF.Calc.pvMax(hP), out = [];
+    COF.Calc.capacites(hP).forEach(function (x) {
+      var c0 = x.cap, cle = x.voieKey + '|' + c0.r;
+      if (faites[cle] || COMPAGNON_CAP.test(c0.n)) return;
+      var soin = c0.t === 'soin';
+      if (soin && (!c0.dmg || hP.pv >= pvMax)) return;
+      if (!soin && (!c0.s || OFFENSIF.test(c0.d || '') || c0.dmg)) return;
+      var cout = c0.s ? c0.r : 0;
+      out.push({ cle: cle, nom: c0.n, soin: soin, cout: cout, possible: (hP.pm || 0) >= cout, desc: sansPoint(String(c0.d || '').split(/[.;]/)[0]), voie: x.voie.nom });
+    });
+    /* soins d'abord, puis 2 sorts au plus (variés d'une scène à l'autre) */
+    var soins = out.filter(function (o) { return o.soin; }), sorts = out.filter(function (o) { return !o.soin; });
+    sorts.sort(function (a, b) { return (a.nom + s.id).length % 3 - (b.nom + s.id).length % 3; });
+    return soins.slice(0, 1).concat(sorts.slice(0, 2));
+  }
+  function utiliserCapacite(c, s, cle) {
+    var hP = heros(c); if (!hP || !s || !s.jeu) return {};
+    var o = capacitesHorsCombat(c, s).filter(function (x) { return x.cle === cle; })[0]; if (!o || !o.possible) return {};
+    var x = COF.Calc.capacites(hP).filter(function (y) { return y.voieKey + '|' + y.cap.r === cle; })[0]; if (!x) return {};
+    var j = s.jeu, ctx = Object.assign(contexte(c, s, j.genre), { cap: o.nom }), m = [], txt;
+    j.caps = j.caps || {}; j.caps[cle] = true;
+    if (o.cout) { hP.pm = Math.max(0, (hP.pm || 0) - o.cout); m.push('−' + o.cout + ' PM (' + hP.pm + ')'); }
+    if (o.soin) {
+      var f = COF.UI && COF.UI.formuleEchelle ? COF.UI.formuleEchelle(x.cap, hP) : x.cap.dmg;
+      var dmR = COF.Dice.dommages(f, COF.Calc.ctx(hP, x.rang), {}), av = hP.pv;
+      hP.pv = Math.min(COF.Calc.pvMax(hP), hP.pv + dmR.total);
+      m.push(f + ' = ' + dmR.total + ' · +' + (hP.pv - av) + ' PV (' + hP.pv + ')');
+      txt = dire(['{h} fait appel à « {cap} » : une douce chaleur referme ses plaies.', '« {cap} » : les blessures de {h} se referment à vue d’œil.'], ctx);
+    } else {
+      /* sort utilitaire : la magie fait avancer la scène et donne l'avantage */
+      j.prog++; j.bonus = true;
+      m.push('objectif +1 · dé bonus au prochain jet');
+      txt = dire(['{h} lance « {cap} ». ' + maj(o.desc) + '. La magie ouvre une voie que nul n’aurait trouvée autrement.',
+        'D’un geste, {h} déclenche « {cap} » : ' + min1(o.desc) + '. La situation tourne à son avantage.'], ctx);
+    }
+    COF.Store.sauver(hP);
+    K().ajouterEntree(c, { t: 'recit', txt: txt, m: '✨ ' + o.nom + ' (' + o.voie + ') · ' + m.join(' · '), ok: true });
+    s = K().sceneCourante(c);
+    if (s.jeu.prog >= s.jeu.progMax && s.jeu.progMax > 0) finir(c, s, 'reussite');
+    K().sauver(c);
+    return {};
+  }
+
   /* ================= Action libre : le joueur écrit, l'app comprend ================= */
   var MOTS = {
     FOR: /forc|pouss|soulev|enfonc|défonc|frapp|cogn|bris|cass|arrach|lutt|plaqu|buscul|bouscul|tir(e|er) (la|le|sur)|port(e|er) |abatt|tordre|dégag/i,
@@ -709,7 +877,7 @@ COF.Conteur = (function () {
     if (caracForcee) it.carac = caracForcee;
     if (it.bonus) j.bonus = true;
     if (it.temps) avancerTemps(c, it.temps);
-    var diff = difficulteBase(c) + it.mod, jt = jet(c, s, it.carac, diff), r = jt.r;
+    var diff = difficulteBase(c) + it.mod, jt = jet(c, s, it.carac, diff, motsPour(null, it.carac, texte)), r = jt.r;
     m.push('action libre · ' + jt.m);
     var debut = polir(ex('{h} tente sa chance : « ' + texte.replace(/[{}\[\]]/g, '') + ' ».', ctx)), txt;
     if (jt.reussi) {
@@ -802,11 +970,21 @@ COF.Conteur = (function () {
       if (!ok) f.quete.revers = (f.quete.revers || 0) + 1;
       if (!ok && f.quete.saga === 'final' && f.quete.etape === 3 && c.saga) c.saga.amere = true;
       notes.push(D().avancer(c, f));
-    } else if (f) notes.push(S ? S.resoudreRumeur(c, f, ok) : (ok ? (f.ouvert = false, '🧵 « ' + f.nom + ' » est résolu.') : ''));
+    } else if (f && f.mission && COF.Missions) COF.Missions.conclure(c, f, ok).forEach(function (n) { notes.push(n); });
+    else if (f) notes.push(S ? S.resoudreRumeur(c, f, ok) : (ok ? (f.ouvert = false, '🧵 « ' + f.nom + ' » est résolu.') : ''));
     if (j.genre === 'ville' && S) notes.push(S.changerRep(M().ici(c), ok ? 1 : -1));
-    var nuit = avancerTemps(c, j.genre === 'repos' ? 2 : 1);
-    if (nuit) notes.push('☀️ Un nouveau jour se lève : jour ' + c.jour + '.');
+    var nuit;
+    if (s.loisir && s.loisir.nuit) {
+      /* une vraie nuit : DR +1, PM restaurés, états effacés, et l'on se réveille à l'aube */
+      var hN = heros(c);
+      if (hN) { hN.dr = Math.min(COF.Calc.drMax(hN), (hN.dr || 0) + 1); hN.pm = COF.Calc.pmMax(hN); hN.etats = []; hN.dmTemp = 0; COF.Store.sauver(hN); }
+      etat(c).heure = 0; c.jour++; nuit = true;
+      notes.push('🌅 ' + p(['Le jour se lève.', 'L’aube pointe, fraîche et claire.', 'Un coq chante quelque part : c’est le matin.']) + ' Jour ' + c.jour + ' · DR +1, PM restaurés.');
+    } else nuit = avancerTemps(c, j.genre === 'repos' ? 2 : 1);
+    if (nuit && !(s.loisir && s.loisir.nuit)) notes.push('☀️ Un nouveau jour se lève : jour ' + c.jour + '.');
     if (S && !ok) S.compagnons(c, 'echec').forEach(function (n) { notes.push(n); });
+    /* le monde bouge entre les scènes : lettres, appels à l'aide, ennemis… */
+    if (COF.Missions && j.genre !== 'repos') { COF.Missions.expirer(c).forEach(function (n) { notes.push(n); }); var nv = COF.Missions.nouvelles(c); if (nv) notes.push(nv); }
     if (S && c.saga) {
       notes.push(S.nouveauJour(c));
       if (!ok && Math.random() < 0.4) notes.push(S.avancer(c, 1));
@@ -815,15 +993,17 @@ COF.Conteur = (function () {
   }
   function infoTemps(c) {
     var co = etat(c), ici = M().ici(c), env = (ici && ici.env) || 'plaine';
-    return { heure: ['🌅 Aube', '☀️ Jour', '🌇 Crépuscule', '🌙 Nuit'][co.heure], meteo: env === 'souterrain' ? '' : METEO_NOM[meteo(c, env)] };
+    var sz = COF.Saisons ? COF.Saisons.info(c) : null;
+    return { heure: ['🌅 Aube', '☀️ Jour', '🌇 Crépuscule', '🌙 Nuit'][co.heure], meteo: env === 'souterrain' ? '' : METEO_NOM[meteo(c, env)],
+      saison: sz ? sz.ic + ' ' + sz.nom + (sz.annee > 1 ? ' (an ' + sz.annee + ')' : '') : '' };
   }
 
   function apresOuverture(c) {
     var s = K().sceneCourante(c);
     if (s && s.jeu && s.jeu.evtDiffere && COF.Imprevus) { s.jeu.evtDiffere = false; COF.Imprevus.declencher(c, s); K().sauver(c); }
   }
-  return { contexte: function (c, s) { return contexte(c, s, s && s.jeu ? s.jeu.genre : genreDe(c, s)); }, heros: heros, niveau: niveau, payer: payer, blesser: blesser,
+  return { repas: repas, contexte: function (c, s) { return contexte(c, s, s && s.jeu ? s.jeu.genre : genreDe(c, s)); }, heros: heros, niveau: niveau, payer: payer, blesser: blesser,
     caracHeros: caracHeros, difficulteBase: difficulteBase, jet: jet, engager: engager, reprendre: reprendre, decouvrirLieu: decouvrirLieu, apresOuverture: apresOuverture,
     formes: formes, ex: ex, polir: polir, dire: dire, GENRES: GENRES, ACTIONS: ACTIONS, genreDe: genreDe,
-    interpreter: interpreter, agirLibre: agirLibre, titreFinale: titreFinale, ouvrir: ouvrir, choix: choix, agir: agir, provoquer: provoquer, apresCombat: apresCombat, conclure: conclure, avancerTemps: avancerTemps, infoTemps: infoTemps };
+    finir: finir, capacitesHorsCombat: capacitesHorsCombat, utiliserCapacite: utiliserCapacite, motsPour: motsPour, interpreter: interpreter, agirLibre: agirLibre, titreFinale: titreFinale, ouvrir: ouvrir, choix: choix, agir: agir, provoquer: provoquer, apresCombat: apresCombat, conclure: conclure, avancerTemps: avancerTemps, infoTemps: infoTemps };
 })();
