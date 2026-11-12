@@ -49,7 +49,7 @@ COF.Monde = (function () {
     c.routes = c.routes || [];
     (c.lieux || []).forEach(function (l) {
       if (l.x === undefined) { var p = placeLibre(c, lieu(c, c.position)); l.x = p.x; l.y = p.y; }
-      if (!l.env) l.env = devinerEnv(l.nom + ' ' + (l.note || '')) || 'plaine';
+      if (!l.env) l.env = devinerEnv(l.nom + ' ' + (l.note || '')) || envAuPoint(c, l.x, l.y) || 'plaine';
     });
     return c;
   }
@@ -74,9 +74,51 @@ COF.Monde = (function () {
     if (l) { if (!l.env && env) l.env = env; return l; }
     l = K().ajouterListe(c, 'lieux', { nom: nom, note: note || '' });
     var p = placeLibre(c, pres); l.x = p.x; l.y = p.y;
-    l.env = env || devinerEnv(nom + ' ' + (note || '')) || 'plaine';
+    l.env = env || devinerEnv(nom + ' ' + (note || '')) || envAuPoint(c, l.x, l.y) || 'plaine';
     return l;
   }
+  /* ---------- Régions : grandes zones de terrain ----------
+     Cercles (centre, rayon) posés sur la carte. Un lieu ou une route
+     sans terrain précis prend celui de la région où il se trouve
+     (la plus petite qui le contient). */
+  function regions(c) { return c.regions = c.regions || []; }
+  function ajouterRegion(c, reg) {
+    reg.id = 'rg_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    regions(c).push(reg);
+    return reg;
+  }
+  function retirerRegion(c, id) { c.regions = regions(c).filter(function (r) { return r.id !== id; }); }
+  function regionA(c, x, y) {
+    return regions(c).filter(function (r) { return Math.hypot(r.x - x, r.y - y) <= r.r; })
+      .sort(function (a, b) { return a.r - b.r; })[0] || null;
+  }
+  function envAuPoint(c, x, y) { var r = regionA(c, x, y); return r ? r.env : null; }
+
+  /* ---------- Découverte en voyage ----------
+     Un lieu inconnu apparaît le long de la route, avec un nom tiré
+     selon le terrain traversé. */
+  var NOMS_DEC = {
+    foret: ['Clairière', 'Bosquet', 'Chêne', 'Sous-bois', 'Cabane du forestier'], plaine: ['Tertre', 'Moulin', 'Gué', 'Pierre levée', 'Ferme'],
+    montagne: ['Col', 'Pic', 'Refuge', 'Défilé', 'Belvédère'], marais: ['Îlot', 'Tourbière', 'Hutte', 'Mare', 'Passerelle'],
+    souterrain: ['Grotte', 'Gouffre', 'Mine', 'Galerie', 'Caverne'], arctique: ['Glacier', 'Cairn', 'Crevasse', 'Lac gelé', 'Igloo'],
+    urbain: ['Hameau', 'Relais', 'Auberge', 'Poste de garde', 'Marché'], ruines: ['Ruines', 'Tour effondrée', 'Tombeau', 'Temple oublié', 'Fort abandonné']
+  };
+  var EPITHETES = ['du Corbeau', 'des Murmures', 'du Pendu', 'aux Loups', 'de la Vieille', 'du Sanglier', 'des Brumes', 'd’Argent', 'du Roi Mort',
+    'des Ronces', 'de l’Ermite', 'aux Cendres', 'du Silence', 'de la Source', 'des Trois Pierres', 'du Gibet', 'de la Lune', 'des Ombres'];
+  function decouvrir(c, depart, dest, fraction, env) {
+    if (!depart || !dest) return null;
+    var x = depart.x + (dest.x - depart.x) * fraction, y = depart.y + (dest.y - depart.y) * fraction;
+    var ang = Math.atan2(dest.y - depart.y, dest.x - depart.x) + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1);
+    var dec = 8 + Math.random() * 10;
+    x += Math.cos(ang) * dec; y += Math.sin(ang) * dec;
+    var e = Math.random() < 0.25 ? COF.piocher(['ruines', 'souterrain', 'urbain']) : (env || envAuPoint(c, x, y) || 'plaine');
+    var nom, essai = 0;
+    do { nom = COF.piocher(NOMS_DEC[e] || NOMS_DEC.plaine) + ' ' + COF.piocher(EPITHETES); } while (lieuParNom(c, nom) && ++essai < 10);
+    var l = K().ajouterListe(c, 'lieux', { nom: nom, note: 'Découvert en voyage le jour ' + c.jour + '.' });
+    l.x = Math.round(x); l.y = Math.round(y); l.env = e;
+    return l;
+  }
+
   /* Terrain là où se trouve le héros (null si inconnu). */
   function envIci(c) { var l = ici(c); return l ? (l.env || devinerEnv(l.nom + ' ' + (l.note || ''))) : null; }
   function route(c, a, b) {
@@ -87,7 +129,10 @@ COF.Monde = (function () {
     if (!a || !b || a === b) return null;
     var r = route(c, a, b);
     if (r) { r.jours = jours; r.env = env || r.env; return r; }
-    r = { id: uid(), a: a, b: b, jours: Math.max(1, jours || 1), env: env || 'plaine' };
+    /* sans terrain précisé : celui de la région au milieu de la route */
+    var la = lieu(c, a), lb = lieu(c, b);
+    var envMilieu = la && lb ? envAuPoint(c, (la.x + lb.x) / 2, (la.y + lb.y) / 2) : null;
+    r = { id: uid(), a: a, b: b, jours: Math.max(1, jours || 1), env: env || envMilieu || 'plaine' };
     c.routes.push(r);
     return r;
   }
@@ -101,6 +146,7 @@ COF.Monde = (function () {
   function ici(c) { return lieu(c, c.position); }
   function seRendre(c, id) { c.position = id; }
 
-  return { L: L, H: H, cadre: cadre, assurer: assurer, envDe: envDe, devinerEnv: devinerEnv, envIci: envIci, lieu: lieu, lieuParNom: lieuParNom, obtenirLieu: obtenirLieu, placeLibre: placeLibre,
+  return { L: L, H: H, cadre: cadre, assurer: assurer, envDe: envDe, devinerEnv: devinerEnv, envIci: envIci,
+    regions: regions, ajouterRegion: ajouterRegion, retirerRegion: retirerRegion, regionA: regionA, envAuPoint: envAuPoint, decouvrir: decouvrir, lieu: lieu, lieuParNom: lieuParNom, obtenirLieu: obtenirLieu, placeLibre: placeLibre,
     route: route, relier: relier, delier: delier, voisins: voisins, ici: ici, seRendre: seRendre };
 })();

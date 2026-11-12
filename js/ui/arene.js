@@ -35,8 +35,8 @@ COF.UI.Arene = (function () {
     var p = COF.Store.get(cb.refId);
     if (!p) return { nom: cb.nom + ' (supprimé)', pv: 0, pvMax: 1, def: 0, init: 0, pm: 0, pmMax: 0, vivant: false };
     if (p.pv === null || p.pv === undefined) COF.Store.reinitialiser(p);
-    var K = COF.Calc;
-    return { nom: p.nom, pv: p.pv, pvMax: K.pvMax(p), def: K.def(p), init: K.init(p), pm: p.pm || 0, pmMax: K.pmMax(p), vivant: true, perso: p };
+    var K = COF.Calc, bv = bonusActifs(p);   /* bonus de DEF / Init. des voies (cochés ou sans condition) */
+    return { nom: p.nom, pv: p.pv, pvMax: K.pvMax(p), def: K.def(p) + bv.def, init: K.init(p) + bv.init, pm: p.pm || 0, pmMax: K.pmMax(p), vivant: true, perso: p };
   }
   function ajusterPv(cb, delta) {
     if (cb.type === 'creature') { A().majPv(cb, delta); return; }
@@ -128,6 +128,7 @@ COF.UI.Arene = (function () {
           dmg: at.dmg ? at.dmg + (cb.adjDm ? '+' + cb.adjDm : '') : null, portee: an.portee, auto: an.auto, nb: an.nb, recharge: an.recharge, indispo: rec,
           action: 'A', ctx: ctxCreature(cb), note: (at.note || '') + (rec ? ' (se recharge)' : ''), idx: i });
       });
+      out = out.concat(optionsManoeuvres(cb));
       (cb.caps || []).forEach(function (cp, i) {
         if (!cp.a) return;
         out.push({ id: 'c' + i, cat: 'capacite', ic: '💥', nom: cp.n, mod: (cb.att && cb.att[0]) ? cb.att[0].mod : (Math.floor(cb.nc) || 0),
@@ -147,6 +148,14 @@ COF.UI.Arene = (function () {
         crit: w.crit || 20, portee: ty === 'distance' ? (w.portee || 30) : null, action: 'A', ctx: K.ctx(p), arme: i });
     });
     out.push({ id: 'mn', cat: 'attaque', ic: '👊', nom: 'Mains nues', mod: aa.contact + modDe('contact'), dmg: dmDe('contact', '1d3+FOR'), portee: null, action: 'A', ctx: K.ctx(p), note: 'DM temporaires' });
+    /* Objets consommables de l'inventaire (potions, élixirs, onguents…) :
+       la formule de soin est lue dans leur description (« Rend 1d4° PV »). */
+    (p.inventaire || []).forEach(function (o, i) {
+      if (!/potion|élixir|elixir|onguent|baume|fiole|eau bénite|parchemin|flasque|antidote|herbe|remède|cataplasme|bandage/i.test(o.nom)) return;
+      var f = formuleSoin(o.desc || o.note || '');
+      out.push({ id: 'o' + i, cat: 'objet', ic: '🧪', nom: o.nom.replace(/^✨ /, '') + ((o.qte || 1) > 1 ? ' ×' + o.qte : ''), soin: !!f, dmg: f, inv: i,
+        auto: true, portee: 3, action: 'A', ctx: K.ctx(p), note: o.desc || '' });
+    });
     K.capacites(p).forEach(function (x) {
       var c = x.cap, txt = c.n + ' ' + (c.d || '');
       var sort = !!c.s, soin = c.t === 'soin';
@@ -173,8 +182,124 @@ COF.UI.Arene = (function () {
       }
       out.push(opt);
     });
-    return out;
+    return out.concat(optionsManoeuvres(cb));
   }
+  /* Formule de soin d'un objet : « Rend 1d4° PV », « [2d8 + CON] PV »… */
+  function formuleSoin(d) {
+    var m = /(\d*d\d+°?(?:\s*\+\s*(?:\d+|FOR|AGI|CON|PER|CHA|INT|VOL|niveau|rang))*)\s*\]?\s*(?:points? de vigueur|PV)/i.exec(d || '');
+    return m && /rend|soign|récup|restaure|regagne|guérit|PV/i.test(d) ? m[1].replace(/\s+/g, '') : null;
+  }
+  /* ---------- Manœuvres (test opposé au contact) ---------- */
+  var MANOEUVRES = [
+    { id: 'renverser', ic: '🤼', nom: 'Renverser', note: 'Test opposé : la cible tombe (état Renversé : −5 en attaque et DEF, une action pour se relever).' },
+    { id: 'desarmer', ic: '🗡️', nom: 'Désarmer', note: 'Test opposé : la cible lâche son arme et perd son prochain tour à la ramasser (créature) ou doit la ramasser (action de mouvement).' },
+    { id: 'saisir', ic: '✊', nom: 'Saisir / bloquer', note: 'Test opposé : la cible est Immobilisée (pas de déplacement, dé malus en attaque) jusqu’à ce qu’on la libère.' },
+    { id: 'pousser', ic: '💨', nom: 'Repousser', note: 'Test opposé : la cible recule de 6 m.' },
+    { id: 'couvert', ic: '🛡️', nom: 'Se mettre à couvert', note: '+2 en DEF contre les attaques à distance jusqu’à votre prochain tour (action de mouvement).', soi: true, action: 'M' }
+  ];
+  function optionsManoeuvres(cb) {
+    return MANOEUVRES.map(function (m) {
+      return { id: 'm-' + m.id, cat: 'manoeuvre', ic: m.ic, nom: m.nom, manoeuvre: m.id, note: m.note, action: m.action || 'A', portee: null, auto: !!m.soi, soi: !!m.soi };
+    });
+  }
+  function modMelee(cb) {
+    if (cb.type === 'pj') { var p = COF.Store.get(cb.refId); return p ? COF.Calc.attaques(p).contact + (cb.adjAtt || 0) : 0; }
+    var m = (cb.att || []).filter(function (x) { return !analyseAttCreature(x).portee; }).map(function (x) { return x.mod || 0; });
+    return (m.length ? Math.max.apply(null, m) : ((cb.att && cb.att[0] && cb.att[0].mod) || Math.floor(cb.nc) || 0)) + (cb.adjAtt || 0);
+  }
+  function resoudreManoeuvre(cb, opt, t) {
+    var d = donnees(t), r = { opt: opt, cible: d.nom, lignes: [], manoeuvre: true };
+    if (opt.manoeuvre === 'couvert') {
+      cb.couvertJusqua = s.round + 1; r.verdict = 'effet';
+      log('🛡️ ' + cb.nom + ' se met à couvert (+2 DEF contre les tirs).');
+      return r;
+    }
+    var ea = effetsEtats(cb), et = effetsEtats(t);
+    var ta = COF.Dice.test({ mod: modMelee(cb) + ea.att, bonus: ui.bonus, malus: ui.malus || ea.malus });
+    var td = COF.Dice.test({ mod: modMelee(t) + et.att, malus: et.malus });
+    r.oppose = { a: ta, d: td };
+    var ok = ta.total > td.total;
+    r.verdict = ok ? 'touche' : 'rate';
+    var effet = '';
+    if (ok) {
+      if (opt.manoeuvre === 'renverser') { if (!a(t, 'renverse')) A().toggleEtat(t, 'renverse'); effet = d.nom + ' est renversé.'; }
+      else if (opt.manoeuvre === 'saisir') { if (!a(t, 'immobilise')) A().toggleEtat(t, 'immobilise'); effet = d.nom + ' est immobilisé.'; }
+      else if (opt.manoeuvre === 'desarmer') { t.desarme = true; effet = d.nom + ' lâche son arme.'; }
+      else if (opt.manoeuvre === 'pousser') { A().eloigner(s, t, cb, 2); effet = d.nom + ' est repoussé.'; }
+      r.lignes.push(effet);
+    }
+    stat('manoeuvres', cb.nom + ' : ' + opt.nom.toLowerCase() + (ok ? ' réussi' : ' raté') + ' contre ' + d.nom);
+    log('🤼 ' + cb.nom + ' tente de ' + opt.nom.toLowerCase().replace(' / bloquer', '') + ' ' + d.nom + ' : ' + ta.total + ' contre ' + td.total + ' → ' + (ok ? 'réussi. ' + effet : 'raté.'));
+    return r;
+  }
+  /* Utilise (consomme) un objet de l'inventaire. */
+  function consommer(cb, opt) {
+    if (opt.inv === undefined || cb.type !== 'pj') return;
+    var p = COF.Store.get(cb.refId); if (!p || !p.inventaire[opt.inv]) return;
+    var o = p.inventaire[opt.inv];
+    if ((o.qte || 1) > 1) o.qte--; else p.inventaire.splice(opt.inv, 1);
+    COF.Store.sauver(p);
+    stat('objets', cb.nom + ' : ' + opt.nom.replace(/ ×\d+$/, ''));
+  }
+
+  /* ---------- Statistiques du combat (pour le bilan) ---------- */
+  function stat(k, v, n) {
+    s.stats = s.stats || { inflige: {}, subi: {}, soins: {}, crits: [], ko: [], objets: [], manoeuvres: [], meilleur: null };
+    var st = s.stats;
+    if (k === 'inflige' || k === 'subi' || k === 'soins') st[k][v] = (st[k][v] || 0) + n;
+    else if (k === 'ko') { if (st.ko.indexOf(v) < 0) st.ko.push(v); }
+    else st[k].push(v);
+  }
+
+  /* ---------- Bilan du combat (affiché en fin de combat et versé au Carnet) ---------- */
+  function bilan(issue) {
+    s = s || A().lire();
+    var st = s.stats || { inflige: {}, subi: {}, soins: {}, crits: [], ko: [], objets: [], manoeuvres: [], meilleur: null };
+    var heros = s.combattants.filter(function (c) { return camp(c) === 'heros'; }), adv = s.combattants.filter(function (c) { return camp(c) === 'monstres'; });
+    function somme(liste, tab) { return liste.reduce(function (n, c) { return n + (tab[c.nom] || 0); }, 0); }
+    var infl = somme(heros, st.inflige), subi = somme(heros, st.subi);
+    var tombes = adv.filter(function (c) { return donnees(c).pv <= 0; }).map(function (c) { return c.nom; });
+    var fuis = adv.filter(function (c) { return c.moral === 'fuite'; }).map(function (c) { return c.nom; });
+    var rendus = adv.filter(function (c) { return c.moral === 'reddition'; }).map(function (c) { return c.nom; });
+    var herosKo = heros.filter(function (c) { return donnees(c).pv <= 0; }).map(function (c) { return c.nom; });
+    var mvp = heros.slice().sort(function (x, y) { return (st.inflige[y.nom] || 0) - (st.inflige[x.nom] || 0); })[0];
+    var L = [];
+    L.push('Combat de ' + s.round + ' round' + (s.round > 1 ? 's' : '') + ' contre ' + adv.map(function (c) { return c.nom; }).join(', ') + '.');
+    L.push('Dégâts : ' + infl + ' infligés, ' + subi + ' subis par le groupe.');
+    if (tombes.length) L.push('Abattus : ' + tombes.join(', ') + '.');
+    if (fuis.length) L.push('En fuite : ' + fuis.join(', ') + '.');
+    if (rendus.length) L.push('Se sont rendus : ' + rendus.join(', ') + '.');
+    if (herosKo.length) L.push('À terre côté héros : ' + herosKo.join(', ') + '.');
+    if (st.meilleur) L.push('Plus beau coup : ' + st.meilleur.par + ' sur ' + st.meilleur.sur + ' (' + st.meilleur.arme + ', ' + st.meilleur.dm + ' DM' + (st.meilleur.crit ? ', critique' : '') + ').');
+    if (st.crits.length) L.push('Critiques : ' + st.crits.length + '.');
+    var soins = Object.keys(st.soins).map(function (k) { return k + ' +' + st.soins[k]; });
+    if (soins.length) L.push('Soins : ' + soins.join(', ') + ' PV.');
+    if (st.objets.length) L.push('Objets utilisés : ' + st.objets.join(' ; ') + '.');
+    if (st.manoeuvres.length) L.push('Manœuvres : ' + st.manoeuvres.join(' ; ') + '.');
+    heros.forEach(function (c) { var d = donnees(c); L.push(c.nom + ' termine à ' + d.pv + '/' + d.pvMax + ' PV.'); });
+    /* une phrase de récit, selon l'issue et les temps forts */
+    var victoire = issue ? issue === 'victoire' : !campDebout('monstres');
+    var recit;
+    if (victoire) {
+      recit = (mvp && st.inflige[mvp.nom] ? mvp.nom + ' mène la charge' : 'Le groupe tient bon') +
+        (st.meilleur && st.meilleur.crit ? ' et ' + st.meilleur.par + ' porte un coup terrible à ' + st.meilleur.sur : '') +
+        (s.round <= 2 ? ' : l’affrontement est expédié en un éclair.' : (s.round >= 6 ? ' au terme d’un combat long et éprouvant.' : '.')) +
+        (subi > infl ? ' La victoire a coûté cher.' : '') + (fuis.length ? ' ' + fuis.join(' et ') + ' s’échappe' + (fuis.length > 1 ? 'nt' : '') + ' : on pourrait le' + (fuis.length > 1 ? 's' : '') + ' revoir.' : '');
+    } else if (issue === 'fuite') recit = 'Le groupe rompt le combat et se replie, laissant le champ libre à ses adversaires.';
+    else recit = 'Le combat tourne mal : ' + (herosKo.length ? herosKo.join(' et ') + ' s’effondre' + (herosKo.length > 1 ? 'nt' : '') : 'le héros est débordé') + '.';
+    return { lignes: L, recit: recit, texte: recit + '\n' + L.join('\n') };
+  }
+  /* Récupération rapide proposée en fin de combat (1 DR). */
+  function recupRapide(cb) {
+    var p = COF.Store.get(cb.refId); if (!p) return null;
+    if ((p.dr || 0) <= 0) return 'Plus de dé de récupération.';
+    p.dr--;
+    var K = COF.Calc, jr = COF.Dice.dommages('1d' + K.drType(p), K.ctx(p), {}), gain = jr.total + Math.floor((p.niveau || 1) / 2);
+    p.pv = Math.min(K.pvMax(p), p.pv + gain); COF.Store.sauver(p);
+    log('⏸️ ' + p.nom + ' récupère ' + gain + ' PV (' + p.pv + '/' + K.pvMax(p) + ', ' + p.dr + ' DR restant).');
+    return '+' + gain + ' PV';
+  }
+
   /* Arme utilisée par une capacité « monture » (choix du joueur). */
   function appliquerArme(cb, opt) {
     if (!opt.rider) return opt;
@@ -198,32 +323,45 @@ COF.UI.Arene = (function () {
      cochent à la main dans le panneau « 🎯 Ajuster ».                      */
   var COND = /\b(si|avec|sans|quand|lorsqu|en selle|dans|contre|tant qu|sur un|une fois|choisit|catégorie|prédilection|des armes à|des dagues|à deux mains|monture|navire|ennemi juré|proie)\b/i;
   /* Capacité activable ou liée à autre chose que le héros : jamais comptée d'office. */
-  var ACTIVABLE = /×|par combat|par jour|pendant|forme|round|\bPC\b|dépens|invoqu|appel|compagnon|loup|golem|familier|monture|animal|action|esprit|rage|transe|furie/i;
+  var ACTIVABLE = /×|par combat|par jour|pendant|en forme|forme d|\bPC\b|dépens|invoqu|appel|compagnon|loup|golem|familier|monture|animal|esprit de|rage|transe|furie|pour le round|ce round|au début du round/i;
   function bonusVoies(p) {
     var out = [];
     COF.Calc.capacites(p).forEach(function (x) {
       var c = x.cap; if (c.a || !c.d) return;
-      var re = /\+\s?(\d+)\s+(?:en |aux |à l['’])?(attaque|DM)(?:\s+(au contact|à distance|magique|des armes à distance))?([^.;]*)/gi, m;
+      var re = /\+\s?(\d+)\s+(?:en |aux |à l['’]|à la |à son )?(attaque|DM|DEF|défense|Initiative|Init\.?)(?:\s+(au contact|à distance|magique|des armes à distance))?([^.;]*)/gi, m;
       while ((m = re.exec(c.d)) !== null) {
         var val = +m[1], suite = c.d.slice(m.index, m.index + 160);
         var prog = /\(\s*\+\s?(\d+)\s+au rang\s+(\d)(?:\s*,\s*\+\s?(\d+)\s+au rang\s+(\d))?/i.exec(suite);
         if (prog) { if (x.rang >= +prog[2]) val = +prog[1]; if (prog[4] && x.rang >= +prog[4]) val = +prog[3]; }
         var phrase = c.d.slice(Math.max(0, c.d.lastIndexOf('.', m.index) + 1), c.d.indexOf('.', m.index) > 0 ? c.d.indexOf('.', m.index) : undefined);
         var scope = /contact/i.test(m[3] || '') ? 'C' : (/distance/i.test(m[3] || '') ? 'D' : (/magique/i.test(m[3] || '') ? 'M' : 'tous'));
-        out.push({ cle: x.voieKey + '|' + c.r + '|' + out.length, cap: c.n, voie: x.voie.nom, type: /DM/i.test(m[2]) ? 'dm' : 'att', val: val, scope: scope,
-          cond: COND.test(phrase) || ACTIVABLE.test(c.n + ' ' + c.d), texte: phrase.trim() });
+        var ty = /^DM$/i.test(m[2]) ? 'dm' : (/DEF|défense/i.test(m[2]) ? 'def' : (/^Init/i.test(m[2]) ? 'init' : 'att'));
+        if (ty === 'def' || ty === 'init') scope = 'tous';
+        var cond = COND.test(phrase) || ACTIVABLE.test(c.n + ' ' + c.d);
+        out.push({ cle: x.voieKey + '|' + c.r + '|' + out.length, cap: c.n, voie: x.voie.nom, type: ty, val: val, scope: scope, cond: cond, texte: phrase.trim() });
+        /* « +2 en DEF et en Initiative » : le même bonus s'applique au second terme */
+        var et2 = /^\s*et\s+(?:en |aux |à l['’]|à la |à son )?(attaque|DM|DEF|défense|Initiative|Init\.?)/i.exec(m[4] || '');
+        if (et2) {
+          var ty2 = /^DM$/i.test(et2[1]) ? 'dm' : (/DEF|défense/i.test(et2[1]) ? 'def' : (/^Init/i.test(et2[1]) ? 'init' : 'att'));
+          out.push({ cle: x.voieKey + '|' + c.r + '|' + out.length, cap: c.n, voie: x.voie.nom, type: ty2, val: val, scope: 'tous', cond: cond, texte: phrase.trim() });
+        }
       }
     });
     return out;
   }
+  var cacheBonus = {};
   function bonusActifs(p) {
-    var choix = p.bonusVoies || {}, r = { attC: 0, attD: 0, attM: 0, dmC: 0, dmD: 0 };
+    var cle = p.id + '|' + JSON.stringify(p.voies || []) + '|' + JSON.stringify(p.bonusVoies || {});
+    if (cacheBonus[cle]) return cacheBonus[cle];
+    var choix = p.bonusVoies || {}, r = { attC: 0, attD: 0, attM: 0, dmC: 0, dmD: 0, def: 0, init: 0 };
     bonusVoies(p).forEach(function (b) {
       var on = choix.hasOwnProperty(b.cle) ? choix[b.cle] : !b.cond;
       if (!on) return;
+      if (b.type === 'def' || b.type === 'init') { r[b.type] += b.val; return; }
       var cles = b.scope === 'tous' ? ['C', 'D', 'M'] : [b.scope];
       cles.forEach(function (k) { if (b.type === 'att') r['att' + k] += b.val; else if (k !== 'M') r['dm' + k] += b.val; });
     });
+    cacheBonus = {}; cacheBonus[cle] = r;
     return r;
   }
   function ctxCreature(cb) { var n = Math.floor(cb.nc) || 1; return { carac: {}, niveau: n, deEvo: COF.deEvolutif(n) }; }
@@ -256,7 +394,7 @@ COF.UI.Arene = (function () {
   function memoriser() {
     var persos = {};
     s.combattants.forEach(function (c) {
-      if (c.type === 'pj') { var p = COF.Store.get(c.refId); if (p) persos[p.id] = { pv: p.pv, pm: p.pm }; }
+      if (c.type === 'pj') { var p = COF.Store.get(c.refId); if (p) persos[p.id] = { pv: p.pv, pm: p.pm, inv: JSON.stringify(p.inventaire || []) }; }
     });
     ui.annuler = { s: JSON.stringify(s), persos: persos, jl: journalCombat.length };
   }
@@ -265,7 +403,9 @@ COF.UI.Arene = (function () {
     s = JSON.parse(ui.annuler.s);
     Object.keys(ui.annuler.persos).forEach(function (id) {
       var p = COF.Store.get(id); if (!p) return;
-      p.pv = ui.annuler.persos[id].pv; p.pm = ui.annuler.persos[id].pm; COF.Store.sauver(p);
+      p.pv = ui.annuler.persos[id].pv; p.pm = ui.annuler.persos[id].pm;
+      if (ui.annuler.persos[id].inv) p.inventaire = JSON.parse(ui.annuler.persos[id].inv);   /* objet utilisé : rendu */
+      COF.Store.sauver(p);
     });
     journalCombat = journalCombat.slice(0, ui.annuler.jl);
     ui.annuler = null; ui.resultat = null; ui.mode = 'menu';
@@ -308,19 +448,25 @@ COF.UI.Arene = (function () {
   function resoudreUne(cb, opt, t) {
     var ea = effetsEtats(cb), d = donnees(t), et = effetsEtats(t);
     var r = { opt: opt, cible: d.nom, lignes: [] };
+    if (opt.manoeuvre) return resoudreManoeuvre(cb, opt, t);
     if (opt.soin) {
       var h = COF.Dice.dommages(opt.dmg || '1d4', opt.ctx, {});
       ajusterPv(t, h.total);
       r.soin = h; r.verdict = 'soin';
-      log('💚 ' + cb.nom + ' soigne ' + d.nom + ' (' + opt.nom + ') : +' + h.total + ' PV (' + donnees(t).pv + '/' + d.pvMax + ').');
+      stat('soins', d.nom, h.total);
+      consommer(cb, opt);
+      log('💚 ' + cb.nom + (opt.inv !== undefined ? ' utilise ' + opt.nom.replace(/ ×\d+$/, '') + (t !== cb ? ' sur ' + d.nom : '') : ' soigne ' + d.nom + ' (' + opt.nom + ')') +
+        ' : +' + h.total + ' PV (' + donnees(t).pv + '/' + d.pvMax + ').');
       return r;
     }
     if (opt.auto && !opt.dmg) {
       r.verdict = 'effet';
-      log('✨ ' + cb.nom + ' utilise ' + opt.nom + (t !== cb ? ' sur ' + d.nom : '') + '.');
+      consommer(cb, opt);
+      log('✨ ' + cb.nom + ' utilise ' + opt.nom.replace(/ ×\d+$/, '') + (t !== cb ? ' sur ' + d.nom : '') + '.');
       return r;
     }
     var def = d.def + et.def;
+    if (opt.portee && t.couvertJusqua >= s.round) { def += 2; r.lignes.push(d.nom + ' est à couvert : +2 DEF.'); }
     var test = null, touche, crit = false;
     if (opt.auto) { touche = true; }
     else {
@@ -339,6 +485,10 @@ COF.UI.Arene = (function () {
       }
       var apres = donnees(t);
       r.pvApres = apres.pv + '/' + apres.pvMax;
+      stat('inflige', cb.nom, dm.total); stat('subi', d.nom, dm.total);
+      if (crit) stat('crits', { par: cb.nom, sur: d.nom, dm: dm.total });
+      if (!s.stats.meilleur || dm.total > s.stats.meilleur.dm) s.stats.meilleur = { par: cb.nom, sur: d.nom, dm: dm.total, arme: opt.nom, crit: crit };
+      if (apres.pv <= 0) stat('ko', d.nom);
       log((cb.allie ? '🤝 ' : (cb.type === 'pj' ? '🛡️ ' : '🐉 ')) + cb.nom + ' → ' + d.nom + ' (' + opt.nom + (opt.armeNom ? ' avec ' + opt.armeNom : '') + ') : ' +
         (test ? test.total + ' contre DEF ' + def + ' → ' : 'automatique → ') + (crit ? 'CRITIQUE, ' : 'touché, ') + dm.total + ' DM' + (apres.pv <= 0 ? ' — à terre !' : ' (' + r.pvApres + ' PV).'));
     } else if (touche) {
@@ -356,6 +506,8 @@ COF.UI.Arene = (function () {
   function jouerAuto(cb) {
     var ea = effetsEtats(cb);
     if (ea.perdTour) { log('🌀 ' + cb.nom + ' ne peut pas agir (' + ea.raisons.join(', ') + ').'); return; }
+    if (cb.desarme) { cb.desarme = false; log('🗡️ ' + cb.nom + ' ramasse son arme.'); return; }
+    if (a(cb, 'renverse') && debout(cb)) { A().toggleEtat(cb, 'renverse'); log('🤼 ' + cb.nom + ' se relève.'); return; }
     var dec = A().decider(s, cb, donnees);
     if (dec.type === 'fuite') {
       var menace = s.combattants.filter(function (x) { return camp(x) !== camp(cb) && x.x !== undefined; })[0];
@@ -494,8 +646,14 @@ COF.UI.Arene = (function () {
     var cb = actif(); if (!cb) return '';
     if (ui.sel && ui.mode === 'menu' && ui.sel !== cb.id) return htmlFicheRapide(trouver(ui.sel));
     if (!campDebout('monstres') || !campDebout('heros')) {
+      var bl = bilan(), pjs = s.combattants.filter(function (c) { return c.type === 'pj' && donnees(c).vivant; });
       return '<div class="cb-fin">' + (!campDebout('monstres') ? '🏆 Plus aucun adversaire debout.' : '💀 Le héros et ses alliés sont à terre.') + '</div>' +
-        (combatAventure() ? '<button class="btn btn-plein btn-bloc" data-cn="fin-combat">🏁 Terminer le combat</button>' : '<button class="btn btn-bloc" data-cb="vider">🧹 Nouveau combat</button>');
+        '<div class="cb-bilan"><div class="recit">' + esc(bl.recit) + '</div>' + bl.lignes.map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>' +
+        (pjs.length ? '<div class="cn-grille" style="margin:8px 0">' + pjs.map(function (c) {
+          var p = COF.Store.get(c.refId);
+          return '<button data-cb="recup" data-id="' + c.id + '"' + ((p && p.dr > 0 && p.pv < COF.Calc.pvMax(p)) ? '' : ' disabled') + '>⏸️ Récup. rapide<small>' + esc(c.nom) + ' · ' + (p ? p.dr : 0) + ' DR</small></button>';
+        }).join('') + '</div>' : '') +
+        (combatAventure() ? '<button class="btn btn-plein btn-bloc" data-cn="fin-combat">🏁 Terminer et noter le bilan</button>' : '<button class="btn btn-bloc" data-cb="vider">🧹 Nouveau combat</button>');
     }
     if (ui.mode === 'resultat') return htmlResultat();
     if (ui.mode === 'cible') return htmlChoixCible(cb);
@@ -511,14 +669,15 @@ COF.UI.Arene = (function () {
       return h + '<div class="cn-grille"><button data-cb="auto" class="on">🤖 Jouer son tour</button><button data-cb="manuel">🎮 Je le joue</button></div>' +
         '<button class="btn btn-bloc" style="margin-top:6px" data-cb="fin-tour">⏭️ Passer</button>';
     }
-    var opts = options(cb), nA = opts.filter(function (o) { return o.cat === 'attaque'; }).length, nS = opts.filter(function (o) { return o.cat !== 'attaque' && !o.soin; }).length;
-    var nH = opts.filter(function (o) { return o.soin; }).length, e = eco();
+    var opts = options(cb), nA = opts.filter(function (o) { return o.cat === 'attaque'; }).length;
+    var nS = opts.filter(function (o) { return filtreCat(o, 'pouvoirs'); }).length, nH = opts.filter(function (o) { return filtreCat(o, 'soins'); }).length, e = eco();
+    h = h.replace('</span></div>', ' · <a href="#" data-cb="etats" data-id="' + cb.id + '">🌀 États' + ((cb.etats || []).length ? ' (' + cb.etats.length + ')' : '') + '</a></span></div>');
     h += '<div class="cb-actions">' +
       btnAct('attaque', '⚔️', 'Attaquer', nA, peut('A')) +
       btnAct('pouvoirs', '✨', cb.type === 'pj' ? 'Sorts & capacités' : 'Capacités', nS, nS && (peut('A') || peut('L') || peut('M'))) +
+      btnAct('manoeuvres', '🤼', 'Manœuvre', MANOEUVRES.length, peut('A') || peut('M')) +
       '<button data-cb="deplacer"' + (peut('M') && !ea.pasDeMouv ? '' : ' disabled') + '><span class="ic">👣</span><span>Se déplacer</span><small>' + (e.m ? 'mouvement' : (e.a ? 'à la place de l’attaque' : '—')) + '</small></button>' +
-      btnAct('soins', '💚', 'Soins', nH, nH && peut('A')) +
-      '<button data-cb="etats" data-id="' + cb.id + '"><span class="ic">🌀</span><span>États</span><small>' + ((cb.etats || []).length || 'aucun') + '</small></button>' +
+      btnAct('soins', '🧪', 'Soins & objets', nH, nH && peut('A')) +
       '<button data-cb="fin-tour" class="fin"><span class="ic">⏭️</span><span>Fin du tour</span><small>' + (s.creaturesAuto !== false ? 'puis l’app joue' : '') + '</small></button>' +
       '</div>';
     if (cb.manuel) h += '<button class="btn btn-sm btn-bloc" style="margin-top:6px" data-cb="rendre-ia">🤖 Rendre la main à l’app</button>';
@@ -527,21 +686,28 @@ COF.UI.Arene = (function () {
   function btnAct(cat, ic, nom, nb, dispo) {
     return '<button data-cb="liste" data-v="' + cat + '"' + (dispo ? '' : ' disabled') + '><span class="ic">' + ic + '</span><span>' + nom + '</span><small>' + (nb || 'aucun') + '</small></button>';
   }
+  function filtreCat(o, cat) {
+    if (cat === 'attaque') return o.cat === 'attaque';
+    if (cat === 'manoeuvres') return o.cat === 'manoeuvre';
+    if (cat === 'soins') return o.cat === 'objet' || (o.soin && o.cat !== 'objet');
+    return o.cat !== 'attaque' && o.cat !== 'objet' && o.cat !== 'manoeuvre' && !o.soin;
+  }
   function htmlListeOptions(cb, cat) {
-    var opts = options(cb).filter(function (o) {
-      return cat === 'attaque' ? o.cat === 'attaque' : (cat === 'soins' ? o.soin : (o.cat !== 'attaque' && !o.soin));
-    });
-    var h = '<div class="cb-consigne">' + { attaque: '⚔️ Choisissez une attaque', pouvoirs: '✨ Choisissez un sort ou une capacité', soins: '💚 Choisissez un soin' }[cat] + '</div>';
-    if (cat !== 'soins') h += htmlAjuster(cb);
-    if (cat === 'attaque') h += htmlModifs(false);
+    var opts = options(cb).filter(function (o) { return filtreCat(o, cat); });
+    var h = '<div class="cb-consigne">' + { attaque: '⚔️ Choisissez une attaque', pouvoirs: '✨ Choisissez un sort ou une capacité',
+      soins: '🧪 Soins, potions et objets', manoeuvres: '🤼 Choisissez une manœuvre (test opposé au contact)' }[cat] + '</div>';
+    if (cat === 'attaque' || cat === 'pouvoirs') h += htmlAjuster(cb);
+    if (cat === 'attaque' || cat === 'manoeuvres') h += htmlModifs(false);
+    if (cat === 'soins' && !opts.length) h += '<div class="note">Aucun soin ni objet utilisable (potions, élixirs, onguents… de l’inventaire).</div>';
     h += '<div class="cb-options">' + opts.map(function (o) {
       var ok = peut(o.action) && !o.indispo;
       return '<button data-cb="choisir" data-v="' + esc(o.id) + '"' + (ok ? '' : ' disabled') + '>' +
         '<span class="ic">' + o.ic + '</span><span class="tx"><b>' + esc(o.nom) + '</b><small>' +
+        (o.cat === 'manoeuvre' ? esc(o.note) : o.cat === 'objet' ? (o.soin ? 'rend ' + esc(o.dmg) + ' PV' : esc((o.note || 'effet').slice(0, 90))) :
         (o.rider ? 'ajoute ' + esc(o.rider) + ' aux DM d’une arme' :
         (o.soin ? 'soin ' + esc(o.dmg || '') : (o.auto ? (o.dmg ? 'touche auto · ' : '') : 'att. ' + sgn(o.mod) + ' · ') + (o.dmg && !o.soin ? 'DM ' + esc(o.dmg) : (o.dmg ? '' : 'effet')))) +
         (o.indispo ? ' · se recharge' : '') +
-        (o.rider ? '' : (o.portee ? ' · ' + o.portee + ' m' : (o.soin ? '' : ' · contact'))) + (o.cout ? ' · ' + o.cout + ' PM' : '') +
+        (o.rider ? '' : (o.portee ? ' · ' + o.portee + ' m' : (o.soin ? '' : ' · contact'))) + (o.cout ? ' · ' + o.cout + ' PM' : '')) +
         '</small></span><span class="act act-' + o.action + '">' + o.action + '</span></button>';
     }).join('') + '</div>';
     return h + '<button class="btn btn-bloc" style="margin-top:6px" data-cb="retour">↩ Retour</button>';
@@ -563,7 +729,8 @@ COF.UI.Arene = (function () {
         h += '<label class="cn-lbl2" style="margin-top:8px">Bonus des voies</label>' + bv.map(function (b) {
           var on = choix.hasOwnProperty(b.cle) ? choix[b.cle] : !b.cond;
           return '<button class="cb-bv' + (on ? ' on' : '') + '" data-cb="bv" data-k="' + esc(b.cle) + '" data-v="' + (on ? 0 : 1) + '">' +
-            '<b>' + (on ? '☑' : '☐') + ' ' + sgn(b.val) + ' ' + (b.type === 'att' ? 'attaque' : 'DM') + (b.scope === 'C' ? ' au contact' : b.scope === 'D' ? ' à distance' : b.scope === 'M' ? ' magique' : '') +
+            '<b>' + (on ? '☑' : '☐') + ' ' + sgn(b.val) + ' ' + ({ att: 'attaque', dm: 'DM', def: 'DEF', init: 'Initiative' }[b.type]) +
+            (b.type === 'att' || b.type === 'dm' ? (b.scope === 'C' ? ' au contact' : b.scope === 'D' ? ' à distance' : b.scope === 'M' ? ' magique' : '') : '') +
             '</b> · ' + esc(b.cap) + (b.cond ? ' <i>(conditionnel)</i>' : '') + '<small>' + esc(b.texte.length > 120 ? b.texte.slice(0, 120) + '…' : b.texte) + '</small></button>';
         }).join('');
         h += '<div class="note">Les bonus sans condition sont comptés d’office ; cochez les autres quand leur condition est remplie. Ce choix est gardé sur la fiche.</div>';
@@ -605,6 +772,7 @@ COF.UI.Arene = (function () {
     var r = ui.resultat; if (!r) return '';
     var cls = { critique: 'crit', touche: 'ok', rate: 'ko', fumble: 'ko', soin: 'ok', effet: 'ok' }[r.verdict];
     var titre = { critique: '💥 Critique !', touche: '✅ Touché', rate: '❌ Raté', fumble: '💀 Échec critique', soin: '💚 Soins', effet: '✨ Effet' }[r.verdict];
+    if (r.opt && r.opt.cat === 'objet') titre = '🧪 ' + esc(r.opt.nom.replace(/ ×\d+$/, ''));
     var h = '<div class="cb-resultat ' + cls + '">';
     if (r.multi) {
       /* plusieurs attaques : une ligne par attaque, la dernière en détail */
@@ -613,7 +781,12 @@ COF.UI.Arene = (function () {
           (x.dm ? ' (' + x.dm.total + ' DM)' : '') + ' → ' + esc(x.cible);
       }).join('<br>') + '</div><div class="pv">Attaque ' + r.multi.length + ' :</div>';
     }
+    if (r.manoeuvre && r.verdict !== 'effet') titre = r.verdict === 'touche' ? '✅ ' + esc(r.opt.nom) + ' réussi' : '❌ ' + esc(r.opt.nom) + ' raté';
     h += '<div class="v">' + titre + '</div>' + htmlDes(r);
+    if (r.oppose) {
+      h += '<div class="cb-des"><span class="de garde">' + r.oppose.a.garde + '</span><span class="op">' + sgn(r.oppose.a.mod) + ' = <b>' + r.oppose.a.total + '</b></span>' +
+        '<span class="op">contre</span><span class="de">' + r.oppose.d.garde + '</span><span class="op">' + sgn(r.oppose.d.mod) + ' = <b>' + r.oppose.d.total + '</b> (' + esc(r.cible) + ')</span></div>';
+    }
     if (r.dm) {
       h += '<div class="dm"><b>' + r.dm.total + ' DM</b> <small>' + esc(r.dm.detail.map(function (x) { return x.jets ? x.label + ' [' + x.jets.join(',') + ']' : x.label + ' ' + sgn(x.val); }).join(' ')) +
         (r.crit ? ' ×2' : '') + '</small></div><div class="pv">' + esc(r.cible) + ' : ' + esc(r.pvApres) + ' PV</div>';
@@ -735,6 +908,7 @@ COF.UI.Arene = (function () {
       case 'annuler': annuler(); break;
       case 'continuer': ui.mode = 'menu'; ui.resultat = null; ui.bonus = false; ui.malus = false; ui.deuxMains = false; if (!(peut('A') || peut('M'))) { tourSuivant(); } break;
       case 'fin-tour': ui.sel = null; tourSuivant(); break;
+      case 'recup': { var cr = trouver(id); if (cr) { var rr = recupRapide(cr); A().ecrire(s); if (rr) toastCb(rr); } break; }
       case 'auto': { if (cb) { memoriser(); eco(); jouerAuto(cb); A().ecrire(s); tourSuivant(); } break; }
       case 'manuel': if (cb) { cb.manuel = true; A().ecrire(s); } break;
       case 'rendre-ia': if (cb) { cb.manuel = false; A().ecrire(s); } break;
@@ -757,6 +931,10 @@ COF.UI.Arene = (function () {
     A().ecrire(s);
     rafraichir();
   }
+  function toastCb(m) {
+    var t = document.createElement('div'); t.className = 'cn-toast'; t.textContent = m;
+    document.body.appendChild(t); setTimeout(function () { t.classList.add('out'); }, 1500); setTimeout(function () { t.remove(); }, 2000);
+  }
   function trierInit() {
     s.combattants.sort(function (x, y) { return donnees(y).init - donnees(x).init; });
     s.tour = 0;
@@ -775,5 +953,6 @@ COF.UI.Arene = (function () {
     });
   }
 
-  return { init: init, rendre: rendre, verserJournal: function () { if (s) verserJournal(); } };
+  return { init: init, rendre: rendre, verserJournal: function () { if (s) verserJournal(); },
+    bilan: function (issue) { s = A().lire(); return bilan(issue); } };
 })();

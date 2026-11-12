@@ -42,7 +42,7 @@ COF.Carnet = (function () {
   /* Recommence l'aventure à zéro : garde le titre et le héros lié,
      efface scènes, fils, PNJ, lieux, carte, expédition, tension, jour. */
   function reinitialiser(c) {
-    ['scenes', 'fils', 'pnj', 'lieux', 'routes'].forEach(function (k) { c[k] = []; });
+    ['scenes', 'fils', 'pnj', 'lieux', 'routes', 'regions'].forEach(function (k) { c[k] = []; });
     ['expedition', 'rencontre', 'combat', 'butinEnAttente', 'position', 'envDernier'].forEach(function (k) { c[k] = null; });
     c.marche = {}; c.ressources = { rations: 3, torches: 2 };
     c.tension = 5; c.jour = 1; c.cree = Date.now();

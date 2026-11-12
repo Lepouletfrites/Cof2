@@ -829,3 +829,18 @@ html.theme-clair .cb-modifs button.on { background: #f6e7bf; }
 .cb-bv.on { border-color: var(--or); color: var(--text); }
 .cb-bv b { color: var(--text); } .cb-bv i { color: var(--text-mute); font-style: normal; }
 .cb-bv small { display: block; font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+.cb-bilan { padding: 10px 12px; border-radius: var(--r-s); border: 1px solid var(--line-2); background: var(--panel); font-size: 13px; color: var(--text-dim); }
+.cb-bilan .recit { font-family: Georgia, serif; font-size: 15px; color: var(--text); margin-bottom: 6px; }
+.cb-bilan div { padding: 1px 0; }
+.cb-qui a { color: #c9a5dc; text-decoration: none; }
+/* Régions de la carte */
+.cn-monde .reg { stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 4 3; }
+.cn-monde .reg-foret { fill: rgba(78,125,74,.22); stroke: rgba(78,125,74,.6); }
+.cn-monde .reg-plaine { fill: rgba(201,162,39,.12); stroke: rgba(201,162,39,.45); }
+.cn-monde .reg-montagne { fill: rgba(140,130,120,.22); stroke: rgba(160,150,140,.6); }
+.cn-monde .reg-marais { fill: rgba(63,111,143,.22); stroke: rgba(63,111,143,.6); }
+.cn-monde .reg-souterrain { fill: rgba(60,50,70,.35); stroke: rgba(109,74,134,.6); }
+.cn-monde .reg-arctique { fill: rgba(200,225,240,.18); stroke: rgba(200,225,240,.55); }
+.cn-monde .reg-urbain { fill: rgba(201,69,60,.12); stroke: rgba(201,69,60,.45); }
+.cn-monde .reg-ruines { fill: rgba(120,100,80,.22); stroke: rgba(150,120,90,.6); }
+.cn-monde .regnm { text-anchor: middle; fill: var(--text-mute); font-style: italic; pointer-events: none; }

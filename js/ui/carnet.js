@@ -256,13 +256,19 @@ COF.UI.Carnet = (function () {
     var v = vueMonde(c), u = v.w / 100;   /* tailles proportionnelles au zoom */
     var h = '<div class="carte"><h2>🗺️ Carte' + (M.ici(c) ? ' <small style="text-transform:none;letter-spacing:0;color:var(--text-mute)">· vous êtes à ' + esc(M.ici(c).nom) + '</small>' : '') + '</h2><div class="carte-corps" style="padding:8px">';
     h += '<div class="cn-monde-boite">';
-    h += '<svg class="cn-monde' + (monde.deplacer || monde.ajouter ? ' placer' : '') + '" viewBox="' + [v.x, v.y, v.w, v.h].map(function (n) { return n.toFixed(1); }).join(' ') + '" data-cn="monde-fond" preserveAspectRatio="xMidYMid meet">';
+    h += '<svg class="cn-monde' + (monde.deplacer || monde.ajouter || monde.ajouterRegion ? ' placer' : '') + '" viewBox="' + [v.x, v.y, v.w, v.h].map(function (n) { return n.toFixed(1); }).join(' ') + '" data-cn="monde-fond" preserveAspectRatio="xMidYMid meet">';
     /* quadrillage infini : seules les lignes autour de la vue sont tracées,
        avec un pas qui suit le zoom */
     var pasG = 25; while (v.w / pasG > 10) pasG *= 2; while (v.w / pasG < 4) pasG /= 2;
     var mx0 = v.x - v.w, my0 = v.y - v.h, mx1 = v.x + 2 * v.w, my1 = v.y + 2 * v.h;
     for (var gx = Math.floor(mx0 / pasG) * pasG; gx <= mx1; gx += pasG) h += '<line x1="' + gx + '" y1="' + my0 + '" x2="' + gx + '" y2="' + my1 + '" class="qd"/>';
     for (var gy = Math.floor(my0 / pasG) * pasG; gy <= my1; gy += pasG) h += '<line x1="' + mx0 + '" y1="' + gy + '" x2="' + mx1 + '" y2="' + gy + '" class="qd"/>';
+    /* régions de terrain (cercles translucides) sous les routes et les lieux */
+    M.regions(c).forEach(function (rg) {
+      var e = M.envDe(rg.env) || {};
+      h += '<circle cx="' + rg.x + '" cy="' + rg.y + '" r="' + rg.r + '" class="reg reg-' + rg.env + '"/>' +
+        '<text x="' + rg.x + '" y="' + (rg.y - rg.r + 4.5 * u) + '" class="regnm" style="font-size:' + (3 * u) + 'px">' + (e.ic || '') + ' ' + esc(rg.nom) + '</text>';
+    });
     (c.routes || []).forEach(function (r) {
       var a = M.lieu(c, r.a), b = M.lieu(c, r.b); if (!a || !b) return;
       var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
@@ -282,9 +288,13 @@ COF.UI.Carnet = (function () {
     h += '<div class="cn-monde-ctl"><button data-cn="monde-zoom" data-v="0.7" aria-label="Zoomer">＋</button><button data-cn="monde-zoom" data-v="1.4" aria-label="Dézoomer">−</button>' +
       '<button data-cn="monde-cadrer" aria-label="Recentrer">⤢</button></div>';
     h += '</div>';
-    h += '<div class="cn-grille" style="margin-top:8px"><button data-cn="monde-ajouter" class="' + (monde.ajouter ? 'on' : '') + '">' + (monde.ajouter ? '✕ Annuler' : '➕ Nouveau lieu sur la carte') + '</button>' +
-      (M.ici(c) ? '<button data-cn="monde-lieu" data-id="' + M.ici(c).id + '">📍 Où suis-je ?</button>' : '<button disabled>📍 Position inconnue</button>') + '</div>';
-    h += '<div class="note" style="margin-top:6px">' + (monde.ajouter ? '➕ Touchez la carte à l’endroit du nouveau lieu.'
+    h += '<div class="cn-grille cn-g3" style="margin-top:8px"><button data-cn="monde-ajouter" class="' + (monde.ajouter ? 'on' : '') + '">' + (monde.ajouter ? '✕ Annuler' : '➕ Lieu') + '</button>' +
+      '<button data-cn="monde-ajouter-region" class="' + (monde.ajouterRegion ? 'on' : '') + '">' + (monde.ajouterRegion ? '✕ Annuler' : '🗺️ Région') + '</button>' +
+      (M.ici(c) ? '<button data-cn="monde-lieu" data-id="' + M.ici(c).id + '">📍 Où suis-je ?</button>' : '<button disabled>📍 Inconnue</button>') + '</div>';
+    if (M.regions(c).length) h += '<div class="cn-mini" style="margin-top:6px">' + M.regions(c).map(function (rg) {
+      return '<span class="chip" data-cn="monde-reg-suppr" data-id="' + rg.id + '">' + ((M.envDe(rg.env) || {}).ic || '') + ' ' + esc(rg.nom) + ' ✕</span>';
+    }).join('') + '</div>';
+    h += '<div class="note" style="margin-top:6px">' + (monde.ajouterRegion ? '🗺️ Touchez le centre de la nouvelle région.' : monde.ajouter ? '➕ Touchez la carte à l’endroit du nouveau lieu.'
       : monde.deplacer ? '✋ Touchez la carte pour placer <b>' + esc((M.lieu(c, monde.deplacer) || {}).nom || '') + '</b>.'
       : 'Faites glisser pour vous déplacer, pincez (ou ＋ −) pour zoomer. Touchez un lieu pour y aller, le relier ou le déplacer.') + '</div>';
     return h + '</div></div>';
@@ -366,6 +376,16 @@ COF.UI.Carnet = (function () {
     return '<div class="cn-mini">' + (COF.ENVIRONNEMENTS || []).map(function (e) {
       return '<span class="chip' + (sel === e.id ? ' on' : '') + '" data-cn="' + act + '" data-v="' + e.id + '"' + (extra || '') + '>' + e.ic + ' ' + esc(e.nom) + '</span>';
     }).join('') + '</div>';
+  }
+  function sheetRegion(c) {
+    var nr = monde.nouvelleRegion;
+    ouvrir('🗺️ Nouvelle région', '<div class="champ"><label>Nom</label><input id="cn-rg-nom" value="' + esc(nr.nom || '') + '" placeholder="Forêt de Sombrebois"></div>' +
+      '<label class="cn-lbl2">Terrain</label>' + chipsType(nr.env, 'monde-reg-type') +
+      '<label class="cn-lbl2" style="margin-top:8px">Taille</label><div class="cn-grille cn-g3">' + [[25, 'Petite'], [45, 'Moyenne'], [75, 'Vaste']].map(function (t) {
+        return '<button data-cn="monde-reg-taille" data-v="' + t[0] + '" class="' + (nr.r === t[0] ? 'on' : '') + '">' + t[1] + '</button>';
+      }).join('') + '</div>' +
+      '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="monde-reg-creer">🗺️ Créer la région</button>' +
+      '<div class="note" style="margin-top:6px">Les lieux et routes de la région sans terrain précis prennent le sien (rencontres, tests, voyages).</div>', { type: 'region' });
   }
   function sheetNouveauLieu(c, nom, note) {
     var ic = COF.Monde.ici(c);
@@ -523,6 +543,9 @@ COF.UI.Carnet = (function () {
         '<div class="cn-l"><span>🌦️</span><div>' + esc(et.meteo) + '</div></div>' +
         '<div class="cn-l"><span>🧭</span><div><b>' + esc((COF.VOYAGE_CATEGORIES_LABELS || {})[et.categorie] || et.categorie) + '</b> — ' + esc(et.detail) + '</div></div>' +
         (et.faim ? '<div class="cn-l"><span>🍖</span><div style="color:var(--sang-clair)">Plus de rations : il faut chasser, cueillir ou acheter.</div></div>' : '') +
+        (et.decouverte ? '<div class="cn-menace ok"><div class="t">🗺️ Découverte</div><div class="s">' + ((COF.Monde.envDe(et.decouverte.env) || {}).ic || '') + ' ' + esc(et.decouverte.nom) +
+          ' — ajouté à la carte.</div><div class="cn-grille" style="margin-top:8px"><button data-cn="decouverte-halte" data-id="' + et.decouverte.id + '">⛺ Faire halte et explorer</button>' +
+          '<button data-cn="onglet" data-v="lieux">🗺️ Voir la carte</button></div></div>' : '') +
         (et.rencontre ? (et.nuit ? '<div class="note" style="margin-top:6px">🌙 Pendant la nuit…</div>' : '') + boiteRencontre(et.rencontre, 'etape', et.vaincue) : '') +
         (et.oriente && et.chasse ? '' : '<div class="cn-grille" style="margin-top:10px">' +
           (et.oriente ? '<button disabled>✓ Orientation</button>' : '<button data-cn="expe-test" data-e="orienter" data-a="S’orienter" data-c="PER" data-d="10">🧭 S’orienter (PER 10)</button>') +
@@ -1065,6 +1088,11 @@ COF.UI.Carnet = (function () {
       case 'issue': {
         var cb0 = c.combat; if (!cb0) return;
         A.syncAllies(c);
+        /* Bilan automatique du combat dans le récit */
+        if (COF.UI.Arene && COF.UI.Arene.bilan) {
+          var bil = COF.UI.Arene.bilan(v);
+          K.ajouterEntree(c, { t: 'note', titre: '⚔️ Bilan du combat', txt: bil.texte });
+        }
         if (v === 'victoire') {
           var bt = A.butinDe(cb0.r);
           c.tension = Math.max(1, c.tension - 1);
@@ -1150,9 +1178,13 @@ COF.UI.Carnet = (function () {
       }
       case 'monde-fond': {
         var fx = +node.getAttribute('data-x'), fy = +node.getAttribute('data-y');   /* pas de bord : le monde s'étend à volonté */
+        if (monde.ajouterRegion) {
+          monde.ajouterRegion = false; monde.nouvelleRegion = { x: fx, y: fy, r: 45, env: COF.Monde.envAuPoint(c, fx, fy) || 'foret', nom: '' };
+          sheetRegion(c); rendre(); return;
+        }
         if (monde.ajouter) {
           monde.ajouter = false; monde.nouveau = { x: fx, y: fy };
-          monde.typeNouveau = COF.Monde.envIci(c) || 'plaine';
+          monde.typeNouveau = COF.Monde.envAuPoint(c, fx, fy) || COF.Monde.envIci(c) || 'plaine';
           sheetNouveauLieu(c);
           setTimeout(function () { var i = $('#cn-nl-nom'); if (i) i.focus(); }, 60);
           rendre(); return;
@@ -1175,7 +1207,28 @@ COF.UI.Carnet = (function () {
         if (!c.position) c.position = nl.id;
         K.sauver(c); fermer(); rendre(); flash('📍 ' + nomL); return;
       }
-      case 'monde-ajouter': monde.ajouter = !monde.ajouter; monde.deplacer = null; rendre(); return;
+      case 'monde-ajouter': monde.ajouter = !monde.ajouter; monde.ajouterRegion = false; monde.deplacer = null; rendre(); return;
+      case 'monde-ajouter-region': monde.ajouterRegion = !monde.ajouterRegion; monde.ajouter = false; monde.deplacer = null; rendre(); return;
+      case 'monde-reg-type': monde.nouvelleRegion.nom = val('cn-rg-nom'); monde.nouvelleRegion.env = v; sheetRegion(c); return;
+      case 'monde-reg-taille': monde.nouvelleRegion.nom = val('cn-rg-nom'); monde.nouvelleRegion.r = +v; sheetRegion(c); return;
+      case 'monde-reg-creer': {
+        var nr = monde.nouvelleRegion; nr.nom = val('cn-rg-nom') || ((COF.Monde.envDe(nr.env) || {}).nom || 'Région');
+        COF.Monde.ajouterRegion(c, nr);
+        /* les lieux de la région sans terrain marqué prennent le sien */
+        c.lieux.forEach(function (l) { if (Math.hypot(l.x - nr.x, l.y - nr.y) <= nr.r && (l.env === 'plaine' || !l.env)) l.env = nr.env; });
+        K.sauver(c); fermer(); rendre(); flash('🗺️ ' + nr.nom); return;
+      }
+      case 'monde-reg-suppr': if (confirm('Retirer cette région de la carte ?')) { COF.Monde.retirerRegion(c, node.getAttribute('data-id')); K.sauver(c); rendre(); } return;
+      case 'decouverte-halte': {
+        var xh = c.expedition, lh = COF.Monde.lieu(c, node.getAttribute('data-id'));
+        if (xh && lh) {
+          COF.Monde.relier(c, xh.departId, lh.id, Math.max(1, xh.fait), xh.env);
+          X.quitter(c, 'Halte à ' + lh.nom);
+          COF.Monde.seRendre(c, lh.id);
+          K.ajouterEntree(c, { t: 'note', titre: 'Halte', txt: 'Le héros s’arrête à ' + lh.nom + ' pour explorer les lieux.' });
+        }
+        K.sauver(c); onglet = 'scene'; rendre.haut = true; rendre(); return;
+      }
       case 'monde-type-nouveau': { var nn = val('cn-nl-nom'), nt = val('cn-nl-note'); monde.typeNouveau = v; sheetNouveauLieu(c, nn, nt); return; }
       case 'monde-type': {
         var lt = COF.Monde.lieu(c, node.getAttribute('data-l'));

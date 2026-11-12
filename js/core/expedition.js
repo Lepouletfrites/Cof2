@@ -162,12 +162,19 @@ COF.Expedition = (function () {
     var seuil = c.tension >= 7 ? 2 : 1;
     if (d(6) <= seuil) et.rencontre = tirerRencontre(x.env, x.niveau, 'ordinaire', 'auto', taille(c));
     else if (d(8) === 1) { et.rencontre = tirerRencontre(x.env, x.niveau, 'facile', 'auto', taille(c)); if (et.rencontre) et.nuit = true; }
+    /* Découverte : 1 chance sur 5 de repérer un lieu inconnu le long de la route */
+    if (!et.rencontre && COF.Monde && x.departId && x.destId && d(5) === 1) {
+      var ld0 = COF.Monde.lieu(c, x.departId), la0 = COF.Monde.lieu(c, x.destId);
+      var nv = COF.Monde.decouvrir(c, ld0, la0, Math.min(0.9, x.fait / Math.max(1, x.jours)), x.env);
+      if (nv) et.decouverte = { id: nv.id, nom: nv.nom, env: nv.env };
+    }
     var res = ressources(c);
     if (res.rations > 0) res.rations--; else et.faim = true;
     x.etapes.push(et);
     var lbl = (COF.VOYAGE_CATEGORIES_LABELS || {})[g.categorie] || g.categorie;
     var txt = 'Jour ' + c.jour + ' (' + x.fait + '/' + x.jours + ') — ' + g.meteo + '.\n' + lbl + ' : ' + g.detail + '.' +
       (et.rencontre ? '\n⚔️ ' + (et.nuit ? 'Pendant la nuit : ' : 'Rencontre : ') + et.rencontre.texte + '.' : '') +
+      (et.decouverte ? '\n🗺️ Découverte : ' + et.decouverte.nom + ' (ajouté à la carte).' : '') +
       (et.faim ? '\n🍖 Plus de rations !' : '\n🍖 Rations restantes : ' + res.rations + '.');
     K().ajouterEntree(c, { t: 'note', titre: 'Voyage', txt: txt });
     if (x.fait >= x.jours) {
