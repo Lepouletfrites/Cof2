@@ -173,7 +173,8 @@ COF.UI.Carnet = (function () {
       (t.resultat === 'modifiee' ? 'La scène est modifiée : quelque chose ne colle pas à ce que vous attendiez.' :
         'La scène est interrompue : un événement prend le dessus.');
     return '<div class="cn-test ' + cls + '"><div class="v">' + esc(t.label) + (t.roll ? ' <small>d10 : ' + t.roll + '</small>' : '') + '</div>' +
-      '<div class="s">' + esc(txt) + '</div>' + (t.histoire ? '<div class="e">🔀 ' + esc(t.histoire.texte) + '</div>' : '') + '</div>';
+      '<div class="s">' + esc(txt) + '</div>' + (t.modif ? '<div class="e">🌀 ' + esc(t.modif) + '</div>' : '') +
+      (t.histoire ? '<div class="e">🔀 ' + esc(t.histoire.texte) + '</div>' : '') + '</div>';
   }
   function htmlEntree(e) {
     var corps;
@@ -209,19 +210,26 @@ COF.UI.Carnet = (function () {
   function htmlScene(c) {
     var s = K.sceneCourante(c), h = '';
     if (!s) {
-      h += htmlTableau(c);
       var der = c.scenes[c.scenes.length - 1];
       if (der) h += '<div class="note cn-rappel">Scène précédente : <b>' + esc(der.titre) + '</b>' + (der.resume ? ' — ' + esc(der.resume) : '') + '</div>';
-      var fo = K.filsOuverts(c);
-      if (fo.length) h += '<div class="cn-mini">' + fo.slice(0, 6).map(function (f) { return '<span class="chip">🧵 ' + esc(f.nom) + '</span>'; }).join('') + '</div>';
-      h += '<div class="carte"><h2>🎬 Nouvelle scène</h2><div class="carte-corps">' +
+      /* Le directeur propose les scènes qui découlent de l'aventure */
+      h += '<div class="carte"><h2>🎬 Et maintenant ?</h2><div class="carte-corps"><div class="cn-props">' +
+        COF.Directeur.propositions(c).map(function (pr, i) {
+          return '<button class="cn-prop t-' + pr.type + '" data-cn="jouer-prop" data-v="' + i + '"><span class="ic">' + pr.ic + '</span><span class="tx"><b>' + esc(pr.titre) + '</b>' +
+            (pr.fil && pr.type !== 'fil' ? '<em>🧵 ' + esc(pr.fil) + (pr.etape ? ' · ' + esc(pr.etape) : '') + '</em>' : '') +
+            '<small>' + esc(pr.attendu.length > 150 ? pr.attendu.slice(0, 150) + '…' : pr.attendu) + '</small></span></button>';
+        }).join('') + '</div>' +
+        '<div class="note" style="margin-top:6px">La scène est testée selon la tension (' + c.tension + ') : comme prévu, modifiée ou interrompue par un événement qui agit sur l’aventure.</div>' +
+        '<details class="cn-libre"><summary>✍️ Scène libre</summary>' +
         '<div class="champ"><label>Titre (facultatif)</label><input id="cn-sc-titre" placeholder="Scène ' + (c.scenes.length + 1) + '"></div>' +
-        '<div class="champ"><label>Ce que vous attendez</label><textarea id="cn-sc-attendu" rows="3" placeholder="Le héros arrive au village à la tombée de la nuit et cherche l’auberge…"></textarea>' +
-        '<div class="aide">L’app teste la scène selon la tension (' + c.tension + ') : elle peut se dérouler comme prévu, être modifiée ou interrompue.</div></div>' +
-        '<button class="btn btn-plein btn-bloc" data-cn="jouer">🎬 Jouer la scène</button></div></div>';
+        '<div class="champ"><label>Ce que vous attendez</label><textarea id="cn-sc-attendu" rows="3" placeholder="Le héros arrive au village à la tombée de la nuit et cherche l’auberge…"></textarea></div>' +
+        '<button class="btn btn-plein btn-bloc" data-cn="jouer">🎬 Jouer la scène</button></details></div></div>';
+      h += htmlTableau(c);
       return h;
     }
+    var fS = s.filId ? c.fils.filter(function (f) { return f.id === s.filId; })[0] : null;
     h += '<div class="carte cn-scene"><h2>' + s.n + '. ' + esc(s.titre) + '<span class="h2-action" data-cn="clore">🏁 Clore</span></h2><div class="carte-corps">' +
+      (fS ? '<div class="cn-filtag">🧵 ' + esc(fS.nom) + (fS.quete && fS.quete.etape < 5 ? ' · ' + COF.Directeur.ETAPES[fS.quete.etape].ic + ' ' + esc(COF.Directeur.ETAPES[fS.quete.etape].nom) : '') + '</div>' : '') +
       (s.attendu ? '<div class="note" style="margin-bottom:8px">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) + '</div></div>';
     h += '<div id="cn-fil" class="cn-fil">' + (s.entrees.length ? s.entrees.map(htmlEntree).join('') :
       '<div class="vide" style="padding:14px">Racontez ce qui se passe, ou interrogez l’oracle.</div>') + '</div>';
@@ -443,12 +451,22 @@ COF.UI.Carnet = (function () {
           (l === 'lieux' && COF.Monde ? ((COF.Monde.envDe(x.env) || {}).ic || '') + ' ' : '') + (l === 'lieux' && x.id === c.position ? '📍 ' : '') + esc(x.nom) +
           (att ? ' <span class="puce" style="border-color:' + att[1] + ';color:' + att[1] + '">' + esc(att[0]) + '</span>' : '') +
           (x.compagnon && x.compagnon.actif ? ' <span class="puce" style="border-color:var(--or);color:var(--or-clair)">🤝 ' + esc((X.ROLES[x.compagnon.role] || {}).nom || 'compagnon') + ' niv. ' + x.compagnon.niveau + '</span>' : '') + '</div>' +
+          (x.quete ? htmlEtapes(x.quete) : '') +
           (x.note ? '<div class="s">' + esc(x.note.length > 140 ? x.note.slice(0, 140) + '…' : x.note) + '</div>' : '') + '</div>' +
         (l === 'fils' ? '<button class="btn btn-sm" data-cn="basculer" data-id="' + x.id + '" aria-label="' + (x.ouvert ? 'Résoudre' : 'Rouvrir') + '">' + (x.ouvert ? '✓' : '↺') + '</button>' : '') +
         '</div>';
     });
-    h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="aller" data-v="' + L.gen[0] + '">' + esc(L.gen[1]) + ' puis 📌</button>';
+    if (l === 'fils') h += '<button class="btn btn-plein btn-bloc" style="margin-top:10px" data-cn="nouvelle-quete">📜 Nouvelle quête<small style="display:block;font-size:11px;opacity:.8">commanditaire, lieu sur la carte et 5 étapes</small></button>';
+    else h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="aller" data-v="' + L.gen[0] + '">' + esc(L.gen[1]) + ' puis 📌</button>';
     return h + '</div></div>';
+  }
+  /* Progression d'une quête : 📜 → 🔍 → 🌀 → ⚔️ → 🏁 */
+  function htmlEtapes(q) {
+    var E = COF.Directeur.ETAPES;
+    return '<div class="cn-etapes">' + E.map(function (e, i) {
+      return '<span class="' + (i < q.etape ? 'fait' : (i === q.etape ? 'ici' : '')) + '" title="' + esc(e.nom) + '">' + e.ic + '</span>';
+    }).join('') + '<b>' + (q.etape >= E.length ? '🏆 accomplie' : esc(E[q.etape].nom)) + '</b>' +
+      '<small>👤 ' + esc(q.comNom) + ' · 📍 ' + esc(q.lieuNom) + '</small></div>';
   }
 
   /* ---------- Onglet Expédition (donjon suivi / voyage en étapes) ---------- */
@@ -646,12 +664,26 @@ COF.UI.Carnet = (function () {
     }).join('') + '</div><label class="cn-lbl2">Toutes les actions</label>';
   }
   function memoAction() { var a = $('#cn-jet-action'); if (a) jet.action = a.value; }
-  function sheetClore() {
-    ouvrir('🏁 Clore la scène', '<div class="champ"><label>En une phrase (facultatif)</label><input id="cn-resume" placeholder="Le héros a trouvé la carte mais le voleur a fui."></div>' +
-      '<button class="btn btn-bloc cn-gros ok" data-cn="clore-ok">✅ Le héros a gardé la main<small>tension −1</small></button>' +
+  /* Clore : on dit si le héros a gardé la main, et quels fils ont avancé
+     (celui de la scène est coché d'office). Une quête qui avance passe
+     à l'étape suivante ; la dernière étape la termine (récompense). */
+  function sheetClore(choix) {
+    var c = K.actif(), s = K.sceneCourante(c), fo = K.filsOuverts(c);
+    if (!choix) { choix = {}; if (s && s.filId) choix[s.filId] = true; }
+    var h = '<div class="champ"><label>En une phrase (facultatif)</label><input id="cn-resume" value="' + esc(clore.resume || '') + '" placeholder="Le héros a trouvé la carte mais le voleur a fui."></div>';
+    if (fo.length) {
+      h += '<label class="cn-lbl2">🧵 Ce qui a avancé</label><div class="cn-comps">' + fo.map(function (f) {
+        var q = f.quete, et = q && q.etape < 5 ? COF.Directeur.ETAPES[q.etape] : null, suiv = q ? COF.Directeur.ETAPES[q.etape + 1] : null;
+        return '<button data-cn="clore-fil" data-id="' + f.id + '" class="' + (choix[f.id] ? 'on' : '') + '"><b>' + (choix[f.id] ? '☑' : '☐') + '</b> ' + esc(f.nom) +
+          '<small>' + (q ? (et ? et.ic + ' ' + et.nom + ' → ' + (suiv ? suiv.ic + ' ' + suiv.nom : '🏆 quête accomplie') : '') : 'fil simple : il sera marqué résolu') + '</small></button>';
+      }).join('') + '</div>';
+    }
+    h += '<button class="btn btn-bloc cn-gros ok" data-cn="clore-ok">✅ Le héros a gardé la main<small>tension −1</small></button>' +
       '<button class="btn btn-bloc cn-gros ko" data-cn="clore-ko">⚠️ La situation lui échappe<small>tension +1</small></button>' +
-      '<div class="cn-grille" style="margin-top:10px"><button data-cn="jour" data-v="1">☀️ Jour suivant</button><button data-cn="aller" data-v="solo">🕰️ Passage du temps</button></div>', { type: 'clore' });
+      '<div class="cn-grille" style="margin-top:10px"><button data-cn="jour" data-v="1">☀️ Jour suivant</button><button data-cn="aller" data-v="solo">🕰️ Passage du temps</button></div>';
+    ouvrir('🏁 Clore la scène', h, { type: 'clore', choix: choix });
   }
+  var clore = { resume: '' };
   /* brouillon : état en cours d'édition (pour re-rendre la feuille sans perdre la saisie) */
   function sheetEditer(l, id, brouillon) {
     var c = K.actif(), x = c[l].filter(function (y) { return y.id === id; })[0];
@@ -885,6 +917,34 @@ COF.UI.Carnet = (function () {
     COF.UI.aller('arene');
   }
 
+  /* Ouvre une scène (libre ou proposée par le directeur) et laisse le
+     directeur la préparer : modification concrète, confrontation de
+     quête, découverte en exploration, test de rencontre selon le
+     terrain (sauf repos, quête et pendant une expédition). */
+  function demarrerScene(c, titre, attendu, prop) {
+    prop = prop || {};
+    var s = K.nouvelleScene(c, titre, attendu, { filId: prop.filId, type: prop.type });
+    c = K.actif(); s = K.sceneCourante(c);
+    var entrees = COF.Directeur.preparerScene(c, s, prop);
+    if (c.rencontresAuto !== false && !c.expedition && !c.rencontre && prop.type !== 'repos' && prop.type !== 'quete') {
+      var tr = A.testRencontre(c);
+      if (prop.type === 'explorer' && !tr.rencontre && tr.n > 2) tr.rencontre = Math.random() < 1 / tr.n;   /* explorer : deux chances */
+      if (tr.rencontre) {
+        var ra2 = A.rencontre(c, { env: tr.env, difficulte: 'ordinaire', style: 'auto' });
+        if (!ra2.erreur) {
+          var envN = (COF.Monde.envDe(tr.env) || {});
+          ra2.test = 'Test de rencontre · ' + (envN.ic || '') + ' ' + (envN.nom || tr.env) + ' · 1 chance sur ' + tr.n;
+          c.rencontre = ra2;
+          entrees.push({ t: 'rencontre', r: ra2, txt: 'Test de rencontre (' + (envN.nom || tr.env) + ', 1 chance sur ' + tr.n + ') : ' + ra2.texte });
+        }
+      }
+    }
+    entrees.forEach(function (e) { K.ajouterEntree(c, e); });
+    K.sauver(c);
+    rendre.defiler = true; rendre();
+    if (prop.type === 'repos') sheetRessources();
+  }
+
   function action(act, node) {
     var c = K.actif(), v = node.getAttribute('data-v');
     switch (act) {
@@ -892,24 +952,28 @@ COF.UI.Carnet = (function () {
       case 'onglet': onglet = v; rendre.haut = true; rendre(); return;
       case 'menu': sheetMenu(); return;
       case 'tension': c.tension = Math.max(1, Math.min(9, c.tension + (+v))); K.sauver(c); rendre(); return;
-      case 'jouer': {
-        K.nouvelleScene(c, val('cn-sc-titre'), val('cn-sc-attendu'));
-        c = K.actif();
-        /* Test de rencontre automatique selon le terrain du lieu actuel
-           (pas pendant une expédition : elle a ses propres rencontres). */
-        if (c.rencontresAuto !== false && !c.expedition && !c.rencontre) {
-          var tr = A.testRencontre(c);
-          if (tr.rencontre) {
-            var ra2 = A.rencontre(c, { env: tr.env, difficulte: 'ordinaire', style: 'auto' });
-            if (!ra2.erreur) {
-              var envN = (COF.Monde.envDe(tr.env) || {});
-              ra2.test = 'Test de rencontre · ' + (envN.ic || '') + ' ' + (envN.nom || tr.env) + ' · 1 chance sur ' + tr.n;
-              c.rencontre = ra2;
-              K.ajouterEntree(c, { t: 'rencontre', r: ra2, txt: 'Test de rencontre (' + (envN.nom || tr.env) + ', 1 chance sur ' + tr.n + ') : ' + ra2.texte });
-            }
-          }
+      case 'jouer': demarrerScene(c, val('cn-sc-titre'), val('cn-sc-attendu'), null); return;
+      case 'jouer-prop': {
+        var pr = COF.Directeur.propositions(c)[+v]; if (!pr) return;
+        if (pr.type === 'voyage') {
+          if (c.expedition) { flash('Terminez d’abord l’expédition en cours'); return; }
+          var iciV = COF.Monde.ici(c), destV = COF.Monde.lieu(c, pr.lieu);
+          if (!destV) return;
+          if (!iciV) { COF.Monde.seRendre(c, destV.id); K.sauver(c); flash('📍 ' + destV.nom); rendre(); return; }
+          var rtV = COF.Monde.route(c, iciV.id, destV.id) || COF.Monde.relier(c, iciV.id, destV.id, 2);
+          K.nouvelleScene(c, 'En route pour ' + destV.nom, rtV.jours + ' jour(s) de route depuis ' + iciV.nom + (pr.fil ? ', pour « ' + pr.fil + ' »' : '') + '.',
+            { type: 'voyage', filId: pr.filId, sansTest: true });
+          c = K.actif();
+          X.commencerVoyage(c, iciV.nom, destV.nom, rtV.jours, rtV.env); K.sauver(c);
+          onglet = 'expe'; rendre.haut = true; rendre(); return;
         }
-        rendre.defiler = true; rendre(); return;
+        if (pr.type === 'nouvelle') {
+          var nq = COF.Directeur.creerQuete(c);
+          pr = Object.assign({ type: 'quete', filId: nq.id }, COF.Directeur.sceneDe(c, nq));
+          flash('📜 Nouvelle quête : ' + nq.nom);
+        }
+        demarrerScene(c, pr.titre, pr.attendu, pr);
+        return;
       }
       case 'rencontres-auto': c.rencontresAuto = c.rencontresAuto === false; K.sauver(c); sheetMenu(); return;
       case 'ecrire': { var t = val('cn-texte'); if (!t) return; K.ajouterEntree(c, { t: 'texte', txt: t }); apresEntree(); return; }
@@ -966,8 +1030,26 @@ COF.UI.Carnet = (function () {
       case 'evt': { var e = K.evenementHistoire(c); K.ajouterEntree(c, { t: 'evt', txt: e.texte }); apresEntree(); return; }
       case 'muse': { var m = COF.Oracle.inspiration(); K.ajouterEntree(c, { t: 'muse', txt: m.mot1 + ' × ' + m.mot2 }); apresEntree(); return; }
       case 'detail': { var d = COF.Oracle.detailSensoriel(null); K.ajouterEntree(c, { t: 'detail', txt: d.detail }); apresEntree(); return; }
-      case 'clore': sheetClore(); return;
-      case 'clore-ok': case 'clore-ko': K.clore(c, act === 'clore-ok', val('cn-resume')); fermer(); rendre(); flash('Tension : ' + K.actif().tension); return;
+      case 'clore': clore.resume = ''; sheetClore(); return;
+      case 'clore-fil': { clore.resume = val('cn-resume'); var ch0 = sheet.choix, idF = node.getAttribute('data-id'); ch0[idF] = !ch0[idF]; sheetClore(ch0); return; }
+      case 'clore-ok': case 'clore-ko': {
+        var choixF = (sheet && sheet.choix) || {}, notes = [];
+        K.clore(c, act === 'clore-ok', val('cn-resume'));
+        c = K.actif();
+        Object.keys(choixF).forEach(function (id) {
+          if (!choixF[id]) return;
+          var fF = c.fils.filter(function (f) { return f.id === id; })[0]; if (!fF) return;
+          if (fF.quete) notes.push(COF.Directeur.avancer(c, fF));
+          else { fF.ouvert = false; notes.push('🧵 « ' + fF.nom + ' » est résolu.'); }
+        });
+        /* l'avancée est notée dans la scène qui vient de se clore */
+        var der0 = c.scenes[c.scenes.length - 1];
+        notes.filter(Boolean).forEach(function (n) { der0.entrees.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quand: Date.now(), t: 'evt', txt: n }); });
+        K.sauver(c); fermer(); rendre.haut = true; rendre();
+        flash(notes.length ? notes[0].slice(0, 90) : 'Tension : ' + K.actif().tension);
+        return;
+      }
+      case 'nouvelle-quete': { var nq2 = COF.Directeur.creerQuete(c); flash('📜 ' + nq2.nom); rendre(); return; }
       case 'jour': c.jour = Math.max(1, c.jour + (+v)); K.sauver(c); if (sheet && sheet.type === 'menu') sheetMenu(); else { fermer(); flash('Jour ' + c.jour); } rendre(); return;
       case 'suppr-entree': if (confirm('Supprimer cette entrée ?')) { K.supprimerEntree(c, node.getAttribute('data-id')); rendre(); } return;
       case 'ajouter': { var nm = val('cn-nouveau'); if (!nm) return; K.ajouterListe(c, node.getAttribute('data-l'), { nom: nm, note: '' }); rendre(); return; }
@@ -1091,7 +1173,7 @@ COF.UI.Carnet = (function () {
         /* Bilan automatique du combat dans le récit */
         if (COF.UI.Arene && COF.UI.Arene.bilan) {
           var bil = COF.UI.Arene.bilan(v);
-          K.ajouterEntree(c, { t: 'note', titre: '⚔️ Bilan du combat', txt: bil.texte });
+          K.ajouterEntree(c, { t: 'note', titre: '⚔️ Récit du combat', txt: bil.texte });
         }
         if (v === 'victoire') {
           var bt = A.butinDe(cb0.r);
@@ -1100,6 +1182,9 @@ COF.UI.Carnet = (function () {
           if (cb0.source === 'etape' && c.expedition) { var ev = c.expedition.etapes[c.expedition.etapes.length - 1]; if (ev) ev.vaincue = true; }
           finRencontre(c, 'Victoire');
           K.ajouterEntree(c, { t: 'note', titre: 'Victoire', txt: 'Le combat est gagné (' + cb0.texte + ').\nButin : ' + A.texteButin(bt) });
+          /* victoire lors de la confrontation d'une quête : elle avance d'elle-même */
+          var scV = K.sceneCourante(c), fV = scV && scV.filId ? c.fils.filter(function (f) { return f.id === scV.filId; })[0] : null;
+          if (fV && fV.quete && fV.quete.etape === 3) { K.ajouterEntree(c, { t: 'evt', txt: COF.Directeur.avancer(c, fV) }); scV.filId = null; }
           c.combat = null; c.butinEnAttente = bt; K.sauver(c);
           ouvrir('🏆 Victoire', '<div class="cn-menace ok"><div class="t">💰 Butin</div><div class="s">' + esc(A.texteButin(bt)) + '</div></div>' +
             '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="prendre-combat">📥 Prendre le butin</button>' +
@@ -1147,6 +1232,11 @@ COF.UI.Carnet = (function () {
         gen.res = null; fermer(); onglet = 'scene'; apresEntree(); return;
       }
       case 'gen-garder': {
+        if (gen.res.gen === 'quete' && gen.res.q) {
+          var fq = COF.Directeur.creerQuete(c, gen.res.q);
+          K.ajouterEntree(c, { t: 'note', titre: 'Nouvelle quête', txt: fq.nom + ' — commanditaire : ' + fq.quete.comNom + ', lieu : ' + fq.quete.lieuNom + '.' });
+          flash('📜 ' + fq.nom); gen.res = null; sheetGenerer(); return;
+        }
         var nm2 = val('cn-g-nom') || gen.res.titre, tx2 = val('cn-g-txt'), li = gen.res.liste;
         var obj = { nom: nm2, note: tx2 }; if (li === 'pnj' && gen.res.attitude) obj.attitude = gen.res.attitude;
         if (li === 'lieux' && gen.res.gen === 'lieu') obj.env = 'urbain';   /* localité, taverne, boutique */
@@ -1168,7 +1258,12 @@ COF.UI.Carnet = (function () {
       case 'expe-quitter': {
         if (!c.expedition) return;
         if (!(v === 'arrive' || (c.expedition.type === 'donjon' && (X.salleCourante(c.expedition) || {}).finale)) && !confirm('Mettre fin à l’expédition ?')) return;
-        X.quitter(c, v === 'arrive' ? 'Voyage terminé' : null); K.sauver(c); rendre(); return;
+        var destQ = c.expedition.destination;
+        X.quitter(c, v === 'arrive' ? 'Voyage terminé' : null);
+        /* fin du voyage : la scène de route se clôt d'elle-même, place à la suite */
+        var scQ = K.sceneCourante(c);
+        if (scQ && scQ.type === 'voyage') { scQ.close = true; scQ.resume = v === 'arrive' ? 'Arrivée à ' + destQ + '.' : 'Voyage interrompu.'; onglet = 'scene'; }
+        K.sauver(c); rendre(); return;
       }
       /* ----- Carte du monde ----- */
       case 'monde-lieu': {

@@ -103,7 +103,7 @@ COF.Aventure = (function () {
   }
   function quete() {
     var q = COF.QueteCalc.genererTout({}, {});
-    return { gen: 'quete', titre: 'Accroche', nom: maj(q.objectif).slice(0, 60), liste: 'fils', texte: COF.QueteCalc.accroche(q) };
+    return { gen: 'quete', titre: 'Accroche', nom: maj(q.objectif).slice(0, 60), liste: 'fils', texte: COF.QueteCalc.accroche(q), q: q };
   }
   function rumeur() { var r = COF.SoloCalc.GENS.rumeur.genererTout({}, {}); return { gen: 'rumeur', titre: 'Rumeur', texte: COF.SoloCalc.texteRumeur(r), liste: 'fils', nom: 'Rumeur : ' + r.sujet }; }
   function rebondissement() { var r = COF.IntrigueCalc.GENS.rebondissement.genererTout({}, {}); return { gen: 'rebond', titre: 'Rebondissement', texte: COF.IntrigueCalc.syntheseRebondissement(r) }; }
@@ -131,7 +131,7 @@ COF.Aventure = (function () {
     [11, 'neutre', 'Indifférentes ou curieuses : elles ne cherchent pas le conflit.'],
     [99, 'amical', 'Bien disposées : une discussion est possible, voire une aide.']
   ];
-  var DISTANCES = ['au contact, au détour d’un passage', 'à une dizaine de mètres', 'à une trentaine de mètres', 'au loin, encore hors de portée'];
+  var DISTANCES = ['au contact, au détour d’un passage', 'à une dizaine de mètres', 'à une vingtaine de mètres', 'au loin, encore hors de portée'];
   /* opts : { env, difficulte, style } */
   function rencontre(c, opts) {
     opts = opts || {};
@@ -147,7 +147,7 @@ COF.Aventure = (function () {
       id: 'r' + Date.now().toString(36), env: env, niveau: niv, nbPJ: nb, difficulte: r.difficulte, type: r.type, utilise: r.utilise,
       lots: r.lots.map(function (l) { return { id: l.c.id, nom: l.c.nom, nb: l.nb, role: l.role || null }; }),
       texte: r.lots.map(function (l) { return l.nb + ' × ' + l.c.nom + (l.role ? ' (' + l.role + ')' : ''); }).join(', '),
-      reaction: re[1], reactionTexte: re[2], jetReaction: jet, distance: DISTANCES[iDist], distanceM: [3, 9, 24, 27][iDist], surprise: surprise, issue: null
+      reaction: re[1], reactionTexte: re[2], jetReaction: jet, distance: DISTANCES[iDist], distanceM: [2, 10, 25, 50][iDist], surprise: surprise, issue: null
     };
     if (c) c.envDernier = env;
     return obj;

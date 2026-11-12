@@ -60,11 +60,15 @@ COF.Carnet = (function () {
     var s = c.scenes[c.scenes.length - 1];
     return s && !s.close ? s : null;
   }
-  function nouvelleScene(c, titre, attendu) {
-    var test = COF.Oracle.testScene(c.tension);
-    if (test.evenement) test.histoire = evenementHistoire(c);
+  /* opts : { filId, type, lieu } (scène proposée par le directeur) */
+  function nouvelleScene(c, titre, attendu, opts) {
+    opts = opts || {};
+    var test = opts.sansTest ? null : COF.Oracle.testScene(c.tension);
+    /* scène interrompue : un événement d'histoire prend le dessus (et agit) */
+    if (test && test.resultat === 'interrompue') test.histoire = evenementHistoire(c);
     var s = { id: uid('sc'), n: c.scenes.length + 1, titre: titre || ('Scène ' + (c.scenes.length + 1)), attendu: attendu || '',
-      test: test, tensionDebut: c.tension, jour: c.jour, entrees: [], close: false, debut: Date.now() };
+      test: test, tensionDebut: c.tension, jour: c.jour, entrees: [], close: false, debut: Date.now(),
+      filId: opts.filId || null, type: opts.type || 'libre' };
     c.scenes.push(s);
     sauver(c);
     return s;
@@ -130,21 +134,24 @@ COF.Carnet = (function () {
   ];
   function evenementHistoire(c) {
     var f = piockerPoids(FOCUS.map(function (x) { return [x, x[2]]; }));
-    var id = f[0], libelle = f[1], cibleNom = null;
+    var id = f[0], libelle = f[1], cibleNom = null, cibleId = null, x;
     var ouverts = filsOuverts(c);
     if (/^pnj(Agit|Neg|Pos)$/.test(id)) {
-      if (c.pnj.length) cibleNom = piocher(c.pnj).nom;
+      if (c.pnj.length) { x = piocher(c.pnj); cibleNom = x.nom; cibleId = x.id; }
       else { id = 'pnjNouveau'; libelle = 'Un nouveau personnage entre en scène'; }
     }
     if (/^fil(Avance|Recule|Fin)$/.test(id)) {
-      if (ouverts.length) cibleNom = piocher(ouverts).nom;
+      if (ouverts.length) { x = piocher(ouverts); cibleNom = x.nom; cibleId = x.id; }
       else { id = 'filNouveau'; libelle = 'Un nouveau fil apparaît'; }
     }
-    var p = COF.Store && COF.Store.actif();
+    var p = (c.persoId && COF.Store && COF.Store.get(c.persoId)) || (COF.Store && COF.Store.actif());
     if (/^hero/.test(id) && p) cibleNom = p.nom;
     var e = COF.Oracle.evenement();
-    return { focus: id, libelle: libelle, cible: cibleNom, action: e.action, sujet: e.sujet,
-      texte: libelle + (cibleNom ? ' — ' + cibleNom : '') + ' : il ' + e.action + ' ' + e.sujet + '.' };
+    var ev = { focus: id, libelle: libelle, cible: cibleNom, cibleId: cibleId, action: e.action, sujet: e.sujet };
+    /* Le directeur applique l'événement à la campagne (PNJ, quête, héros…). */
+    ev.effet = COF.Directeur ? COF.Directeur.appliquer(c, ev) : null;
+    ev.texte = ev.effet ? libelle + ' : ' + ev.effet : libelle + (cibleNom ? ' — ' + cibleNom : '') + ' : ' + e.action + ' ' + e.sujet + '.';
+    return ev;
   }
 
   /* ---------- Oracle branché sur la tension ---------- */
@@ -174,7 +181,7 @@ COF.Carnet = (function () {
     c.scenes.forEach(function (s) {
       L.push('## ' + s.n + '. ' + s.titre + ' (jour ' + (s.jour || 1) + ')');
       if (s.attendu) L.push('Attendu : ' + s.attendu);
-      if (s.test) L.push('Scène ' + s.test.label.toLowerCase() + (s.test.histoire ? ' — ' + s.test.histoire.texte : ''));
+      if (s.test) L.push('Scène ' + s.test.label.toLowerCase() + (s.test.modif ? ' — ' + s.test.modif : '') + (s.test.histoire ? ' — ' + s.test.histoire.texte : ''));
       L.push('');
       s.entrees.forEach(function (e) { L.push(texteEntree(e), ''); });
       if (s.close) L.push('— Fin de scène' + (s.resume ? ' : ' + s.resume : '') + (s.controle === true ? ' (le héros garde la main)' : (s.controle === false ? ' (ça tourne mal)' : '')), '');

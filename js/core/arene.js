@@ -133,83 +133,66 @@ COF.Arene = (function () {
     var caps = (cb.caps || []).map(function (c, i) { return { c: c, i: i }; }).filter(function (x) { return x.c.a && x.c.dmg; });
     if (caps.length && Math.random() < 0.3) {
       var k = caps[Math.floor(Math.random() * caps.length)];
-      return { type: 'cap', i: k.i, cible: cible, texte: cb.nom + ' (' + cb.ia + ') utilise ' + k.c.n + ' contre ' + infos(cible).nom + '.' };
+      return { type: 'cap', i: k.i, cible: cible, texte: cb.nom + ' utilise ' + k.c.n + ' contre ' + infos(cible).nom + '.' };
     }
     if (!(cb.att || []).length) return { type: 'rien', texte: cb.nom + ' n’a pas d’attaque : il se met en garde.' };
     var best = 0;
     cb.att.forEach(function (a, i) { if ((a.mod || 0) > (cb.att[best].mod || 0)) best = i; });
     if (Math.random() < 0.25) best = Math.floor(Math.random() * cb.att.length);
-    return { type: 'att', i: best, cible: cible, texte: cb.nom + ' (' + cb.ia + ') attaque ' + infos(cible).nom + ' avec ' + cb.att[best].n + '.' };
+    return { type: 'att', i: best, cible: cible, texte: cb.nom + ' attaque ' + infos(cible).nom + ' avec ' + cb.att[best].n + '.' };
   }
 
-  /* ============ Champ de bataille (distances) ============
-     Grille de 10 × 6 cases de 3 m. Distance = nombre de cases dans la
-     direction la plus longue × 3 m. Au contact : cases adjacentes.
-     Une action de mouvement ≈ 10 m, soit 3 cases. Les héros partent à
-     gauche, les adversaires à droite, à la distance de la rencontre.  */
-  var GRILLE = { l: 10, h: 6, m: 3, pas: 3 };
-  function cases(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
-  function distance(a, b) { return (a && b && a.x !== undefined && b.x !== undefined) ? cases(a, b) * GRILLE.m : null; }
-  function occupe(s, x, y, sauf) {
-    return s.combattants.some(function (c) { return c !== sauf && c.x === x && c.y === y; });
+  /* ============ Distances narratives (pas de cases) ============
+     Le groupe des héros (héros, compagnons, alliés) sert de repère.
+     Chaque adversaire se trouve dans une « zone » par rapport à lui :
+       0 Au contact · 1 Proche (≈ 10 m) · 2 À portée (≈ 25 m) · 3 Loin (50 m et plus)
+     Une action de mouvement fait passer d'une zone à la voisine. Le
+     corps à corps demande le contact ; un tir ou un sort porte si sa
+     portée couvre la zone. Rien à placer : on raconte, l'app suit.     */
+  var ZONES = [
+    { id: 0, nom: 'Au contact', court: 'contact', ic: '⚔️', m: 2 },
+    { id: 1, nom: 'Proche', court: 'proche', ic: '🏃', m: 10, note: '≈ 10 m' },
+    { id: 2, nom: 'À portée', court: 'à portée', ic: '🏹', m: 25, note: '≈ 25 m' },
+    { id: 3, nom: 'Loin', court: 'loin', ic: '🔭', m: 50, note: '50 m et plus' }
+  ];
+  function zoneDepuisM(m) { return m <= 3 ? 0 : (m <= 14 ? 1 : (m <= 35 ? 2 : 3)); }
+  /* L'adversaire de la paire (celui qui porte la zone). */
+  function porteur(a, b) { return a && camp(a) === 'monstres' ? a : (b && camp(b) === 'monstres' ? b : null); }
+  /* Zone entre deux combattants (même camp : côte à côte, 0). */
+  function zoneEntre(a, b) {
+    if (!a || !b || camp(a) === camp(b)) return 0;
+    var m = porteur(a, b); return m && typeof m.zone === 'number' ? m.zone : 1;
   }
-  function libreProche(s, x, y, sauf) {
-    for (var r = 0; r < 6; r++) {
-      for (var dy = -r; dy <= r; dy++) for (var dx = -r; dx <= r; dx++) {
-        var nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= GRILLE.l || ny >= GRILLE.h) continue;
-        if (!occupe(s, nx, ny, sauf)) return { x: nx, y: ny };
-      }
-    }
-    return { x: x, y: y };
-  }
-  /* Place ceux qui n'ont pas encore de position ; distanceM : écart initial. */
+  function distance(a, b) { return ZONES[zoneEntre(a, b)].m; }
+  /* Place les nouveaux adversaires à la distance de la rencontre. */
   function placer(s, distanceM) {
-    var ecart = Math.max(1, Math.min(GRILLE.l - 2, Math.round((distanceM || 12) / GRILLE.m)));
-    var xh = 1, xm = Math.min(GRILLE.l - 1, xh + ecart);
-    var nh = 0, nm = 0;
-    s.combattants.forEach(function (c) {
-      if (c.x !== undefined) return;
-      var heros = camp(c) === 'heros', i = heros ? nh++ : nm++;
-      var y = Math.floor(GRILLE.h / 2) + (i % 2 ? Math.ceil(i / 2) : -Math.ceil(i / 2));
-      var p = libreProche(s, heros ? xh - (i > 4 ? 1 : 0) : xm + (i > 4 ? 1 : 0), Math.max(0, Math.min(GRILLE.h - 1, y)), c);
-      c.x = p.x; c.y = p.y;
-    });
+    var z = zoneDepuisM(distanceM === undefined || distanceM === null ? 12 : distanceM);
+    s.combattants.forEach(function (c) { if (camp(c) === 'monstres' && typeof c.zone !== 'number') c.zone = z; });
   }
-  /* Rapproche cb de sa cible (jusqu'à pas cases), jusqu'au contact ou à portée. */
-  function approcher(s, cb, cible, porteeCases, pas) {
-    var fait = 0;
-    pas = pas || GRILLE.pas;
-    /* À chaque pas : la case voisine libre qui rapproche le plus (distance
-       en cases, puis distance réelle) ; on s'arrête si rien ne rapproche. */
-    while (fait < pas && cases(cb, cible) > porteeCases) {
-      var actuel = cases(cb, cible), eucl = Math.hypot(cb.x - cible.x, cb.y - cible.y), best = null;
-      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        var nx = cb.x + dx, ny = cb.y + dy;
-        if (nx < 0 || ny < 0 || nx >= GRILLE.l || ny >= GRILLE.h || occupe(s, nx, ny, cb)) continue;
-        var dc = Math.max(Math.abs(nx - cible.x), Math.abs(ny - cible.y)), de = Math.hypot(nx - cible.x, ny - cible.y);
-        if (dc > actuel || (dc === actuel && de >= eucl)) continue;
-        if (!best || dc < best.dc || (dc === best.dc && de < best.de)) best = { x: nx, y: ny, dc: dc, de: de };
-      }
-      if (!best) break;
-      cb.x = best.x; cb.y = best.y; fait++;
-    }
+  /* Rapproche deux combattants d'une zone (n zones) ; renvoie le nombre fait. */
+  function approcher(s, cb, cible, n) {
+    var m = porteur(cb, cible); if (!m) return 0;
+    var fait = Math.min(n || 1, m.zone || 0);
+    m.zone = (m.zone || 0) - fait;
     return fait;
   }
-  /* S'éloigne de la menace la plus proche (fuite). */
-  function eloigner(s, cb, menace, pas) {
-    for (var i = 0; i < (pas || GRILLE.pas); i++) {
-      var nx = cb.x + Math.sign(cb.x - menace.x || (camp(cb) === 'heros' ? -1 : 1)), ny = cb.y;
-      if (nx < 0 || nx >= GRILLE.l || occupe(s, nx, ny, cb)) break;
-      cb.x = nx;
-    }
+  /* Éloigne : la zone augmente (au-delà de « Loin », il est hors de vue). */
+  function eloigner(s, cb, menace, n) {
+    var m = porteur(cb, menace) || (camp(cb) === 'monstres' ? cb : null); if (!m) return 0;
+    var avant = m.zone || 0;
+    m.zone = Math.min(3, avant + (n || 1));
+    if (avant >= 3 && m.moral === 'fuite') m.horsDeVue = true;
+    return m.zone - avant;
   }
-  /* Portée d'une attaque en cases (contact = 1). */
-  function porteeCases(att) { return att && att.portee ? Math.max(1, Math.floor(att.portee / GRILLE.m)) : 1; }
+  /* Zone maximale qu'atteint une attaque (contact = 0). */
+  function zonePortee(att) {
+    if (!att || !att.portee) return 0;
+    return att.portee >= 45 ? 3 : (att.portee >= 18 ? 2 : (att.portee >= 6 ? 1 : 0));
+  }
 
   return {
-    GRILLE: GRILLE, distance: distance, placer: placer, approcher: approcher, eloigner: eloigner, porteeCases: porteeCases, cases: cases,
+    ZONES: ZONES, zoneDepuisM: zoneDepuisM, zoneEntre: zoneEntre, zonePortee: zonePortee,
+    distance: distance, placer: placer, approcher: approcher, eloigner: eloigner,
     decider: decider, camp: camp,
     lire: lire, ecrire: ecrire, vider: etatVide,
     ajouterCreature: ajouterCreature, ajouterLots: ajouterLots, ajouterPersonnage: ajouterPersonnage,

@@ -105,6 +105,12 @@ COF.Monde = (function () {
   };
   var EPITHETES = ['du Corbeau', 'des Murmures', 'du Pendu', 'aux Loups', 'de la Vieille', 'du Sanglier', 'des Brumes', 'd’Argent', 'du Roi Mort',
     'des Ronces', 'de l’Ermite', 'aux Cendres', 'du Silence', 'de la Source', 'des Trois Pierres', 'du Gibet', 'de la Lune', 'des Ombres'];
+  /* Nom de lieu inédit pour un terrain (« Clairière aux Loups »…). */
+  function nomLieu(c, env) {
+    var nom, essai = 0;
+    do { nom = COF.piocher(NOMS_DEC[env] || NOMS_DEC.plaine) + ' ' + COF.piocher(EPITHETES); } while (lieuParNom(c, nom) && ++essai < 12);
+    return nom;
+  }
   function decouvrir(c, depart, dest, fraction, env) {
     if (!depart || !dest) return null;
     var x = depart.x + (dest.x - depart.x) * fraction, y = depart.y + (dest.y - depart.y) * fraction;
@@ -147,6 +153,6 @@ COF.Monde = (function () {
   function seRendre(c, id) { c.position = id; }
 
   return { L: L, H: H, cadre: cadre, assurer: assurer, envDe: envDe, devinerEnv: devinerEnv, envIci: envIci,
-    regions: regions, ajouterRegion: ajouterRegion, retirerRegion: retirerRegion, regionA: regionA, envAuPoint: envAuPoint, decouvrir: decouvrir, lieu: lieu, lieuParNom: lieuParNom, obtenirLieu: obtenirLieu, placeLibre: placeLibre,
+    nomLieu: nomLieu, regions: regions, ajouterRegion: ajouterRegion, retirerRegion: retirerRegion, regionA: regionA, envAuPoint: envAuPoint, decouvrir: decouvrir, lieu: lieu, lieuParNom: lieuParNom, obtenirLieu: obtenirLieu, placeLibre: placeLibre,
     route: route, relier: relier, delier: delier, voisins: voisins, ici: ici, seRendre: seRendre };
 })();

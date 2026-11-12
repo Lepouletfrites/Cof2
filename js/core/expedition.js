@@ -217,7 +217,9 @@ COF.Expedition = (function () {
   function versArene(c, rencontre) {
     if (!rencontre) return false;
     var s = COF.Arene.vider();
-    s.distanceDepart = rencontre.distanceM || (c.expedition && c.expedition.type === 'donjon' ? 9 : 15);
+    s.distanceDepart = typeof rencontre.distanceM === 'number' ? rencontre.distanceM : (c.expedition && c.expedition.type === 'donjon' ? 10 : 25);
+    s.env = rencontre.env || (c.expedition && c.expedition.env) || (COF.Aventure ? COF.Aventure.envCourant(c) : '');
+    s.surprise = /héros est surpris/i.test(rencontre.surprise || '') ? 'heros' : (/créatures sont surprises/i.test(rencontre.surprise || '') ? 'monstres' : null);
     rencontre.lots.forEach(function (l) {
       var cr = COF.UI.Bestiaire && COF.UI.Bestiaire.get(l.id);
       if (cr) for (var i = 0; i < l.nb; i++) COF.Arene.ajouterCreature(s, cr, l.role);
@@ -248,6 +250,10 @@ COF.Expedition = (function () {
     };
     s.combattants.sort(function (a, b) { return init(b) - init(a); });
     s.tour = 0;
+    /* Surprise : le camp surpris ne joue pas au premier round. */
+    if (s.surprise) s.combattants.forEach(function (cb) {
+      if (COF.Arene.camp(cb) === (s.surprise === 'heros' ? 'heros' : 'monstres')) cb.etats.push('surpris');
+    });
     COF.Arene.ecrire(s);
     return true;
   }

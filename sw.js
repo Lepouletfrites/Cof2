@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v47';
+var CACHE_VERSION = 'cof2-v48';
 
 var FICHIERS = [
   './',
@@ -62,12 +62,14 @@ var FICHIERS = [
   'js/core/pnj.js',
   'js/core/recompense.js',
   'js/core/arene.js',
+  'js/core/narration.js',
   'js/core/oracle.js',
   'js/core/carnet.js',
   'js/core/expedition.js',
   'js/core/aventure.js',
   'js/core/sauvegarde.js',
   'js/core/monde.js',
+  'js/core/directeur.js',
   'js/core/lieux.js',
   'js/core/quetes.js',
   'js/core/voyage.js',

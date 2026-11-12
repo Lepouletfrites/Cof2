@@ -1,15 +1,15 @@
 /* ============================================================
-   COF2 Compagnon — Combat (Arène), refonte « tour par tour »
-   Un seul écran pensé pour le téléphone :
-     ┌ bandeau d'initiative : qui joue, dans quel ordre, PV de chacun
-     ├ champ de bataille : cases de 3 m, pions, distances
-     ├ journal du combat (3 dernières lignes, dépliable)
+   COF2 Compagnon — Combat (Arène), version narrative
+   Un seul écran pensé pour le téléphone, sans cases ni pions :
+     ┌ la situation : votre groupe, puis les adversaires rangés par
+     │  distance (au contact · proche · à portée · loin)
+     ├ le récit du combat, raconté phrase par phrase (les dés en petit)
      └ panneau d'action du combattant actif :
-         ⚔️ Attaquer · ✨ Sorts & capacités · 👣 Se déplacer ·
-         🎒 Soins & objets · 🌀 États · ⏭️ Fin du tour
-   Déroulé d'une attaque, sans fenêtre : choisir l'attaque → toucher
-   la cible sur la carte (celles à portée sont surlignées) → résultat
-   affiché dans le panneau (dés, DEF, DM appliqués) → « ↶ Annuler ».
+         ⚔️ Attaquer · ✨ Sorts & capacités · 🤼 Manœuvre ·
+         👣 Se déplacer · 🧪 Soins & objets · ⏭️ Fin du tour
+   Déroulé d'une attaque : choisir l'attaque → toucher une cible (un
+   adversaire « proche » peut être chargé : on s'approche puis on
+   frappe) → résultat raconté, dés, DM appliqués → « ↶ Annuler ».
    Le tour suit l'économie d'actions de COF2 : une action d'attaque (A)
    et une de mouvement (M), ou deux mouvements ; une action limitée (L)
    prend tout le tour ; une action gratuite (G) ne coûte rien.
@@ -211,7 +211,8 @@ COF.UI.Arene = (function () {
     var d = donnees(t), r = { opt: opt, cible: d.nom, lignes: [], manoeuvre: true };
     if (opt.manoeuvre === 'couvert') {
       cb.couvertJusqua = s.round + 1; r.verdict = 'effet';
-      log('🛡️ ' + cb.nom + ' se met à couvert (+2 DEF contre les tirs).');
+      r.recit = cb.nom + ' se met à l’abri derrière un obstacle.';
+      log(r.recit, '+2 DEF contre les tirs jusqu’à son prochain tour');
       return r;
     }
     var ea = effetsEtats(cb), et = effetsEtats(t);
@@ -220,16 +221,23 @@ COF.UI.Arene = (function () {
     r.oppose = { a: ta, d: td };
     var ok = ta.total > td.total;
     r.verdict = ok ? 'touche' : 'rate';
-    var effet = '';
+    var effet = '', an = cb.nom, cn = d.nom;
+    var RECITS = {
+      renverser: [an + ' bouscule ' + cn + ', qui s’étale au sol.', cn + ' résiste à la poussée de ' + an + '.'],
+      desarmer: ['D’un geste vif, ' + an + ' fait sauter l’arme des mains de ' + cn + '.', cn + ' garde fermement son arme.'],
+      saisir: [an + ' empoigne ' + cn + ' et l’immobilise.', cn + ' se dégage de la prise de ' + an + '.'],
+      pousser: [an + ' repousse violemment ' + cn + '.', cn + ' ne recule pas d’un pouce.']
+    };
     if (ok) {
-      if (opt.manoeuvre === 'renverser') { if (!a(t, 'renverse')) A().toggleEtat(t, 'renverse'); effet = d.nom + ' est renversé.'; }
-      else if (opt.manoeuvre === 'saisir') { if (!a(t, 'immobilise')) A().toggleEtat(t, 'immobilise'); effet = d.nom + ' est immobilisé.'; }
-      else if (opt.manoeuvre === 'desarmer') { t.desarme = true; effet = d.nom + ' lâche son arme.'; }
-      else if (opt.manoeuvre === 'pousser') { A().eloigner(s, t, cb, 2); effet = d.nom + ' est repoussé.'; }
+      if (opt.manoeuvre === 'renverser') { if (!a(t, 'renverse')) A().toggleEtat(t, 'renverse'); effet = 'état Renversé'; }
+      else if (opt.manoeuvre === 'saisir') { if (!a(t, 'immobilise')) A().toggleEtat(t, 'immobilise'); effet = 'état Immobilisé'; }
+      else if (opt.manoeuvre === 'desarmer') { t.desarme = true; effet = 'perd son prochain tour à ramasser son arme'; }
+      else if (opt.manoeuvre === 'pousser') { A().eloigner(s, t, cb, 1); effet = 'repoussé : ' + A().ZONES[A().zoneEntre(cb, t)].nom.toLowerCase(); }
       r.lignes.push(effet);
     }
+    r.recit = (RECITS[opt.manoeuvre] || ['', ''])[ok ? 0 : 1];
     stat('manoeuvres', cb.nom + ' : ' + opt.nom.toLowerCase() + (ok ? ' réussi' : ' raté') + ' contre ' + d.nom);
-    log('🤼 ' + cb.nom + ' tente de ' + opt.nom.toLowerCase().replace(' / bloquer', '') + ' ' + d.nom + ' : ' + ta.total + ' contre ' + td.total + ' → ' + (ok ? 'réussi. ' + effet : 'raté.'));
+    log(r.recit, opt.nom + ' : ' + ta.total + ' contre ' + td.total + (ok ? ' → ' + effet : ' → raté'));
     return r;
   }
   /* Utilise (consomme) un objet de l'inventaire. */
@@ -263,6 +271,8 @@ COF.UI.Arene = (function () {
     var rendus = adv.filter(function (c) { return c.moral === 'reddition'; }).map(function (c) { return c.nom; });
     var herosKo = heros.filter(function (c) { return donnees(c).pv <= 0; }).map(function (c) { return c.nom; });
     var mvp = heros.slice().sort(function (x, y) { return (st.inflige[y.nom] || 0) - (st.inflige[x.nom] || 0); })[0];
+    var fil = (s.log || []).map(function (x) { return typeof x === 'string' ? x : x.r; }).filter(Boolean);
+    if (fil.length > 30) fil = fil.slice(0, 4).concat(['…']).concat(fil.slice(-25));
     var L = [];
     L.push('Combat de ' + s.round + ' round' + (s.round > 1 ? 's' : '') + ' contre ' + adv.map(function (c) { return c.nom; }).join(', ') + '.');
     L.push('Dégâts : ' + infl + ' infligés, ' + subi + ' subis par le groupe.');
@@ -287,7 +297,7 @@ COF.UI.Arene = (function () {
         (subi > infl ? ' La victoire a coûté cher.' : '') + (fuis.length ? ' ' + fuis.join(' et ') + ' s’échappe' + (fuis.length > 1 ? 'nt' : '') + ' : on pourrait le' + (fuis.length > 1 ? 's' : '') + ' revoir.' : '');
     } else if (issue === 'fuite') recit = 'Le groupe rompt le combat et se replie, laissant le champ libre à ses adversaires.';
     else recit = 'Le combat tourne mal : ' + (herosKo.length ? herosKo.join(' et ') + ' s’effondre' + (herosKo.length > 1 ? 'nt' : '') : 'le héros est débordé') + '.';
-    return { lignes: L, recit: recit, texte: recit + '\n' + L.join('\n') };
+    return { lignes: L, recit: recit, fil: fil, texte: recit + (fil.length ? '\n\n' + fil.join('\n') : '') + '\n\n' + L.join('\n') };
   }
   /* Récupération rapide proposée en fin de combat (1 DR). */
   function recupRapide(cb) {
@@ -296,7 +306,7 @@ COF.UI.Arene = (function () {
     p.dr--;
     var K = COF.Calc, jr = COF.Dice.dommages('1d' + K.drType(p), K.ctx(p), {}), gain = jr.total + Math.floor((p.niveau || 1) / 2);
     p.pv = Math.min(K.pvMax(p), p.pv + gain); COF.Store.sauver(p);
-    log('⏸️ ' + p.nom + ' récupère ' + gain + ' PV (' + p.pv + '/' + K.pvMax(p) + ', ' + p.dr + ' DR restant).');
+    log(p.nom + ' reprend son souffle et panse ses plaies.', '+' + gain + ' PV (' + p.pv + '/' + K.pvMax(p) + ', ' + p.dr + ' DR restant)');
     return '+' + gain + ' PV';
   }
 
@@ -365,30 +375,31 @@ COF.UI.Arene = (function () {
     return r;
   }
   function ctxCreature(cb) { var n = Math.floor(cb.nc) || 1; return { carac: {}, niveau: n, deEvo: COF.deEvolutif(n) }; }
-  function porteeCases(opt) { return opt.portee ? Math.max(1, Math.floor(opt.portee / A().GRILLE.m)) : 1; }
-  /* Cibles possibles pour une option : adversaires (ou alliés pour un soin). */
+  function zonePortee(opt) { return opt.portee ? A().zonePortee(opt) : 0; }
+  function nomZone(z) { return A().ZONES[z].nom.toLowerCase(); }
+  /* Cibles possibles pour une option : adversaires (ou alliés pour un soin).
+     ok : la cible est à portée ; charge : au corps à corps, un adversaire
+     « proche » peut être chargé (on s'approche, puis on frappe). */
   function cibles(cb, opt) {
     return s.combattants.filter(function (c) {
-      if (!donnees(c).vivant) return false;
+      if (!donnees(c).vivant || c.horsDeVue) return false;
       if (opt.soin) return camp(c) === camp(cb) && donnees(c).pv < donnees(c).pvMax;
       return camp(c) !== camp(cb) && donnees(c).pv > 0;
     }).map(function (c) {
-      var dc = A().cases(cb, c);
-      return { cb: c, m: dc * A().GRILLE.m, ok: opt.soin ? dc <= 1 || c === cb : dc <= porteeCases(opt) };
+      var z = A().zoneEntre(cb, c), ok = opt.soin ? true : z <= zonePortee(opt);
+      var charge = !ok && !opt.portee && !opt.soin && z === 1 && eco().m && eco().a && !effetsEtats(cb).pasDeMouv;
+      return { cb: c, z: z, ok: ok, charge: charge };
     });
   }
 
-  /* ================= Journal ================= */
-  function log(l) {
-    s.log = s.log || []; s.log.push(l); if (s.log.length > 60) s.log = s.log.slice(-60);
-    journalCombat.push(l);
+  /* ================= Récit du combat =================
+     Chaque ligne : r = la phrase racontée, m = le détail des dés. */
+  function log(r, m) {
+    s.log = s.log || []; s.log.push({ r: r, m: m || '' }); if (s.log.length > 80) s.log = s.log.slice(-80);
   }
   function combatAventure() { var c = COF.Carnet && COF.Carnet.actif(); return c && c.combat ? c : null; }
-  function verserJournal() {
-    var c = combatAventure();
-    if (c && journalCombat.length) COF.Carnet.ajouterEntree(c, { t: 'note', titre: 'Combat · round ' + s.round, txt: journalCombat.join('\n') });
-    journalCombat = [];
-  }
+  /* Le récit complet est versé au Carnet en fin de combat (bilan). */
+  function verserJournal() { journalCombat = []; }
 
   /* ================= Annuler la dernière action ================= */
   function memoriser() {
@@ -396,7 +407,7 @@ COF.UI.Arene = (function () {
     s.combattants.forEach(function (c) {
       if (c.type === 'pj') { var p = COF.Store.get(c.refId); if (p) persos[p.id] = { pv: p.pv, pm: p.pm, inv: JSON.stringify(p.inventaire || []) }; }
     });
-    ui.annuler = { s: JSON.stringify(s), persos: persos, jl: journalCombat.length };
+    ui.annuler = { s: JSON.stringify(s), persos: persos, jl: 0 };
   }
   function annuler() {
     if (!ui.annuler) return;
@@ -407,7 +418,6 @@ COF.UI.Arene = (function () {
       if (ui.annuler.persos[id].inv) p.inventaire = JSON.parse(ui.annuler.persos[id].inv);   /* objet utilisé : rendu */
       COF.Store.sauver(p);
     });
-    journalCombat = journalCombat.slice(0, ui.annuler.jl);
     ui.annuler = null; ui.resultat = null; ui.mode = 'menu';
     A().ecrire(s);
   }
@@ -415,8 +425,8 @@ COF.UI.Arene = (function () {
   /* ================= Résolution d'une action ================= */
   /* Résout une action complète : coût, action dépensée, puis une ou
      plusieurs attaques (créatures à « 2 attaques »), recharge éventuelle. */
-  function resoudre(cb, opt, t) {
-    memoriser();
+  function resoudre(cb, opt, t, dejaMemo) {
+    if (!dejaMemo) memoriser();
     opt = appliquerArme(cb, opt);
     var lignes = [];
     if (opt.cout) {
@@ -455,22 +465,26 @@ COF.UI.Arene = (function () {
       r.soin = h; r.verdict = 'soin';
       stat('soins', d.nom, h.total);
       consommer(cb, opt);
-      log('💚 ' + cb.nom + (opt.inv !== undefined ? ' utilise ' + opt.nom.replace(/ ×\d+$/, '') + (t !== cb ? ' sur ' + d.nom : '') : ' soigne ' + d.nom + ' (' + opt.nom + ')') +
-        ' : +' + h.total + ' PV (' + donnees(t).pv + '/' + d.pvMax + ').');
+      r.recit = COF.Narration.soin(cb.nom, t === cb ? cb.nom : d.nom, opt.inv !== undefined ? opt.nom.replace(/ ×\d+$/, '').toLowerCase() : null, h.total);
+      log(r.recit, opt.nom.replace(/ ×\d+$/, '') + ' : ' + h.total + ' → ' + donnees(t).pv + '/' + d.pvMax + ' PV');
       return r;
     }
     if (opt.auto && !opt.dmg) {
       r.verdict = 'effet';
       consommer(cb, opt);
-      log('✨ ' + cb.nom + ' utilise ' + opt.nom.replace(/ ×\d+$/, '') + (t !== cb ? ' sur ' + d.nom : '') + '.');
+      r.recit = cb.nom + ' utilise ' + opt.nom.replace(/ ×\d+$/, '') + (t !== cb ? ' sur ' + d.nom : '') + '.';
+      log(r.recit, opt.note ? opt.note.slice(0, 120) : '');
       return r;
     }
     var def = d.def + et.def;
     if (opt.portee && t.couvertJusqua >= s.round) { def += 2; r.lignes.push(d.nom + ' est à couvert : +2 DEF.'); }
+    /* tirer sur un adversaire au contact : dé malus (arme à distance) */
+    var malusContact = opt.cat === 'attaque' && opt.portee && !opt.auto && A().zoneEntre(cb, t) === 0 && cb.type === 'pj';
+    if (malusContact) r.lignes.push('Tir au contact : dé malus.');
     var test = null, touche, crit = false;
     if (opt.auto) { touche = true; }
     else {
-      test = COF.Dice.test({ mod: (opt.mod || 0) + ea.att, difficulte: def, bonus: ui.bonus, malus: ui.malus || ea.malus, critMin: opt.crit || 20 });
+      test = COF.Dice.test({ mod: (opt.mod || 0) + ea.att, difficulte: def, bonus: ui.bonus && !malusContact, malus: ui.malus || ea.malus || malusContact, critMin: opt.crit || 20 });
       touche = !!test.reussite; crit = !!test.crit;
     }
     if (et.autoCrit) { touche = true; crit = true; r.lignes.push('La cible est paralysée : touchée automatiquement, critique.'); }
@@ -487,16 +501,20 @@ COF.UI.Arene = (function () {
       r.pvApres = apres.pv + '/' + apres.pvMax;
       stat('inflige', cb.nom, dm.total); stat('subi', d.nom, dm.total);
       if (crit) stat('crits', { par: cb.nom, sur: d.nom, dm: dm.total });
-      if (!s.stats.meilleur || dm.total > s.stats.meilleur.dm) s.stats.meilleur = { par: cb.nom, sur: d.nom, dm: dm.total, arme: opt.nom, crit: crit };
+      if (camp(cb) === 'heros' && (!s.stats.meilleur || dm.total > s.stats.meilleur.dm)) s.stats.meilleur = { par: cb.nom, sur: d.nom, dm: dm.total, arme: opt.nom, crit: crit };
       if (apres.pv <= 0) stat('ko', d.nom);
-      log((cb.allie ? '🤝 ' : (cb.type === 'pj' ? '🛡️ ' : '🐉 ')) + cb.nom + ' → ' + d.nom + ' (' + opt.nom + (opt.armeNom ? ' avec ' + opt.armeNom : '') + ') : ' +
-        (test ? test.total + ' contre DEF ' + def + ' → ' : 'automatique → ') + (crit ? 'CRITIQUE, ' : 'touché, ') + dm.total + ' DM' + (apres.pv <= 0 ? ' — à terre !' : ' (' + r.pvApres + ' PV).'));
+      r.recit = COF.Narration.attaque({ a: cb.nom, c: d.nom, arme: opt.armeNom || opt.nom, sort: opt.cat === 'sort', distance: !!opt.portee,
+        verdict: r.verdict, dm: dm.total, ko: apres.pv <= 0, pv: apres.pv, pvMax: d.pvMax, crit: crit, heros: t.type === 'pj' });
+      log(r.recit, opt.nom + (opt.armeNom ? ' (' + opt.armeNom + ')' : '') + ' : ' + (test ? test.total + ' contre DEF ' + def : 'automatique') + ' → ' +
+        (crit ? 'critique, ' : '') + dm.total + ' DM' + (apres.pv <= 0 ? ', à terre' : ' (' + r.pvApres + ' PV)'));
     } else if (touche) {
       r.verdict = 'touche';
-      log(cb.nom + ' → ' + d.nom + ' (' + opt.nom + ') : touché.');
+      r.recit = cb.nom + ' atteint ' + d.nom + ' avec ' + opt.nom + '.';
+      log(r.recit, 'touché');
     } else {
       r.verdict = test && test.fumble ? 'fumble' : 'rate';
-      log(cb.nom + ' → ' + d.nom + ' (' + opt.nom + ') : ' + test.total + ' contre DEF ' + def + ' → ' + (test.fumble ? 'échec critique.' : 'raté.'));
+      r.recit = COF.Narration.attaque({ a: cb.nom, c: d.nom, arme: opt.nom, sort: opt.cat === 'sort', distance: !!opt.portee, verdict: r.verdict });
+      log(r.recit, opt.nom + ' : ' + test.total + ' contre DEF ' + def + ' → ' + (test.fumble ? 'échec critique' : 'raté'));
     }
     if (ea.raisons.length) r.lignes.push('États : ' + ea.raisons.join(' ; ') + '.');
     return r;
@@ -504,26 +522,31 @@ COF.UI.Arene = (function () {
 
   /* ================= Tours automatiques (créatures, alliés) ================= */
   function jouerAuto(cb) {
-    var ea = effetsEtats(cb);
-    if (ea.perdTour) { log('🌀 ' + cb.nom + ' ne peut pas agir (' + ea.raisons.join(', ') + ').'); return; }
-    if (cb.desarme) { cb.desarme = false; log('🗡️ ' + cb.nom + ' ramasse son arme.'); return; }
-    if (a(cb, 'renverse') && debout(cb)) { A().toggleEtat(cb, 'renverse'); log('🤼 ' + cb.nom + ' se relève.'); return; }
+    var ea = effetsEtats(cb), N = COF.Narration;
+    if (ea.perdTour) { log(cb.nom + ' ne peut rien faire ce tour-ci.', ea.raisons.join(', ')); return; }
+    if (cb.desarme) { cb.desarme = false; log(N.mouvement('ramasse', cb.nom)); return; }
+    if (a(cb, 'renverse') && debout(cb)) { A().toggleEtat(cb, 'renverse'); log(N.mouvement('releve', cb.nom)); return; }
     var dec = A().decider(s, cb, donnees);
-    if (dec.type === 'fuite') {
-      var menace = s.combattants.filter(function (x) { return camp(x) !== camp(cb) && x.x !== undefined; })[0];
-      if (menace) A().eloigner(s, cb, menace);
-    }
-    if (dec.type !== 'att' && dec.type !== 'cap') { log('🤖 ' + dec.texte); return; }
-    var t = dec.cible, opt = choisirAttaque(cb, t);
-    if (!opt) { log('🤖 ' + cb.nom + ' n’a aucune attaque utilisable.'); return; }
-    var pc = porteeCases(opt), ic = cb.allie ? '🤝 ' : '🐉 ';
-    /* Tireur au contact sans arme de mêlée : il recule avant de tirer. */
-    if (opt.portee && A().cases(cb, t) <= 1 && !aDeLaMelee(cb) && !ea.pasDeMouv) {
-      A().eloigner(s, cb, t, 2);
-      log(ic + cb.nom + ' recule pour tirer.');
-    } else if (!ea.pasDeMouv && A().cases(cb, t) > pc) {
-      var n = A().approcher(s, cb, t, pc);
-      if (A().cases(cb, t) > pc) { log(ic + cb.nom + ' avance vers ' + donnees(t).nom + (n ? ' (' + n * A().GRILLE.m + ' m)' : '') + '.'); return; }
+    /* Moral brisé : la créature s'enfuit (elle quitte le combat) ou se rend. */
+    if (dec.type === 'fuite') { cb.horsDeVue = true; cb.zone = 3; log(dec.texte.replace(/\s*\(moral d6 : \d\)/, ''), (dec.texte.match(/moral d6 : \d/) || [''])[0]); return; }
+    if (dec.type === 'reddition') { log(N.mouvement('reddition', cb.nom), (dec.texte.match(/moral d6 : \d/) || [''])[0]); return; }
+    if (dec.type !== 'att' && dec.type !== 'cap') { log(dec.texte); return; }
+    var t = dec.cible, opt = choisirAttaque(cb, t), tn = donnees(t).nom;
+    if (!opt) { log(cb.nom + ' hésite, sans moyen d’attaquer.'); return; }
+    var z = A().zoneEntre(cb, t), zp = zonePortee(opt);
+    /* Tireur au contact sans arme de mêlée : il recule, puis tire. */
+    if (opt.portee && z === 0 && !aDeLaMelee(cb) && !ea.pasDeMouv) {
+      A().eloigner(s, cb, t, 1); log(N.mouvement('recule', cb.nom), 'mouvement : ' + nomZone(A().zoneEntre(cb, t)));
+    } else if (z > zp) {
+      if (ea.pasDeMouv) { log(cb.nom + ' est entravé et ne peut pas approcher.'); return; }
+      /* trop loin : deux mouvements (il court) et pas d'attaque */
+      if (z - zp >= 2) {
+        A().approcher(s, cb, t, 2);
+        log(A().zoneEntre(cb, t) === 0 ? N.mouvement('engage', cb.nom, tn) : cb.nom + ' court vers ' + tn + '.', 'deux mouvements : ' + nomZone(A().zoneEntre(cb, t)));
+        return;
+      }
+      A().approcher(s, cb, t, 1);
+      log(A().zoneEntre(cb, t) === 0 ? N.mouvement('engage', cb.nom, tn) : N.mouvement('approche', cb.nom, tn), 'mouvement : ' + nomZone(A().zoneEntre(cb, t)));
     }
     var sauveBonus = ui.bonus, sauveMalus = ui.malus, sauve2 = ui.deuxMains;
     ui.bonus = false; ui.malus = false; ui.deuxMains = false;
@@ -533,22 +556,21 @@ COF.UI.Arene = (function () {
   /* Choix d'attaque d'une créature selon la distance de sa cible :
      au contact → la meilleure attaque de mêlée ; sinon une attaque à
      distance qui porte (souffle/zone en priorité s'il est rechargé) ;
-     sinon celle qui demandera le moins de chemin.                      */
-  function aDeLaMelee(cb) { return options(cb).some(function (o) { return !o.portee && !o.indispo && o.dmg; }); }
+     sinon la mêlée (elle approchera) ou la plus longue portée.         */
+  function aDeLaMelee(cb) { return options(cb).some(function (o) { return o.cat === 'attaque' && !o.portee && !o.indispo && o.dmg; }); }
   function choisirAttaque(cb, t) {
     var opts = options(cb).filter(function (o) { return o.cat === 'attaque' && o.dmg && !o.indispo; });
     if (!opts.length) return null;
-    var dc = A().cases(cb, t);
+    var z = A().zoneEntre(cb, t);
     var melee = opts.filter(function (o) { return !o.portee; }).sort(function (x, y) { return y.mod - x.mod; });
-    var tirs = opts.filter(function (o) { return o.portee && porteeCases(o) >= dc; })
+    var tirs = opts.filter(function (o) { return o.portee && zonePortee(o) >= z; })
       .sort(function (x, y) { return (y.auto ? 1 : 0) - (x.auto ? 1 : 0) || y.mod - x.mod; });
-    if (dc <= 1 && melee.length) return melee[0];
+    if (z === 0 && melee.length) return melee[0];
     if (tirs.length) return tirs[0];
-    /* hors de portée : la plus longue portée si elle existe, sinon la mêlée */
-    var loin = opts.filter(function (o) { return o.portee; }).sort(function (x, y) { return y.portee - x.portee; });
-    return loin[0] || melee[0];
+    if (melee.length) return melee[0];
+    return opts.filter(function (o) { return o.portee; }).sort(function (x, y) { return y.portee - x.portee; })[0];
   }
-  function campDebout(c) { return s.combattants.some(function (x) { return camp(x) === c && debout(x); }); }
+  function campDebout(c) { return s.combattants.some(function (x) { return camp(x) === c && debout(x) && !x.horsDeVue; }); }
   /* L'app joue-t-elle ce combattant ? */
   function joueParApp(cb) {
     if (!cb || cb.type === 'pj') return false;
@@ -562,6 +584,8 @@ COF.UI.Arene = (function () {
     var garde = 0;
     do {
       A().tourSuivant(s);
+      /* la surprise ne dure que le premier round */
+      if (s.round > 1) s.combattants.forEach(function (x) { if (a(x, 'surpris')) A().toggleEtat(x, 'surpris'); });
       var cb = actif();
       if (!cb) break;
       if (!debout(cb)) continue;
@@ -580,11 +604,16 @@ COF.UI.Arene = (function () {
     s = A().lire();
     if (!s.combattants.length) { cible.innerHTML = htmlVide(); return; }
     A().placer(s, s.distanceDepart);
-    var h = (COF.UI.Carnet ? COF.UI.Carnet.banniereCombat() : '') + htmlTete() + htmlRuban();
-    h += '<div class="cb-milieu" id="cb-milieu">' + htmlCarte() + htmlJournal() + '</div>';
+    if (s.round > 1) s.combattants.forEach(function (x) { if (a(x, 'surpris')) A().toggleEtat(x, 'surpris'); });
+    /* Phrase d'ouverture (combat lancé depuis l'aventure) */
+    if (!s.ouvert && s.env !== undefined && s.combattants.some(function (c) { return c.type === 'pj'; })) {
+      s.ouvert = true; var ov = COF.Narration.ouverture(s, s.env); if (ov) log(ov, s.surprise === 'heros' ? 'surpris : pas d’action au 1er round' : '');
+    }
+    var h = (COF.UI.Carnet ? COF.UI.Carnet.banniereCombat() : '') + htmlTete();
+    h += '<div class="cb-milieu" id="cb-milieu">' + htmlSituation() + htmlJournal() + '</div>';
     h += '<div class="cb-panneau">' + htmlPanneau() + '</div>';
     cible.innerHTML = h;
-    var rb = $('.cb-ruban .actif', cible); if (rb && rb.scrollIntoView) rb.scrollIntoView({ block: 'nearest', inline: 'center' });
+    var rj = $('.cb-recit', cible); if (rj) rj.scrollTop = rj.scrollHeight;
     A().ecrire(s);
   }
   function rafraichir() { if (cible) rendre(cible); }
@@ -593,8 +622,8 @@ COF.UI.Arene = (function () {
     var dernier = COF.UI.Generateurs && COF.UI.Generateurs.dernierResultat();
     return (COF.UI.Carnet ? COF.UI.Carnet.banniereCombat() : '') +
       '<div class="carte"><h2>⚔️ Combat</h2><div class="carte-corps">' +
-      '<div class="note" style="margin-bottom:12px">Ajoutez les combattants : l’initiative est triée, les pions sont placés sur le champ de bataille, ' +
-      'et chacun joue à son tour depuis le panneau du bas. En aventure, la rencontre arrive ici toute seule.</div>' +
+      '<div class="note" style="margin-bottom:12px">Ajoutez les combattants : l’initiative est triée, les adversaires sont rangés par distance ' +
+      '(au contact, proche, à portée, loin) et chacun joue à son tour depuis le panneau du bas. En aventure, la rencontre arrive ici toute seule.</div>' +
       '<button class="btn btn-plein btn-bloc" data-cb="importer"' + (dernier && !dernier.erreur ? '' : ' disabled style="opacity:.5"') + '>📥 Dernière rencontre générée</button>' +
       '<div class="cn-grille" style="margin-top:8px"><button data-cb="ajout-bete">🐉 Créature</button><button data-cb="ajout-pj">🛡️ Personnage</button></div>' +
       '</div></div>';
@@ -606,39 +635,52 @@ COF.UI.Arene = (function () {
         '<span class="' + (e.a ? 'on' : '') + '" title="Action d’attaque">⚔️ A</span><span class="' + (e.m ? 'on' : '') + '" title="Action de mouvement">👣 M</span>' : '') +
       '<button data-cb="config" aria-label="Réglages du combat">⚙️</button></div></div>';
   }
-  function htmlRuban() {
-    return '<div class="cb-ruban">' + s.combattants.map(function (c, i) {
-      var d = donnees(c), pct = Math.max(0, Math.min(100, d.pv / Math.max(1, d.pvMax) * 100));
-      var cls = (c.type === 'pj' ? 'pj' : (c.allie ? 'allie' : 'ennemi')) + (i === s.tour ? ' actif' : '') + (d.pv <= 0 ? ' ko' : '') + (c.moral ? ' fuit' : '') + (ui.sel === c.id ? ' sel' : '');
-      return '<button class="cb-jeton ' + cls + '" data-cb="sel" data-id="' + c.id + '"><span class="sg">' + esc(sigle(c)) + '</span>' +
-        '<span class="nm">' + esc(c.nom.length > 10 ? c.nom.slice(0, 9) + '…' : c.nom) + '</span>' +
-        '<span class="pvb"><i style="width:' + pct + '%"></i></span>' + ((c.etats || []).length ? '<span class="et">🌀</span>' : '') + '</button>';
-    }).join('') + '</div>';
+  /* ---------- La situation : votre groupe, puis les adversaires par distance ---------- */
+  function jeton(c, vis) {
+    var d = donnees(c), pct = Math.max(0, Math.min(100, d.pv / Math.max(1, d.pvMax) * 100)), i = s.combattants.indexOf(c);
+    var cls = (c.type === 'pj' ? 'pj' : (c.allie ? 'allie' : 'ennemi')) + (i === s.tour ? ' actif' : '') + (d.pv <= 0 ? ' ko' : '') +
+      (c.moral ? ' fuit' : '') + (ui.sel === c.id ? ' sel' : '') + (vis[c.id] ? ' ' + vis[c.id] : '');
+    var etats = (c.etats || []).map(function (e) { var x = (COF.RULES.etats || []).filter(function (y) { return y.id === e; })[0]; return x ? x.nom : e; });
+    return '<button class="cb-ent ' + cls + '" data-cb="ent" data-id="' + c.id + '">' +
+      '<span class="nm">' + (i === s.tour ? '▶ ' : '') + esc(c.nom) + '</span>' +
+      '<span class="pvb"><i style="width:' + pct + '%"></i></span>' +
+      '<small>' + (d.pv <= 0 ? 'à terre' : (c.moral === 'reddition' ? 'se rend' : d.pv + '/' + d.pvMax + ' PV')) +
+      (etats.length ? ' · ' + esc(etats.join(', ').toLowerCase()) : '') + (vis[c.id] === 'charge' ? ' · charger' : (vis[c.id] === 'loin' ? ' · hors de portée' : '')) + '</small></button>';
   }
-  function htmlCarte() {
-    var G = A().GRILLE, cb = actif(), mode = ui.mode, opt = ui.choix;
-    var vis = mode === 'cible' && opt ? cibles(cb, appliquerArme(cb, opt)) : [];
-    var okIds = {}; vis.forEach(function (v) { okIds[v.cb.id] = v.ok ? 'ok' : 'loin'; });
-    var portee = mode === 'deplacer' ? G.pas : 0;
-    var h = '<div class="ar-grille cb-grille" style="grid-template-columns:repeat(' + G.l + ',1fr)">';
-    for (var y = 0; y < G.h; y++) for (var x = 0; x < G.l; x++) {
-      var c = s.combattants.filter(function (k) { return k.x === x && k.y === y; })[0];
-      if (c) {
-        var d = donnees(c), cls = 'ar-pion ' + (c.type === 'pj' ? 'pj' : (c.allie ? 'allie' : 'ennemi')) + (d.pv <= 0 ? ' ko' : '') + (c.moral ? ' fuit' : '') +
-          (c === cb ? ' actif' : '') + (ui.sel === c.id ? ' sel' : '') + (okIds[c.id] === 'ok' ? ' vise' : (okIds[c.id] === 'loin' ? ' horsportee' : ''));
-        h += '<button class="' + cls + '" data-cb="pion" data-id="' + c.id + '">' + esc(sigle(c)) + '</button>';
-      } else {
-        var dist = portee && cb ? Math.max(Math.abs(cb.x - x), Math.abs(cb.y - y)) : 99;
-        h += '<button class="ar-case' + (dist <= portee ? ' portee' : '') + '" data-cb="case" data-x="' + x + '" data-y="' + y + '"></button>';
-      }
+  function htmlSituation() {
+    var cb = actif(), opt = ui.mode === 'cible' && ui.choix ? appliquerArme(cb, ui.choix) : null, vis = {};
+    if (opt) cibles(cb, opt).forEach(function (v) { vis[v.cb.id] = v.ok ? 'vise' : (v.charge ? 'charge' : 'loin'); });
+    var groupe = s.combattants.filter(function (c) { return camp(c) === 'heros'; });
+    var adv = s.combattants.filter(function (c) { return camp(c) === 'monstres'; });
+    var actifs = adv.filter(function (c) { return !c.horsDeVue && donnees(c).pv > 0 && c.moral !== 'reddition'; });
+    var hors = adv.filter(function (c) { return actifs.indexOf(c) < 0; });
+    var h = '<div class="cb-sit"><div class="cb-zone groupe"><div class="zt">🛡️ Votre groupe</div><div class="zl">' +
+      groupe.map(function (c) { return jeton(c, vis); }).join('') + '</div></div>';
+    A().ZONES.forEach(function (z) {
+      var l = actifs.filter(function (c) { return (c.zone || 0) === z.id; });
+      if (!l.length) return;
+      h += '<div class="cb-zone z' + z.id + '"><div class="zt">' + z.ic + ' ' + z.nom + (z.note ? ' <small>' + z.note + '</small>' : '') + '</div>' +
+        '<div class="zl">' + l.map(function (c) { return jeton(c, vis); }).join('') + '</div></div>';
+    });
+    if (hors.length) h += '<div class="cb-hors">Hors de combat : ' + hors.map(function (c) {
+      return '<a href="#" data-cb="ent" data-id="' + c.id + '">' + esc(c.nom) + '</a> <small>(' + (donnees(c).pv <= 0 ? 'à terre' : (c.moral === 'reddition' ? 'rendu' : 'enfui')) + ')</small>';
+    }).join(', ') + '</div>';
+    /* qui joue ensuite */
+    var suite = [];
+    for (var k = 1; k < s.combattants.length && suite.length < 4; k++) {
+      var x = s.combattants[(s.tour + k) % s.combattants.length];
+      if (debout(x) && !x.horsDeVue) suite.push(x.nom);
     }
+    if (suite.length) h += '<div class="cb-suite">Ensuite : ' + esc(suite.join(' → ')) + '</div>';
     return h + '</div>';
   }
   function htmlJournal() {
-    var l = (s.log || []), dern = ui.journal ? l.slice(-25) : l.slice(-3);
+    var l = (s.log || []), dern = ui.journal ? l.slice(-40) : l.slice(-4);
     if (!l.length) return '';
-    return '<div class="cb-journal" data-cb="journal">' + dern.map(function (x) { return '<div>' + esc(x) + '</div>'; }).join('') +
-      '<small>' + (ui.journal ? '▲ réduire' : '▼ tout le journal (' + l.length + ')') + '</small></div>';
+    return '<div class="cb-recit' + (ui.journal ? ' ouvert' : '') + '" data-cb="journal">' + dern.map(function (x) {
+      if (typeof x === 'string') return '<p>' + esc(x) + '</p>';
+      return '<p>' + esc(x.r) + (x.m ? '<small>' + esc(x.m) + '</small>' : '') + '</p>';
+    }).join('') + '<span class="plus">' + (ui.journal ? '▲ réduire' : (l.length > 4 ? '▼ tout le récit (' + l.length + ')' : '')) + '</span></div>';
   }
 
   /* ---------- Panneau d'action ---------- */
@@ -658,7 +700,7 @@ COF.UI.Arene = (function () {
     if (ui.mode === 'resultat') return htmlResultat();
     if (ui.mode === 'cible') return htmlChoixCible(cb);
     if (ui.mode === 'liste') return htmlListeOptions(cb, ui.cat);
-    if (ui.mode === 'deplacer') return '<div class="cb-consigne">👣 Touchez une case surlignée (≈ 10 m).</div><button class="btn btn-bloc" data-cb="retour">↩ Retour</button>';
+    if (ui.mode === 'deplacer') return htmlDeplacer(cb);
     var d = donnees(cb), ea = effetsEtats(cb);
     var h = '<div class="cb-qui"><b>' + (cb.type === 'pj' ? '🛡️ ' : (cb.allie ? '🤝 ' : '🐉 ')) + esc(cb.nom) + '</b>' +
       '<span>❤️ ' + d.pv + '/' + d.pvMax + (d.pmMax ? ' · 🔮 ' + d.pm + '/' + d.pmMax : '') + ' · DEF ' + (d.def + ea.def) + '</span></div>';
@@ -682,6 +724,20 @@ COF.UI.Arene = (function () {
       '</div>';
     if (cb.manuel) h += '<button class="btn btn-sm btn-bloc" style="margin-top:6px" data-cb="rendre-ia">🤖 Rendre la main à l’app</button>';
     return h;
+  }
+  /* 👣 Se déplacer : s'approcher d'un adversaire ou rompre le contact. */
+  function htmlDeplacer(cb) {
+    var adv = s.combattants.filter(function (c) { return camp(c) !== camp(cb) && debout(c) && !c.horsDeVue; });
+    var h = '<div class="cb-consigne">👣 Une action de mouvement : on passe d’une distance à la voisine.</div><div class="cb-options">';
+    adv.forEach(function (c) {
+      var z = A().zoneEntre(cb, c); if (z <= 0) return;
+      h += '<button data-cb="bouger" data-v="approche" data-id="' + c.id + '"><span class="ic">🏃</span><span class="tx"><b>S’approcher de ' + esc(c.nom) + '</b><small>' +
+        esc(A().ZONES[z].nom) + ' → ' + esc(nomZone(z - 1)) + '</small></span><span class="act act-M">M</span></button>';
+    });
+    if (adv.some(function (c) { return A().zoneEntre(cb, c) < 3; })) {
+      h += '<button data-cb="bouger" data-v="recule"><span class="ic">↩️</span><span class="tx"><b>Reculer, rompre le contact</b><small>tous les adversaires s’éloignent d’un cran</small></span><span class="act act-M">M</span></button>';
+    }
+    return h + '</div><button class="btn btn-bloc" style="margin-top:6px" data-cb="retour">↩ Retour</button>';
   }
   function btnAct(cat, ic, nom, nb, dispo) {
     return '<button data-cb="liste" data-v="' + cat + '"' + (dispo ? '' : ' disabled') + '><span class="ic">' + ic + '</span><span>' + nom + '</span><small>' + (nb || 'aucun') + '</small></button>';
@@ -745,7 +801,7 @@ COF.UI.Arene = (function () {
   }
   function htmlChoixCible(cb) {
     var opt = appliquerArme(cb, ui.choix), vs = cibles(cb, opt);
-    var h = '<div class="cb-consigne">' + opt.ic + ' <b>' + esc(opt.nom) + '</b> — touchez ' + (opt.soin ? 'un allié' : 'une cible') + ' sur la carte</div>';
+    var h = '<div class="cb-consigne">' + opt.ic + ' <b>' + esc(opt.nom) + '</b> — choisissez ' + (opt.soin ? 'un allié' : 'une cible') + '</div>';
     if (opt.rider) {
       var p = COF.Store.get(cb.refId);
       h += '<div class="cn-mini" style="margin-bottom:6px">' + ((p && p.armes) || []).map(function (w, i) {
@@ -756,8 +812,10 @@ COF.UI.Arene = (function () {
     if (!vs.length) h += '<div class="note">Aucune cible possible.</div>';
     h += '<div class="cb-cibles">' + vs.map(function (v) {
       var d = donnees(v.cb);
-      return '<button data-cb="cibler" data-id="' + v.cb.id + '" class="' + (v.ok ? '' : 'loin') + '"><b>' + esc(d.nom) + '</b><small>' +
-        (v.m <= A().GRILLE.m ? 'au contact' : v.m + ' m') + ' · DEF ' + (d.def + effetsEtats(v.cb).def) + ' · ' + d.pv + '/' + d.pvMax + ' PV' + (v.ok ? '' : ' · hors de portée') + '</small></button>';
+      var tirContact = opt.cat === 'attaque' && opt.portee && v.z === 0 && cb.type === 'pj';
+      return '<button data-cb="cibler" data-id="' + v.cb.id + '" class="' + (v.ok ? '' : (v.charge ? 'charge' : 'loin')) + '"><b>' + (v.charge ? '🏃 Charger ' : '') + esc(d.nom) + '</b><small>' +
+        (camp(v.cb) === camp(cb) ? 'votre groupe' : nomZone(v.z)) + (opt.soin ? '' : ' · DEF ' + (d.def + effetsEtats(v.cb).def)) + ' · ' + d.pv + '/' + d.pvMax + ' PV' +
+        (v.ok ? (tirContact ? ' · tir au contact : dé malus' : '') : (v.charge ? ' · on s’approche puis on frappe (mouvement + attaque)' : ' · hors de portée')) + '</small></button>';
     }).join('') + '</div>';
     if (opt.auto && !opt.dmg) h += '<button class="btn btn-bloc btn-or" style="margin-top:6px" data-cb="cibler" data-id="' + cb.id + '">✨ Utiliser sans cible</button>';
     return h + '<button class="btn btn-bloc" style="margin-top:6px" data-cb="retour">↩ Retour</button>';
@@ -773,7 +831,7 @@ COF.UI.Arene = (function () {
     var cls = { critique: 'crit', touche: 'ok', rate: 'ko', fumble: 'ko', soin: 'ok', effet: 'ok' }[r.verdict];
     var titre = { critique: '💥 Critique !', touche: '✅ Touché', rate: '❌ Raté', fumble: '💀 Échec critique', soin: '💚 Soins', effet: '✨ Effet' }[r.verdict];
     if (r.opt && r.opt.cat === 'objet') titre = '🧪 ' + esc(r.opt.nom.replace(/ ×\d+$/, ''));
-    var h = '<div class="cb-resultat ' + cls + '">';
+    var h = (r.recit ? '<div class="cb-res-recit">' + esc(r.recit) + '</div>' : '') + '<div class="cb-resultat ' + cls + '">';
     if (r.multi) {
       /* plusieurs attaques : une ligne par attaque, la dernière en détail */
       h += '<div class="pv" style="margin-bottom:4px">' + r.multi.slice(0, -1).map(function (x, i) {
@@ -800,8 +858,11 @@ COF.UI.Arene = (function () {
   }
   function htmlFicheRapide(c) {
     if (!c) { ui.sel = null; return htmlPanneau(); }
-    var d = donnees(c), ea = effetsEtats(c), cb = actif(), dist = cb ? A().distance(cb, c) : null;
-    return '<div class="cb-qui"><b>' + esc(d.nom) + '</b><span>DEF ' + (d.def + ea.def) + ' · Init. ' + d.init + (dist !== null ? ' · à ' + dist + ' m de ' + esc(cb.nom) : '') + '</span></div>' +
+    var d = donnees(c), ea = effetsEtats(c), cb = actif();
+    var zones = camp(c) === 'monstres' ? '<div class="cb-zones">' + A().ZONES.map(function (z) {
+      return '<button data-cb="zone" data-id="' + c.id + '" data-v="' + z.id + '" class="' + ((c.zone || 0) === z.id ? 'on' : '') + '">' + z.ic + ' ' + esc(z.nom) + '</button>';
+    }).join('') + '</div>' : '';
+    return '<div class="cb-qui"><b>' + esc(d.nom) + '</b><span>DEF ' + (d.def + ea.def) + ' · Init. ' + d.init + (camp(c) === 'monstres' ? ' · ' + nomZone(c.zone || 0) : '') + '</span></div>' + zones +
       '<div class="cb-pvligne"><button data-cb="pv" data-v="-5" data-id="' + c.id + '">−5</button><button data-cb="pv" data-v="-1" data-id="' + c.id + '">−1</button>' +
       '<b>❤️ ' + d.pv + '/' + d.pvMax + '</b><button data-cb="pv" data-v="1" data-id="' + c.id + '">+1</button><button data-cb="pv" data-v="5" data-id="' + c.id + '">+5</button></div>' +
       (ea.raisons.length ? '<div class="cb-etats">🌀 ' + esc(ea.raisons.join(' · ')) + '</div>' : '') +
@@ -876,19 +937,25 @@ COF.UI.Arene = (function () {
       case 'sel': ui.sel = ui.sel === id ? null : id; if (ui.mode !== 'cible' && ui.mode !== 'deplacer') ui.mode = 'menu'; break;
       case 'desel': ui.sel = null; break;
       case 'journal': ui.journal = !ui.journal; break;
-      case 'pion': {
+      case 'ent': {
         if (ui.mode === 'cible') { var cc = trouver(id); if (cc) return cibler(cc); }
         ui.sel = ui.sel === id ? null : id; ui.mode = 'menu'; break;
       }
-      case 'case': {
-        if (ui.mode !== 'deplacer' || !cb) return;
-        var nx = +node.getAttribute('data-x'), ny = +node.getAttribute('data-y');
-        var dc = Math.max(Math.abs(cb.x - nx), Math.abs(cb.y - ny));
-        if (dc > A().GRILLE.pas) return;
+      case 'bouger': {
+        if (!cb || !peut('M')) return;
         memoriser();
-        log('👣 ' + cb.nom + ' se déplace de ' + dc * A().GRILLE.m + ' m.');
-        cb.x = nx; cb.y = ny; depenser('M'); ui.mode = 'menu'; A().ecrire(s); break;
+        var N = COF.Narration;
+        if (v === 'approche') {
+          var tb = trouver(id); if (!tb) return;
+          A().approcher(s, cb, tb, 1);
+          log(N.mouvement(A().zoneEntre(cb, tb) === 0 ? 'engage' : 'approche', cb.nom, tb.nom), 'mouvement : ' + nomZone(A().zoneEntre(cb, tb)));
+        } else {
+          s.combattants.forEach(function (x) { if (camp(x) !== camp(cb) && debout(x) && !x.horsDeVue) A().eloigner(s, cb, x, 1); });
+          log(N.mouvement('recule', cb.nom), 'mouvement : les adversaires s’éloignent d’un cran');
+        }
+        depenser('M'); ui.mode = 'menu'; A().ecrire(s); break;
       }
+      case 'zone': { var cz = trouver(id); if (cz) { cz.zone = +v; A().ecrire(s); } break; }
       case 'deplacer': ui.mode = 'deplacer'; ui.sel = null; break;
       case 'liste': ui.mode = 'liste'; ui.cat = v; ui.sel = null; break;
       case 'retour': ui.mode = ui.mode === 'cible' ? 'liste' : 'menu'; ui.choix = null; break;
@@ -925,8 +992,14 @@ COF.UI.Arene = (function () {
     var cb = actif(), opt = ui.choix ? appliquerArme(cb, ui.choix) : null; if (!cb || !opt) return;
     var v = cibles(cb, opt).filter(function (x) { return x.cb === t; })[0];
     if (!v && !(opt.auto && !opt.dmg && t === cb)) return;
-    if (v && !v.ok && !confirm(donnees(t).nom + ' est hors de portée (' + v.m + ' m). Attaquer quand même ?')) return;
-    ui.resultat = resoudre(cb, opt, t);
+    var memo = false;
+    if (v && !v.ok && v.charge) {
+      /* Charge : on s'approche (mouvement), puis on frappe (attaque). */
+      memoriser(); memo = true;
+      A().approcher(s, cb, t, 1); depenser('M');
+      log(COF.Narration.mouvement('charge', cb.nom, donnees(t).nom), 'mouvement : au contact');
+    } else if (v && !v.ok && !confirm(donnees(t).nom + ' est hors de portée (' + nomZone(v.z) + '). Attaquer quand même ?')) return;
+    ui.resultat = resoudre(cb, opt, t, memo);
     ui.mode = 'resultat'; ui.sel = null;
     A().ecrire(s);
     rafraichir();
