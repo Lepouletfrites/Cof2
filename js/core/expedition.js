@@ -30,13 +30,17 @@ COF.Expedition = (function () {
   }
 
   /* Rencontre stockée légère (ids du bestiaire) + texte. */
-  function tirerRencontre(env, niveau, difficulte, style) {
-    var r = COF.Rencontre.generer({ env: env, nbPJ: 1, niveau: niveau, difficulte: difficulte || 'ordinaire', style: style || 'auto' });
+  function tirerRencontre(env, niveau, difficulte, style, nb) {
+    /* calibrée sur le héros + ses compagnons (et non sur un groupe de 4) */
+    var r = COF.Rencontre.generer({ env: env, nbPJ: Math.max(1, nb || 1), niveau: niveau, difficulte: difficulte || 'ordinaire', style: style || 'auto' });
     if (!r || r.erreur) return null;
     return { lots: r.lots.map(function (l) { return { id: l.c.id, nom: l.c.nom, nb: l.nb, role: l.role || null }; }),
       texte: r.lots.map(function (l) { return l.nb + ' × ' + l.c.nom + (l.role ? ' (' + l.role + ')' : ''); }).join(', '),
       difficulte: difficulte || 'ordinaire' };
   }
+
+  /* Taille du groupe : le héros et ses compagnons. */
+  function taille(c) { return 1 + (COF.Aventure ? COF.Aventure.nbAllies(c) : 0); }
 
   /* ================= Donjon ================= */
   var TAILLES = { petit: 5, moyen: 8, grand: 12 };
@@ -63,8 +67,8 @@ COF.Expedition = (function () {
     var s = { n: x.salles.length + 1, champs: ch, finale: finale, piege: estPiege(ch.piege), fouillee: false };
     var idx = indexOccupant(ch.occupant);
     /* La salle finale abrite toujours une menace, plus difficile. */
-    if (finale) s.rencontre = tirerRencontre(x.env, x.niveau, 'difficile', 'auto');
-    else if (HOSTILES[idx]) s.rencontre = tirerRencontre(x.env, x.niveau, Math.random() < 0.25 ? 'difficile' : 'ordinaire', HOSTILES[idx]);
+    if (finale) s.rencontre = tirerRencontre(x.env, x.niveau, 'difficile', 'auto', taille(c));
+    else if (HOSTILES[idx]) s.rencontre = tirerRencontre(x.env, x.niveau, Math.random() < 0.25 ? 'difficile' : 'ordinaire', HOSTILES[idx], taille(c));
     x.salles.push(s);
     /* Lumière : une torche dure environ quatre salles. */
     var resL = ressources(c), torche = '';
@@ -123,7 +127,7 @@ COF.Expedition = (function () {
       : (motif || 'Voyage interrompu') + ' — ' + x.depart + ' → ' + x.destination + ', jour ' + x.fait + '/' + x.jours + '.') });
     if (x.type === 'donjon' && !c.lieux.some(function (l) { return l.nom === x.nom; })) {
       if (COF.Monde) {
-        var ld = COF.Monde.obtenirLieu(c, x.nom, COF.Monde.ici(c), '🗝️ ' + x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.');
+        var ld = COF.Monde.obtenirLieu(c, x.nom, COF.Monde.ici(c), '🗝️ ' + x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.', x.env === 'souterrain' ? 'souterrain' : 'ruines');
         var here = COF.Monde.ici(c);
         if (here && here.id !== ld.id && !COF.Monde.route(c, here.id, ld.id)) COF.Monde.relier(c, here.id, ld.id, 1, x.env);
       } else K().ajouterListe(c, 'lieux', { nom: x.nom, note: x.salles.length + ' salle(s) explorée(s) le jour ' + c.jour + '.' });
@@ -140,7 +144,7 @@ COF.Expedition = (function () {
     if (COF.Monde) {
       COF.Monde.assurer(c);
       var ld = COF.Monde.obtenirLieu(c, c.expedition.depart, COF.Monde.ici(c));
-      var la = COF.Monde.obtenirLieu(c, c.expedition.destination, ld);
+      var la = COF.Monde.obtenirLieu(c, c.expedition.destination, ld, '', COF.Monde.devinerEnv(c.expedition.destination) || c.expedition.env);
       c.expedition.departId = ld.id; c.expedition.destId = la.id;
       if (!c.position) c.position = ld.id;
     }
@@ -156,8 +160,8 @@ COF.Expedition = (function () {
     var et = { jour: x.fait, meteo: g.meteo, categorie: g.categorie, detail: g.detail };
     /* Rencontre : 1 sur d6 (1-2 si tension ≥ 7), et la nuit 1 sur d8. */
     var seuil = c.tension >= 7 ? 2 : 1;
-    if (d(6) <= seuil) et.rencontre = tirerRencontre(x.env, x.niveau, 'ordinaire', 'auto');
-    else if (d(8) === 1) { et.rencontre = tirerRencontre(x.env, x.niveau, 'facile', 'auto'); if (et.rencontre) et.nuit = true; }
+    if (d(6) <= seuil) et.rencontre = tirerRencontre(x.env, x.niveau, 'ordinaire', 'auto', taille(c));
+    else if (d(8) === 1) { et.rencontre = tirerRencontre(x.env, x.niveau, 'facile', 'auto', taille(c)); if (et.rencontre) et.nuit = true; }
     var res = ressources(c);
     if (res.rations > 0) res.rations--; else et.faim = true;
     x.etapes.push(et);

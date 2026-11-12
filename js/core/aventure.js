@@ -20,9 +20,23 @@ COF.Aventure = (function () {
   function min1(s) { s = String(s || ''); return s.charAt(0).toLowerCase() + s.slice(1); }
   function heros(c) { return (c && c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif(); }
   function niveau(c) { var p = heros(c); return p ? (p.niveau || 1) : 1; }
+  /* Terrain courant : celui de l'expédition, sinon celui du lieu où se
+     trouve le héros sur la carte, sinon le dernier utilisé. */
   function envCourant(c) {
     if (c && c.expedition && c.expedition.env) return c.expedition.env;
+    var ici = c && COF.Monde ? COF.Monde.envIci(c) : null;
+    if (ici) return ici;
     return (c && c.envDernier) || 'foret';
+  }
+  /* Test de rencontre automatique au début d'une scène : 1 chance sur N
+     selon le terrain (la ville est sûre, les profondeurs dangereuses),
+     deux fois plus de risques quand la tension dépasse 6. */
+  var RISQUE = { urbain: 12, plaine: 8, foret: 6, montagne: 6, arctique: 6, marais: 5, ruines: 4, souterrain: 4 };
+  function testRencontre(c) {
+    var env = envCourant(c), n = RISQUE[env] || 6;
+    if (c.tension >= 7) n = Math.max(2, Math.ceil(n / 2));
+    var jet = d(n);
+    return { env: env, n: n, jet: jet, rencontre: jet === 1 };
   }
   function nbAllies(c) {
     var p = heros(c);
@@ -218,7 +232,7 @@ COF.Aventure = (function () {
   }
 
   return {
-    heros: heros, envCourant: envCourant, nbAllies: nbAllies,
+    heros: heros, envCourant: envCourant, nbAllies: nbAllies, testRencontre: testRencontre, RISQUE: RISQUE,
     pnj: pnj, lieu: lieu, quete: quete, rumeur: rumeur, rebondissement: rebondissement, faction: faction,
     temps: temps, marchand: marchand, salle: salle, routeEvt: routeEvt, attitudeCarnet: attitudeCarnet,
     rencontre: rencontre, approches: approches, resoudreApproche: resoudreApproche,

@@ -167,6 +167,8 @@ COF.UI = COF.UI || {};
     else if (sub.vue === 'des') COF.UI.rendreJournal();
     else if (sub.vue === 'carnet') COF.UI.Carnet.rendre();
     else if (sub.vue === 'marche') COF.UI.Marche.rendre();
+    document.body.classList.toggle('carnet-fixe', sub.vue === 'carnet' || sub.vue === 'arene');
+    if (sub.vue === 'arene') { var tb = $('.topbar'); document.documentElement.style.setProperty('--top-h', (tb ? tb.offsetHeight : 56) + 'px'); }
     if (COF.UI.Carnet) COF.UI.Carnet.majFab();
     majTitre();
   }

@@ -28,6 +28,13 @@ COF.UI.Carnet = (function () {
     solo: 'journal', rencontre: 'journal' };
 
   function $(s, r) { return (r || document).querySelector(s); }
+  var dockCourant = '';
+  /* Le Carnet occupe exactement l'écran entre l'en-tête et la barre du bas. */
+  function ajusterHauteur() {
+    var top = document.querySelector('.topbar');
+    document.documentElement.style.setProperty('--top-h', (top ? top.offsetHeight : 56) + 'px');
+  }
+  window.addEventListener('resize', ajusterHauteur);
   function maj(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
   var A = COF.Aventure;
   var gen = { type: 'pnj', peuple: '', genre: '', lieu: 'village', env: '', diff: 'ordinaire', style: 'auto', res: null };
@@ -49,14 +56,26 @@ COF.UI.Carnet = (function () {
       return '<button data-cn="onglet" data-v="' + o[0] + '" class="' + (onglet === o[0] ? 'on' : '') + '">' +
         '<span class="ic">' + o[1] + '</span><span class="tx">' + o[2] + (o[3] ? ' <b>' + o[3] + '</b>' : '') + '</span></button>';
     }).join('') + '</div>';
-    if (onglet === 'scene') h += htmlScene(c);
-    else if (onglet === 'expe') h += htmlExpedition(c);
-    else if (onglet === 'journal') h += htmlJournal(c);
-    else h += htmlListe(c, onglet);
+    /* Zone centrale : seule partie qui défile (en-tête, onglets et barre
+       de saisie restent en place). On conserve sa position de défilement. */
+    var ancien = $('#cn-corps'), pos = ancien && rendre.onglet === onglet ? ancien.scrollTop : 0;
+    dockCourant = '';
+    var corps;
+    if (onglet === 'scene') corps = htmlScene(c);
+    else if (onglet === 'expe') corps = htmlExpedition(c);
+    else if (onglet === 'journal') corps = htmlJournal(c);
+    else corps = htmlListe(c, onglet);
+    h += '<div class="cn-corps" id="cn-corps">' + corps + '</div>' + dockCourant;
     n.innerHTML = h;
-    var fil = $('#cn-fil');
-    if (fil && onglet === 'scene') { var der = fil.lastElementChild; if (der && rendre.defiler) der.scrollIntoView({ block: 'end' }); }
-    rendre.defiler = false;
+    rendre.onglet = onglet;
+    var zc = $('#cn-corps');
+    if (zc) {
+      if (rendre.defiler && onglet === 'scene') zc.scrollTop = zc.scrollHeight;
+      else if (rendre.haut) zc.scrollTop = 0;
+      else zc.scrollTop = pos;
+    }
+    rendre.defiler = false; rendre.haut = false;
+    ajusterHauteur();
     if (COF.UI.majTitre) COF.UI.majTitre();
   }
 
@@ -172,6 +191,7 @@ COF.UI.Carnet = (function () {
     } else if (e.t === 'rencontre') {
       var rc = e.r || {}, cc = K.actif(), enCours = cc && cc.rencontre && cc.rencontre.id === rc.id && !rc.fin;
       corps = '<div class="cn-meta">⚔️ Rencontre · ' + esc(rc.difficulte || '') + '</div>' +
+        (rc.test ? '<div class="cn-meta" style="text-transform:none;letter-spacing:0">🎲 ' + esc(rc.test) + '</div>' : '') +
         '<div class="cn-verdict ' + ({ hostile: 'ko', mefiant: 'mod', neutre: 'ok', amical: 'ok' }[rc.reaction] || '') + '" style="font-size:16px">' + esc(rc.texte) + '</div>' +
         '<div class="cn-txt" style="font-size:14px">' + esc(maj(rc.distance)) + '. ' + esc(rc.reactionTexte) + (rc.surprise ? ' ' + esc(rc.surprise) : '') + '</div>' +
         (enCours ? '<div class="cn-grille cn-g2b" style="margin-top:8px"><button data-cn="combat-rencontre" class="ko">⚔️ Combattre</button>' +
@@ -205,10 +225,11 @@ COF.UI.Carnet = (function () {
       (s.attendu ? '<div class="note" style="margin-bottom:8px">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) + '</div></div>';
     h += '<div id="cn-fil" class="cn-fil">' + (s.entrees.length ? s.entrees.map(htmlEntree).join('') :
       '<div class="vide" style="padding:14px">Racontez ce qui se passe, ou interrogez l’oracle.</div>') + '</div>';
-    h += '<div class="cn-dock"><div class="cn-compose">' +
+    /* La barre de saisie et d'actions reste fixe sous la zone qui défile. */
+    dockCourant = '<div class="cn-dock"><div class="cn-compose">' +
       '<textarea id="cn-texte" rows="2" placeholder="Que se passe-t-il ?"></textarea>' +
-      '<button class="btn btn-plein" data-cn="ecrire" aria-label="Ajouter au récit">➤</button></div>';
-    h += '<div class="cn-actions">' +
+      '<button class="btn btn-plein" data-cn="ecrire" aria-label="Ajouter au récit">➤</button></div>' +
+      '<div class="cn-actions">' +
       [['oracle', '🔮', 'Oracle'], ['test', '🎲', 'Test'], ['rencontre', '⚔️', 'Rencontre'],
        ['inspirer', '✨', 'Inspirer'], ['generer', '🧰', 'Générer'], ['clore', '🏁', 'Clore']].map(function (a) {
         return '<button data-cn="' + a[0] + '"><span class="ic">' + a[1] + '</span><span class="tx">' + a[2] + '</span></button>';
@@ -223,36 +244,143 @@ COF.UI.Carnet = (function () {
     lieux: { titre: 'Lieux', ph: 'Village de Brumeval…', vide: 'Aucun lieu noté.', gen: ['lieux', '🏘️ Générer un lieu'] }
   };
   /* ---------- 🗺️ Carte du monde (onglet Lieux) ---------- */
-  var monde = { deplacer: null, cible: null, jours: 2, env: 'plaine' };
+  var monde = { deplacer: null, ajouter: false, cible: null, jours: 2, env: 'plaine', vue: null, vueId: null };
+  /* Vue courante (zone visible du monde) : recadrée sur les lieux au besoin. */
+  function vueMonde(c) {
+    if (!monde.vue || monde.vueId !== c.id) { monde.vue = COF.Monde.cadre(c); monde.vueId = c.id; }
+    return monde.vue;
+  }
   function htmlCarteMonde(c) {
     var M = COF.Monde; M.assurer(c);
     var envIc = {}; (COF.ENVIRONNEMENTS || []).forEach(function (e) { envIc[e.id] = e.ic; });
+    var v = vueMonde(c), u = v.w / 100;   /* tailles proportionnelles au zoom */
     var h = '<div class="carte"><h2>🗺️ Carte' + (M.ici(c) ? ' <small style="text-transform:none;letter-spacing:0;color:var(--text-mute)">· vous êtes à ' + esc(M.ici(c).nom) + '</small>' : '') + '</h2><div class="carte-corps" style="padding:8px">';
-    if (!c.lieux.length) return h + '<div class="vide">Ajoutez un lieu (ou partez en voyage) pour commencer la carte.</div></div></div>';
-    h += '<svg class="cn-monde' + (monde.deplacer ? ' placer' : '') + '" viewBox="0 0 ' + M.L + ' ' + M.H + '" data-cn="monde-fond">';
+    h += '<div class="cn-monde-boite">';
+    h += '<svg class="cn-monde' + (monde.deplacer || monde.ajouter ? ' placer' : '') + '" viewBox="' + [v.x, v.y, v.w, v.h].map(function (n) { return n.toFixed(1); }).join(' ') + '" data-cn="monde-fond" preserveAspectRatio="xMidYMid meet">';
+    /* quadrillage infini : seules les lignes autour de la vue sont tracées,
+       avec un pas qui suit le zoom */
+    var pasG = 25; while (v.w / pasG > 10) pasG *= 2; while (v.w / pasG < 4) pasG /= 2;
+    var mx0 = v.x - v.w, my0 = v.y - v.h, mx1 = v.x + 2 * v.w, my1 = v.y + 2 * v.h;
+    for (var gx = Math.floor(mx0 / pasG) * pasG; gx <= mx1; gx += pasG) h += '<line x1="' + gx + '" y1="' + my0 + '" x2="' + gx + '" y2="' + my1 + '" class="qd"/>';
+    for (var gy = Math.floor(my0 / pasG) * pasG; gy <= my1; gy += pasG) h += '<line x1="' + mx0 + '" y1="' + gy + '" x2="' + mx1 + '" y2="' + gy + '" class="qd"/>';
     (c.routes || []).forEach(function (r) {
       var a = M.lieu(c, r.a), b = M.lieu(c, r.b); if (!a || !b) return;
       var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      h += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" class="rt"/>' +
-        '<text x="' + mx + '" y="' + (my - 1.2) + '" class="rtl">' + (envIc[r.env] || '') + ' ' + r.jours + ' j</text>';
+      h += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" class="rt" style="stroke-width:' + (0.7 * u) + ';stroke-dasharray:' + (1.6 * u) + ' ' + (1.2 * u) + '"/>' +
+        '<text x="' + mx + '" y="' + (my - 1.2 * u) + '" class="rtl" style="font-size:' + (2.8 * u) + 'px">' + (envIc[r.env] || '') + ' ' + r.jours + ' j</text>';
     });
     c.lieux.forEach(function (l) {
       var ici = l.id === c.position, dep = monde.deplacer === l.id;
       h += '<g data-cn="monde-lieu" data-id="' + l.id + '" class="lieu' + (ici ? ' ici' : '') + (dep ? ' dep' : '') + '">' +
-        '<circle cx="' + l.x + '" cy="' + l.y + '" r="5.5" class="zone"/>' +
-        '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + (ici ? 2.6 : 2) + '" class="pt"/>' +
-        (ici ? '<text x="' + l.x + '" y="' + (l.y - 3.4) + '" class="pin">📍</text>' : '') +
-        '<text x="' + l.x + '" y="' + (l.y + 5.4) + '" class="nm">' + esc(l.nom.length > 18 ? l.nom.slice(0, 17) + '…' : l.nom) + '</text></g>';
+        '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + (5.5 * u) + '" class="zone"/>' +
+        '<circle cx="' + l.x + '" cy="' + l.y + '" r="' + ((ici ? 3.4 : 2.9) * u) + '" class="pt" style="stroke-width:' + (0.6 * u) + '"/>' +
+        '<text x="' + l.x + '" y="' + (l.y + 0.2 * u) + '" class="ic-lieu" style="font-size:' + (3.4 * u) + 'px">' + ((M.envDe(l.env) || {}).ic || '•') + '</text>' +
+        (ici ? '<text x="' + l.x + '" y="' + (l.y - 4.6 * u) + '" class="pin" style="font-size:' + (3.8 * u) + 'px">📍</text>' : '') +
+        '<text x="' + l.x + '" y="' + (l.y + 5.6 * u) + '" class="nm" style="font-size:' + (3.2 * u) + 'px;stroke-width:' + (0.8 * u) + 'px">' + esc(l.nom.length > 20 ? l.nom.slice(0, 19) + '…' : l.nom) + '</text></g>';
     });
     h += '</svg>';
-    h += '<div class="note" style="margin-top:4px">' + (monde.deplacer ? '✋ Touchez la carte pour placer <b>' + esc((M.lieu(c, monde.deplacer) || {}).nom || '') + '</b>.'
-      : 'Touchez un lieu pour vous y rendre, le relier à un autre ou le déplacer. Les voyages terminés tracent leurs routes.') + '</div>';
+    h += '<div class="cn-monde-ctl"><button data-cn="monde-zoom" data-v="0.7" aria-label="Zoomer">＋</button><button data-cn="monde-zoom" data-v="1.4" aria-label="Dézoomer">−</button>' +
+      '<button data-cn="monde-cadrer" aria-label="Recentrer">⤢</button></div>';
+    h += '</div>';
+    h += '<div class="cn-grille" style="margin-top:8px"><button data-cn="monde-ajouter" class="' + (monde.ajouter ? 'on' : '') + '">' + (monde.ajouter ? '✕ Annuler' : '➕ Nouveau lieu sur la carte') + '</button>' +
+      (M.ici(c) ? '<button data-cn="monde-lieu" data-id="' + M.ici(c).id + '">📍 Où suis-je ?</button>' : '<button disabled>📍 Position inconnue</button>') + '</div>';
+    h += '<div class="note" style="margin-top:6px">' + (monde.ajouter ? '➕ Touchez la carte à l’endroit du nouveau lieu.'
+      : monde.deplacer ? '✋ Touchez la carte pour placer <b>' + esc((M.lieu(c, monde.deplacer) || {}).nom || '') + '</b>.'
+      : 'Faites glisser pour vous déplacer, pincez (ou ＋ −) pour zoomer. Touchez un lieu pour y aller, le relier ou le déplacer.') + '</div>';
     return h + '</div></div>';
+  }
+  /* Point du monde sous un clic/toucher. */
+  function pointMonde(svg, cx, cy) {
+    var rc = svg.getBoundingClientRect(), v = monde.vue;
+    /* preserveAspectRatio meet : la vue peut être centrée avec des marges */
+    var s = Math.min(rc.width / v.w, rc.height / v.h), ox = (rc.width - v.w * s) / 2, oy = (rc.height - v.h * s) / 2;
+    return { x: v.x + (cx - rc.left - ox) / s, y: v.y + (cy - rc.top - oy) / s };
+  }
+  function zoomMonde(f, centre) {
+    var v = monde.vue, M = COF.Monde; if (!v) return;
+    var w = Math.max(20, Math.min(6000, v.w * f)), h = w * v.h / v.w;
+    var cx = centre ? centre.x : v.x + v.w / 2, cy = centre ? centre.y : v.y + v.h / 2;
+    var rx = (cx - v.x) / v.w, ry = (cy - v.y) / v.h;
+    monde.vue = { x: cx - rx * w, y: cy - ry * h, w: w, h: h };
+  }
+  function appliquerVue(svg) {
+    var v = monde.vue; svg.setAttribute('viewBox', [v.x, v.y, v.w, v.h].map(function (n) { return n.toFixed(1); }).join(' '));
+  }
+  /* Gestes : glisser = déplacer la vue ; pincer / molette = zoom.
+     Un simple toucher reste un clic (lieu ou fond). */
+  (function gestes() {
+    var pts = {}, depart = null, pince = null, bouge = false;
+    document.addEventListener('pointerdown', function (e) {
+      var svg = e.target.closest && e.target.closest('svg.cn-monde'); if (!svg || !monde.vue) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var ids = Object.keys(pts);
+      if (ids.length === 1) { depart = { x: e.clientX, y: e.clientY, vue: Object.assign({}, monde.vue) }; bouge = false; }
+      if (ids.length === 2) {
+        var a = pts[ids[0]], b = pts[ids[1]];
+        pince = { d: Math.hypot(a.x - b.x, a.y - b.y), vue: Object.assign({}, monde.vue), c: pointMonde(svg, (a.x + b.x) / 2, (a.y + b.y) / 2) };
+      }
+    });
+    document.addEventListener('pointermove', function (e) {
+      if (!pts[e.pointerId]) return;
+      var svg = document.querySelector('svg.cn-monde'); if (!svg) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var ids = Object.keys(pts), rc = svg.getBoundingClientRect();
+      if (ids.length >= 2 && pince) {
+        var a = pts[ids[0]], b = pts[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+        monde.vue = pince.vue; zoomMonde(pince.d / Math.max(10, d), pince.c); appliquerVue(svg); bouge = true;
+      } else if (depart) {
+        var dx = e.clientX - depart.x, dy = e.clientY - depart.y;
+        if (!bouge && Math.hypot(dx, dy) < 8) return;
+        bouge = true;
+        var s = Math.min(rc.width / depart.vue.w, rc.height / depart.vue.h);
+        monde.vue = { x: depart.vue.x - dx / s, y: depart.vue.y - dy / s, w: depart.vue.w, h: depart.vue.h };
+        appliquerVue(svg);
+      }
+      if (bouge) e.preventDefault();
+    }, { passive: false });
+    function fin(e) {
+      if (!pts[e.pointerId]) return;
+      delete pts[e.pointerId];
+      if (Object.keys(pts).length < 2) pince = null;
+      if (!Object.keys(pts).length) {
+        depart = null;
+        if (bouge) {
+          /* empêche le clic qui suit un glissement */
+          var stop = function (ev) { ev.stopPropagation(); ev.preventDefault(); document.removeEventListener('click', stop, true); };
+          document.addEventListener('click', stop, true);
+          setTimeout(function () { document.removeEventListener('click', stop, true); }, 350);
+          setTimeout(function () { rendre(); }, 0);   /* recalcule la taille des libellés */
+        }
+      }
+    }
+    document.addEventListener('pointerup', fin);
+    document.addEventListener('pointercancel', fin);
+    document.addEventListener('wheel', function (e) {
+      var svg = e.target.closest && e.target.closest('svg.cn-monde'); if (!svg || !monde.vue) return;
+      e.preventDefault();
+      zoomMonde(e.deltaY > 0 ? 1.15 : 0.87, pointMonde(svg, e.clientX, e.clientY)); appliquerVue(svg);
+      clearTimeout(gestes.t); gestes.t = setTimeout(rendre, 250);
+    }, { passive: false });
+  })();
+  function chipsType(sel, act, extra) {
+    return '<div class="cn-mini">' + (COF.ENVIRONNEMENTS || []).map(function (e) {
+      return '<span class="chip' + (sel === e.id ? ' on' : '') + '" data-cn="' + act + '" data-v="' + e.id + '"' + (extra || '') + '>' + e.ic + ' ' + esc(e.nom) + '</span>';
+    }).join('') + '</div>';
+  }
+  function sheetNouveauLieu(c, nom, note) {
+    var ic = COF.Monde.ici(c);
+    ouvrir('➕ Nouveau lieu', '<div class="champ"><label>Nom</label><input id="cn-nl-nom" value="' + esc(nom || '') + '" placeholder="Fort de la Brèche"></div>' +
+      '<label class="cn-lbl2">Type de terrain</label>' + chipsType(monde.typeNouveau, 'monde-type-nouveau') +
+      '<div class="champ" style="margin-top:8px"><label>Notes (facultatif)</label><textarea id="cn-nl-note" rows="3" placeholder="Village fortifié, garnison de 30 soldats…">' + esc(note || '') + '</textarea></div>' +
+      (ic ? '<label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:14px"><input type="checkbox" id="cn-nl-route" checked> Tracer une route depuis ' + esc(ic.nom) + '</label>' : '') +
+      '<button class="btn btn-plein btn-bloc" data-cn="monde-creer">📍 Créer le lieu</button>' +
+      '<div class="note" style="margin-top:6px">Le terrain détermine les créatures rencontrées et les tests proposés sur place.</div>', { type: 'nouveau-lieu' });
   }
   function sheetLieu(id) {
     var c = K.actif(), M = COF.Monde, l = M.lieu(c, id); if (!l) return;
     var ici = M.ici(c), vois = M.voisins(c, id), routeIci = ici && ici.id !== id ? M.route(c, ici.id, id) : null;
-    var h = (l.note ? '<div class="note" style="margin-bottom:10px;white-space:pre-line">' + esc(l.note.length > 300 ? l.note.slice(0, 300) + '…' : l.note) + '</div>' : '');
+    var h = '<label class="cn-lbl2">Type de terrain</label>' + chipsType(l.env, 'monde-type', ' data-l="' + id + '"') +
+      (l.note ? '<div class="note" style="margin:8px 0 10px;white-space:pre-line">' + esc(l.note.length > 300 ? l.note.slice(0, 300) + '…' : l.note) + '</div>' : '');
     if (routeIci) h += '<button class="btn btn-plein btn-bloc" data-cn="monde-voyager" data-id="' + id + '">🧭 Voyager jusqu’ici (' + routeIci.jours + ' j depuis ' + esc(ici.nom) + ')</button>';
     h += '<div class="cn-grille" style="margin-top:8px">' +
       (c.position === id ? '<button disabled>📍 Vous êtes ici</button>' : '<button data-cn="monde-ici" data-id="' + id + '">📍 Je suis ici</button>') +
@@ -291,7 +419,8 @@ COF.UI.Carnet = (function () {
     items.forEach(function (x) {
       var att = l === 'pnj' ? ATTITUDES.filter(function (a) { return a[0] === x.attitude; })[0] || ATTITUDES[1] : null;
       h += '<div class="cn-item' + (l === 'fils' && !x.ouvert ? ' ferme' : '') + '" data-cn="editer" data-l="' + l + '" data-id="' + x.id + '">' +
-        '<div class="info"><div class="t">' + (l === 'fils' && !x.ouvert ? '✓ ' : '') + esc(x.nom) +
+        '<div class="info"><div class="t">' + (l === 'fils' && !x.ouvert ? '✓ ' : '') +
+          (l === 'lieux' && COF.Monde ? ((COF.Monde.envDe(x.env) || {}).ic || '') + ' ' : '') + (l === 'lieux' && x.id === c.position ? '📍 ' : '') + esc(x.nom) +
           (att ? ' <span class="puce" style="border-color:' + att[1] + ';color:' + att[1] + '">' + esc(att[0]) + '</span>' : '') +
           (x.compagnon && x.compagnon.actif ? ' <span class="puce" style="border-color:var(--or);color:var(--or-clair)">🤝 ' + esc((X.ROLES[x.compagnon.role] || {}).nom || 'compagnon') + ' niv. ' + x.compagnon.niveau + '</span>' : '') + '</div>' +
           (x.note ? '<div class="s">' + esc(x.note.length > 140 ? x.note.slice(0, 140) + '…' : x.note) + '</div>' : '') + '</div>' +
@@ -323,6 +452,10 @@ COF.UI.Carnet = (function () {
     var x = c.expedition, h = '';
     if (!x) {
       var dernierLieu = COF.Monde && COF.Monde.ici(c) ? COF.Monde.ici(c).nom : (c.lieux[0] ? c.lieux[0].nom : '');
+      /* Par défaut, le terrain du lieu actuel (donjon : ruines si on est en ville ou en plaine) */
+      var envL = COF.Monde ? COF.Monde.envIci(c) : null;
+      if (envL && !expe.envChoisi) expe.env = (envL === 'urbain' || envL === 'plaine') ? 'ruines' : envL;
+      if (envL && !expe.envVChoisi) expe.envV = envL === 'urbain' ? 'plaine' : envL;
       h += '<div class="carte"><h2>🗝️ Explorer un donjon</h2><div class="carte-corps">' +
         '<div class="champ"><label>Nom du lieu</label><input id="cn-x-nom" value="' + esc(expe.nom) + '" placeholder="Les cryptes de Brumeval"></div>' +
         '<label class="cn-lbl2">Taille</label><div class="cn-grille cn-g3">' + [['petit', 'Petit', 5], ['moyen', 'Moyen', 8], ['grand', 'Grand', 12]].map(function (t) {
@@ -450,6 +583,7 @@ COF.UI.Carnet = (function () {
     var caracs = COF.RULES ? COF.RULES.caracs : [{ id: 'FOR' }, { id: 'AGI' }, { id: 'CON' }, { id: 'PER' }, { id: 'CHA' }, { id: 'INT' }, { id: 'VOL' }];
     var comps = X.toutesCompetences(p);
     var h = '<div class="champ"><label>Action</label><input id="cn-jet-action" value="' + esc(jet.action) + '" placeholder="Crocheter la serrure…"></div>' +
+      htmlActionsSuggerees(c) +
       '<div class="cn-mini">' + X.ACTIONS.map(function (a, i) {
         return '<span class="chip' + (jet.action === a[0] ? ' on' : '') + '" data-cn="jet-action" data-i="' + i + '">' + esc(a[0]) + ' · ' + a[1] + '</span>';
       }).join('') + '</div>' +
@@ -472,6 +606,21 @@ COF.UI.Carnet = (function () {
       '<button class="btn btn-plein btn-bloc" style="margin-top:12px" data-cn="lancer">🎲 Lancer</button>' +
       '<div class="note" style="margin-top:8px">En cas d’échec, l’app propose une conséquence ; sur un 20, un avantage.</div>';
     ouvrir('🎲 Test', h, { type: 'test', comps: comps });
+  }
+  /* Tests typiques du terrain où se trouve le héros, proposés en premier. */
+  var TESTS_TERRAIN = {
+    foret: ['Pister', 'Survie', 'Discrétion', 'Escalader'], plaine: ['Repérer / fouiller', 'Pister', 'Endurer', 'Survie'],
+    montagne: ['Escalader', 'Endurer', 'Survie', 'Acrobatie'], marais: ['Nager', 'Résister au poison', 'Endurer', 'Survie'],
+    souterrain: ['Repérer / fouiller', 'Discrétion', 'Escalader', 'Se concentrer'], arctique: ['Endurer', 'Survie', 'Escalader', 'Repérer / fouiller'],
+    urbain: ['Persuader', 'Mentir / bluffer', 'Intimider', 'Se souvenir / savoir'], ruines: ['Repérer / fouiller', 'Déchiffrer', 'Crocheter', 'Acrobatie']
+  };
+  function htmlActionsSuggerees(c) {
+    var env = A.envCourant(c), noms = TESTS_TERRAIN[env]; if (!noms) return '';
+    var e = COF.Monde.envDe(env) || {};
+    return '<label class="cn-lbl2">' + (e.ic || '📍') + ' Suggérés ici (' + esc(e.nom || env) + ')</label><div class="cn-mini">' + noms.map(function (n) {
+      var i = X.ACTIONS.map(function (a) { return a[0]; }).indexOf(n); if (i < 0) return '';
+      return '<span class="chip' + (jet.action === n ? ' on' : '') + '" data-cn="jet-action" data-i="' + i + '">' + esc(n) + ' · ' + X.ACTIONS[i][1] + '</span>';
+    }).join('') + '</div><label class="cn-lbl2">Toutes les actions</label>';
   }
   function memoAction() { var a = $('#cn-jet-action'); if (a) jet.action = a.value; }
   function sheetClore() {
@@ -525,8 +674,10 @@ COF.UI.Carnet = (function () {
       }).join('');
     }
     h += '<div class="champ" style="margin-top:12px"><label>Nouvelle aventure</label><div class="cn-ajout"><input id="cn-m-new" placeholder="Titre…"><button class="btn btn-plein" data-cn="creer-menu">＋</button></div></div>' +
+      '<button class="btn btn-bloc" style="margin-top:6px" data-cn="rencontres-auto">🎲 Rencontres aléatoires en début de scène : <b>' + (c.rencontresAuto === false ? 'désactivées' : 'activées') + '</b></button>' +
       '<div class="cn-grille" style="margin-top:6px"><button data-rg="sauver">💾 Tout sauvegarder</button><button data-rg="ouvrir">⚙️ Réglages</button></div>' +
-      '<button class="btn btn-bloc btn-sang" style="margin-top:10px" data-cn="supprimer-camp">🗑️ Supprimer cette aventure</button>';
+      '<button class="btn btn-bloc" style="margin-top:10px" data-cn="reinit-camp">♻️ Recommencer cette aventure à zéro</button>' +
+      '<button class="btn btn-bloc btn-sang" style="margin-top:8px" data-cn="supprimer-camp">🗑️ Supprimer cette aventure</button>';
     ouvrir('📖 Aventure', h, { type: 'menu' });
   }
 
@@ -540,7 +691,9 @@ COF.UI.Carnet = (function () {
     var c = K.actif();
     if (!gen.env) gen.env = A.envCourant(c);
     var nbA = A.nbAllies(c);
-    var h = '<div class="note" style="margin-bottom:8px">Calibrée pour ' + (perso(c) ? esc(perso(c).nom) + ' (niv. ' + perso(c).niveau + ')' : 'le héros') +
+    var envH = COF.Monde.envDe(A.envCourant(c)) || {}, iciR = COF.Monde.ici(c);
+    var h = '<div class="note" style="margin-bottom:6px">' + (envH.ic || '📍') + ' Terrain ' + (c.expedition ? 'de l’expédition' : (iciR ? 'de ' + esc(iciR.nom) : 'actuel')) + ' : <b>' + esc(envH.nom || '') + '</b> (présélectionné).</div>' +
+      '<div class="note" style="margin-bottom:8px">Calibrée pour ' + (perso(c) ? esc(perso(c).nom) + ' (niv. ' + perso(c).niveau + ')' : 'le héros') +
       (nbA ? ' et ' + nbA + ' allié(s)' : '') + '. Tension ' + c.tension + ' : plus elle est haute, plus les créatures sont hostiles.</div>' +
       '<label class="cn-lbl2">Environnement</label>' + chipsEnv(gen.env) +
       '<label class="cn-lbl2">Difficulté</label><div class="cn-grille cn-g4">' + COF.Rencontre.DIFFICULTES.map(function (dd) {
@@ -713,10 +866,29 @@ COF.UI.Carnet = (function () {
     var c = K.actif(), v = node.getAttribute('data-v');
     switch (act) {
       case 'creer': { K.creer(val('cn-titre-new'), (COF.Store.actif() || {}).id); onglet = 'scene'; rendre(); return; }
-      case 'onglet': onglet = v; rendre(); window.scrollTo(0, 0); return;
+      case 'onglet': onglet = v; rendre.haut = true; rendre(); return;
       case 'menu': sheetMenu(); return;
       case 'tension': c.tension = Math.max(1, Math.min(9, c.tension + (+v))); K.sauver(c); rendre(); return;
-      case 'jouer': K.nouvelleScene(c, val('cn-sc-titre'), val('cn-sc-attendu')); rendre(); return;
+      case 'jouer': {
+        K.nouvelleScene(c, val('cn-sc-titre'), val('cn-sc-attendu'));
+        c = K.actif();
+        /* Test de rencontre automatique selon le terrain du lieu actuel
+           (pas pendant une expédition : elle a ses propres rencontres). */
+        if (c.rencontresAuto !== false && !c.expedition && !c.rencontre) {
+          var tr = A.testRencontre(c);
+          if (tr.rencontre) {
+            var ra2 = A.rencontre(c, { env: tr.env, difficulte: 'ordinaire', style: 'auto' });
+            if (!ra2.erreur) {
+              var envN = (COF.Monde.envDe(tr.env) || {});
+              ra2.test = 'Test de rencontre · ' + (envN.ic || '') + ' ' + (envN.nom || tr.env) + ' · 1 chance sur ' + tr.n;
+              c.rencontre = ra2;
+              K.ajouterEntree(c, { t: 'rencontre', r: ra2, txt: 'Test de rencontre (' + (envN.nom || tr.env) + ', 1 chance sur ' + tr.n + ') : ' + ra2.texte });
+            }
+          }
+        }
+        rendre.defiler = true; rendre(); return;
+      }
+      case 'rencontres-auto': c.rencontresAuto = c.rencontresAuto === false; K.sauver(c); sheetMenu(); return;
       case 'ecrire': { var t = val('cn-texte'); if (!t) return; K.ajouterEntree(c, { t: 'texte', txt: t }); apresEntree(); return; }
       case 'oracle': sheetOracle(); return;
       case 'likelihood': oracleL = v; document.querySelectorAll('#cn-sheet [data-cn="likelihood"]').forEach(function (b) { b.classList.toggle('on', b === node); }); return;
@@ -807,6 +979,13 @@ COF.UI.Carnet = (function () {
       case 'lier': c.persoId = (COF.Store.actif() || {}).id || null; K.sauver(c); fermer(); rendre(); flash('Héros lié'); return;
       case 'basculer-camp': K.setActif(node.getAttribute('data-id')); fermer(); onglet = 'scene'; rendre(); return;
       case 'creer-menu': K.creer(val('cn-m-new') || 'Nouvelle aventure', (COF.Store.actif() || {}).id); fermer(); onglet = 'scene'; rendre(); return;
+      case 'reinit-camp': {
+        if (!confirm('Recommencer « ' + c.titre + ' » à zéro ?\n\nScènes, fils, PNJ, compagnons, lieux, carte et expédition seront effacés ; le titre et le héros sont gardés. ' +
+          'Le personnage lui-même (PV, inventaire, bourse) n’est pas modifié.')) return;
+        if (c.combat) COF.Arene.ecrire(COF.Arene.vider());
+        K.reinitialiser(c); fermer(); onglet = 'scene'; rendre.haut = true; rendre(); flash('♻️ Aventure remise à zéro');
+        return;
+      }
       case 'supprimer-camp': if (confirm('Supprimer « ' + c.titre + ' » et tout son journal ? C’est définitif.')) { K.supprimer(c.id); fermer(); rendre(); } return;
       case 'plier': node.parentNode.classList.toggle('ferme'); return;
       case 'partager': {
@@ -824,7 +1003,7 @@ COF.UI.Carnet = (function () {
       }
       /* ----- Expédition ----- */
       case 'expe-taille': memoExpe(); expe.taille = v; rendre(); return;
-      case 'expe-env': memoExpe(); expe[node.getAttribute('data-k')] = v; rendre(); return;
+      case 'expe-env': memoExpe(); expe[node.getAttribute('data-k')] = v; expe[node.getAttribute('data-k') === 'env' ? 'envChoisi' : 'envVChoisi'] = true; rendre(); return;
       case 'cpt': {
         var k = node.getAttribute('data-k'), dv = +v;
         if (k === 'monde-jours') { monde.jours = Math.max(1, Math.min(60, monde.jours + dv)); if (sheet && sheet.type === 'lieu') sheetLieu(sheet.id); return; }
@@ -842,7 +1021,7 @@ COF.UI.Carnet = (function () {
         rendre(); return;
       }
       case 'expe-donjon': memoExpe(); X.commencerDonjon(c, expe.nom || 'Donjon', expe.taille, expe.env); X.salleSuivante(c); K.sauver(c); rendre(); return;
-      case 'expe-salle': X.salleSuivante(c); K.sauver(c); rendre(); window.scrollTo(0, 0); return;
+      case 'expe-salle': X.salleSuivante(c); K.sauver(c); rendre.haut = true; rendre(); return;
       case 'expe-voyage': memoExpe(); X.commencerVoyage(c, expe.depart, expe.destination, expe.jours, expe.envV); K.sauver(c); rendre(); return;
       case 'expe-jour': X.etapeSuivante(c); K.sauver(c); rendre(); return;
       case 'expe-fouiller': X.fouiller(c); K.sauver(c); rendre(); return;
@@ -942,6 +1121,7 @@ COF.UI.Carnet = (function () {
       case 'gen-garder': {
         var nm2 = val('cn-g-nom') || gen.res.titre, tx2 = val('cn-g-txt'), li = gen.res.liste;
         var obj = { nom: nm2, note: tx2 }; if (li === 'pnj' && gen.res.attitude) obj.attitude = gen.res.attitude;
+        if (li === 'lieux' && gen.res.gen === 'lieu') obj.env = 'urbain';   /* localité, taverne, boutique */
         K.ajouterListe(c, li, obj);
         K.ajouterEntree(c, { t: 'note', titre: { pnj: 'Nouveau PNJ', lieux: 'Nouveau lieu', fils: 'Nouveau fil' }[li], txt: nm2 });
         flash('💾 ' + nm2); gen.res = null; sheetGenerer(); return;
@@ -969,11 +1149,41 @@ COF.UI.Carnet = (function () {
         monde.cible = null; sheetLieu(idl); return;
       }
       case 'monde-fond': {
+        var fx = +node.getAttribute('data-x'), fy = +node.getAttribute('data-y');   /* pas de bord : le monde s'étend à volonté */
+        if (monde.ajouter) {
+          monde.ajouter = false; monde.nouveau = { x: fx, y: fy };
+          monde.typeNouveau = COF.Monde.envIci(c) || 'plaine';
+          sheetNouveauLieu(c);
+          setTimeout(function () { var i = $('#cn-nl-nom'); if (i) i.focus(); }, 60);
+          rendre(); return;
+        }
         if (!monde.deplacer) return;
         var lm = COF.Monde.lieu(c, monde.deplacer);
-        if (lm) { lm.x = Math.max(5, Math.min(95, +node.getAttribute('data-x'))); lm.y = Math.max(5, Math.min(59, +node.getAttribute('data-y'))); K.sauver(c); }
+        if (lm) { lm.x = fx; lm.y = fy; K.sauver(c); }
         monde.deplacer = null; rendre(); return;
       }
+      case 'monde-creer': {
+        var nomL = val('cn-nl-nom'); if (!nomL) { flash('Donnez un nom au lieu'); return; }
+        var nl = K.ajouterListe(c, 'lieux', { nom: nomL, note: val('cn-nl-note') });
+        nl.x = Math.round(monde.nouveau.x); nl.y = Math.round(monde.nouveau.y); nl.env = monde.typeNouveau || 'plaine';
+        var rte = $('#cn-nl-route'), icl = COF.Monde.ici(c);
+        if (rte && rte.checked && icl) {
+          var dj = Math.max(1, Math.round(Math.hypot(icl.x - nl.x, icl.y - nl.y) / 15));   /* ~15 unités de carte par jour */
+          /* le terrain de la route est celui de la destination (sauf en ville) */
+          COF.Monde.relier(c, icl.id, nl.id, dj, nl.env === 'urbain' ? (icl.env && icl.env !== 'urbain' ? icl.env : 'plaine') : nl.env);
+        }
+        if (!c.position) c.position = nl.id;
+        K.sauver(c); fermer(); rendre(); flash('📍 ' + nomL); return;
+      }
+      case 'monde-ajouter': monde.ajouter = !monde.ajouter; monde.deplacer = null; rendre(); return;
+      case 'monde-type-nouveau': { var nn = val('cn-nl-nom'), nt = val('cn-nl-note'); monde.typeNouveau = v; sheetNouveauLieu(c, nn, nt); return; }
+      case 'monde-type': {
+        var lt = COF.Monde.lieu(c, node.getAttribute('data-l'));
+        if (lt) { lt.env = v; K.sauver(c); rendre(); sheetLieu(lt.id); }
+        return;
+      }
+      case 'monde-zoom': zoomMonde(+v); rendre(); return;
+      case 'monde-cadrer': monde.vue = COF.Monde.cadre(c); rendre(); return;
       case 'monde-deplacer': monde.deplacer = node.getAttribute('data-id'); fermer(); onglet = 'lieux'; rendre(); return;
       case 'monde-ici': {
         COF.Monde.seRendre(c, node.getAttribute('data-id')); K.sauver(c);
@@ -1040,13 +1250,13 @@ COF.UI.Carnet = (function () {
     document.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-cn]') : null;
       if (!t) return;
-      if (!(t.closest('#vue-carnet') || t.closest('#modale') || t.closest('.cn-banniere') || t.id === 'cn-fab')) return;
+      if (!(t.closest('#vue-carnet') || t.closest('#modale') || t.closest('.cn-banniere') || t.closest('#vue-arene') || t.id === 'cn-fab')) return;
       e.preventDefault();
       if (t.getAttribute('data-cn') === 'monde-fond') {
-        /* position touchée sur la carte → coordonnées 0-100 × 0-64 */
-        var rc = t.getBoundingClientRect();
-        t.setAttribute('data-x', Math.round((e.clientX - rc.left) / rc.width * COF.Monde.L));
-        t.setAttribute('data-y', Math.round((e.clientY - rc.top) / rc.height * COF.Monde.H));
+        /* position touchée → coordonnées du monde (selon le zoom et le déplacement) */
+        var pm = pointMonde(t, e.clientX, e.clientY);
+        t.setAttribute('data-x', Math.round(pm.x));
+        t.setAttribute('data-y', Math.round(pm.y));
       }
       action(t.getAttribute('data-cn'), t);
     });
@@ -1067,7 +1277,7 @@ COF.UI.Carnet = (function () {
     if (!K.actif()) return;
     var i = ORDRE.indexOf(onglet) + sens;
     if (i < 0 || i >= ORDRE.length) return;
-    onglet = ORDRE[i]; rendre(); window.scrollTo(0, 0);
+    onglet = ORDRE[i]; rendre.haut = true; rendre();
   }
 
   return { init: init, rendre: rendre, majFab: majFab, banniereCombat: banniereCombat, glisser: glisser, ouvrirOnglet: function (o) { onglet = o; } };

@@ -136,7 +136,7 @@ COF.UI.Reglages = (function () {
     var x0 = null, y0 = null, t0 = 0;
     document.addEventListener('touchstart', function (e) {
       var t = e.target;
-      if (!t.closest || !t.closest('#vue-carnet') || t.closest('input, textarea, select, .cn-mini, .cn-plan, .cn-dock')) { x0 = null; return; }
+      if (!t.closest || !t.closest('#vue-carnet') || t.closest('input, textarea, select, .cn-mini, .cn-plan, .cn-dock, .cn-monde-boite, .ar-grille')) { x0 = null; return; }
       x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
     }, { passive: true });
     document.addEventListener('touchend', function (e) {

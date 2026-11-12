@@ -39,6 +39,15 @@ COF.Carnet = (function () {
     ecrire(tous().filter(function (c) { return c.id !== id; }));
     if (actifId() === id) setActif(null);
   }
+  /* Recommence l'aventure à zéro : garde le titre et le héros lié,
+     efface scènes, fils, PNJ, lieux, carte, expédition, tension, jour. */
+  function reinitialiser(c) {
+    ['scenes', 'fils', 'pnj', 'lieux', 'routes'].forEach(function (k) { c[k] = []; });
+    ['expedition', 'rencontre', 'combat', 'butinEnAttente', 'position', 'envDernier'].forEach(function (k) { c[k] = null; });
+    c.marche = {}; c.ressources = { rations: 3, torches: 2 };
+    c.tension = 5; c.jour = 1; c.cree = Date.now();
+    return sauver(c);
+  }
   function creer(titre, persoId) {
     var c = { id: uid('cmp'), titre: titre || 'Nouvelle aventure', persoId: persoId || null, cree: Date.now(), maj: Date.now(),
       tension: 5, jour: 1, scenes: [], fils: [], pnj: [], lieux: [] };
@@ -178,7 +187,7 @@ COF.Carnet = (function () {
   }
 
   return {
-    tous: tous, get: get, actif: actif, setActif: setActif, sauver: sauver, supprimer: supprimer, creer: creer,
+    tous: tous, get: get, actif: actif, setActif: setActif, sauver: sauver, supprimer: supprimer, creer: creer, reinitialiser: reinitialiser,
     sceneCourante: sceneCourante, nouvelleScene: nouvelleScene, clore: clore,
     ajouterEntree: ajouterEntree, supprimerEntree: supprimerEntree,
     ajouterListe: ajouterListe, majListe: majListe, retirerListe: retirerListe, filsOuverts: filsOuverts,

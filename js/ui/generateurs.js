@@ -80,7 +80,7 @@ COF.UI.Generateurs = (function () {
 
     /* groupe */
     h += '<div class="grille2" style="margin-bottom:4px">';
-    h += '<div class="champ"><label>Personnages</label>' +
+    h += '<div class="champ"><label>' + (COF.UI.mode && COF.UI.mode() === 'aventure' ? 'Héros + compagnons' : 'Personnages') + '</label>' +
       '<div class="compteur" style="justify-content:center">' +
       '<button data-gact="pj-">−</button><span class="n">' + P.nbPJ + '</span><button data-gact="pj+">+</button>' +
       '</div></div>';
@@ -246,7 +246,17 @@ COF.UI.Generateurs = (function () {
     }
   }
 
-  function afficher(id) { SOUS = id; rendre(); }
+  function afficher(id) {
+    SOUS = id;
+    /* En mode aventure, le groupe est le héros et ses compagnons (pas 4 joueurs). */
+    if (id === 'rencontre' && COF.UI.mode && COF.UI.mode() === 'aventure' && COF.Carnet && COF.Carnet.actif()) {
+      var c = COF.Carnet.actif(), p = (c.persoId && COF.Store.get(c.persoId)) || COF.Store.actif();
+      P.nbPJ = 1 + COF.Aventure.nbAllies(c);
+      if (p) P.niveau = p.niveau || 1;
+      if (c.expedition && c.expedition.env) P.env = c.expedition.env;
+    }
+    rendre();
+  }
 
   return { init: init, rendre: rendre, afficher: afficher, dernierResultat: dernierResultat };
 })();
