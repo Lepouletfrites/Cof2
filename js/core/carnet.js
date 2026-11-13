@@ -106,6 +106,7 @@ COF.Carnet = (function () {
     obj.id = uid(liste.slice(0, 2)); obj.cree = Date.now();
     if (liste === 'fils' && obj.ouvert === undefined) obj.ouvert = true;
     if (liste === 'pnj' && !obj.attitude) obj.attitude = 'neutre';
+    if (liste === 'fils' && COF.Rumeurs) COF.Rumeurs.marquer(c, obj);   /* une rumeur peut mentir */
     c[liste].unshift(obj);
     sauver(c);
     return obj;

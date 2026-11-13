@@ -172,7 +172,7 @@ COF.UI.Marche = (function () {
     }).join('') + '</div>';
     h += '<div class="cn-grille">' + (v.marchande === null || v.marchande === undefined
       ? '<button data-mc="marchander">🗣️ Marchander (CHA 15)</button>'
-      : '<button disabled>' + (v.marchande ? '✓ Remise de 10 %' : '✗ Le marchand a augmenté ses prix de 10 %') + '</button>') +
+      : '<button disabled>' + (v.marchande ? '✓ Remise de 10 %' : '✗ Prix +10 %') + '</button>') +
       '<button data-mc="onglet" data-v="' + (etat.onglet === 'acheter' ? 'vendre' : 'acheter') + '" class="on">' + (etat.onglet === 'acheter' ? '💰 Vendre' : '🛒 Acheter') + '</button></div>';
     h += '</div></div>';
     h += etat.onglet === 'acheter' ? htmlAcheter(p) : htmlVendre(p);

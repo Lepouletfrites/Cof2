@@ -385,7 +385,9 @@ COF.Loisirs = (function () {
       var jt = T().jet(c, s, ch.carac, T().difficulteBase(c), T().motsPour(null, ch.carac, ch.nom));
       reussi = jt.reussi; m.push(jt.m);
       txt = T().dire(reussi ? ch.ok : (ch.ko || ['Raté.']), ctx);
+      if (COF.Plume) { var io = COF.Plume.issue(jt.r, reussi, T().difficulteBase(c), ctx); if (io) txt += ' ' + io; }
     }
+    var acte = T().dire(ch.nom, ctx), verd = ch.auto ? null : T().verdict(Object.assign({ diff: T().difficulteBase(c) }, jt));
     var codes = (reussi ? ch.eff : ch.effKo) || [], autres = [], out = {}, mise = v.mise || 0;
     codes.forEach(function (code) {
       switch (code) {
@@ -439,7 +441,7 @@ COF.Loisirs = (function () {
     if (COF.Troupe) COF.Troupe.reagir(c, triche ? 'tricher' : (ch.eff || []).indexOf('fac+temple') >= 0 ? 'offrande' : 'loisir', ctx).forEach(function (n) { txt += ' ' + n.txt; m.push(n.m); });
     j.prog++;
     if (!reussi) j.danger++;
-    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.filter(Boolean).join(' · ') || 'sans jet', ok: reussi });
+    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.filter(Boolean).join(' · ') || 'sans jet', ok: reussi, a: acte, v: verd });
     s = K().sceneCourante(c);
     if (out.combat) { out.menace = T().engager(c, s, null); K().sauver(c); return out; }
     if (s.jeu.prog >= s.jeu.progMax || s.jeu.danger >= s.jeu.dangerMax) T().finir(c, s, s.jeu.danger >= s.jeu.dangerMax ? 'echec' : 'reussite');

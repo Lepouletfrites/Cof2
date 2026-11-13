@@ -455,6 +455,16 @@ button, input, select, textarea {
 .cn-item.ferme { opacity: .5; }
 .cn-item.on .t { color: var(--or-clair); }
 .cn-item .btn { width: 40px; height: 40px; flex: none; font-size: 16px; }
+/* échoppes du village */
+.cn-bats .cn-bat small { line-height: 1.35; }
+.cn-bats .cn-q { color: var(--or); letter-spacing: 1px; }
+.cn-pret { color: var(--vert); font-weight: 600; }
+.cn-bat.temp { border-style: dashed; }
+.cn-bat:disabled { opacity: .55; }
+.cn-rappel-sv { display: block; width: 100%; margin: 0 0 10px; padding: 8px 12px; text-align: left; font-size: 13px; color: var(--text-dim);
+  background: var(--panel-2); border: 1px dashed var(--or); border-radius: var(--r-s); cursor: pointer; }
+/* boutons texte (« Acheter », « Vendre »…) : jamais coupés */
+.cn-item .btn.btn-sm { width: auto; height: auto; min-height: 36px; min-width: 76px; padding: 6px 12px; font-size: 13px; line-height: 1.2; white-space: nowrap; }
 
 .cn-export { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
 .cn-export .btn { padding: 11px 6px; }
@@ -923,6 +933,25 @@ html.theme-clair .cb-modifs button.on { background: #f6e7bf; }
 .cn-recit-fin { display: block; color: var(--or); font-size: 18px; margin-bottom: 2px; }
 .cn-meca { font-size: 11.5px; color: var(--text-mute); margin-top: 4px; font-family: inherit; }
 .cn-recit.ko .cn-meca { color: var(--sang-clair); }
+/* mode récit : l'action choisie, le verdict en mots, les dés repliés */
+.cn-acte { font-size: 13px; font-style: italic; color: var(--or-clair); margin-bottom: 4px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.cn-acte::before { content: '›'; font-style: normal; color: var(--or); }
+.cn-v { font-style: normal; font-size: 11px; letter-spacing: .04em; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--text-dim); }
+.cn-v.v-crit { color: var(--or-clair); border-color: var(--or); }
+.cn-v.v-ok { color: var(--vert); border-color: var(--vert); }
+.cn-v.v-juste { color: var(--text-dim); }
+.cn-v.v-ko, .cn-v.v-fumble { color: var(--sang-clair); border-color: var(--sang); }
+.cn-recit.acte p::first-letter { font-size: 1.35em; color: var(--or-clair); }
+.cn-csq { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.cn-meca-d { display: inline-block; margin-top: 2px; }
+.cn-meca-d > summary { list-style: none; cursor: pointer; font-size: 11px; opacity: .45; display: inline; }
+.cn-meca-d > summary::-webkit-details-marker { display: none; }
+.cn-meca-d[open] > summary { opacity: .8; }
+.cn-chiffres { float: right; background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 0 8px; font-size: 13px; cursor: pointer; font-style: normal; }
+.cn-humeur { font-size: 12.5px; font-style: italic; color: var(--text-mute); margin: -4px 0 8px; }
+.cn-jauges .dg.fort { animation: cn-pulse 1.6s ease-in-out infinite; }
+.cn-opt.ch-haut small { color: var(--vert); }
+.cn-opt.ch-bas small { color: var(--sang-clair); }
 .cn-choix { margin: 14px 0 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
 .cn-choix-q { font-family: Georgia, serif; font-style: italic; font-size: 16px; color: var(--or-clair); margin-bottom: 6px; }
 .cn-jauges { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 1px; }
@@ -1075,6 +1104,20 @@ select:disabled { opacity: .5; cursor: not-allowed; }
 .cn-attend { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; margin-bottom: 10px; }
 .cn-attend > div { padding: 6px 9px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
 .cn-attend.passe > div { opacity: .65; }
+.cn-vie { font-style: italic; }
+.cn-livre { font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; font-size: 15.5px; }
+.cn-livre p { margin: 0 0 12px; text-align: justify; hyphens: auto; }
+.cn-livre-tete { text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.cn-livre-tete .t { font-size: 21px; color: var(--or-clair); letter-spacing: .02em; }
+.cn-livre-tete .s { font-size: 13px; color: var(--text-mute); margin-top: 3px; }
+.cn-livre-avant { font-style: italic; color: var(--text-mute); }
+.cn-livre-ch { margin: 18px 0 8px; font-size: 17px; color: var(--or-clair); font-weight: normal; }
+.cn-livre-ch > span { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-mute); }
+.cn-livre-ch > small { display: block; font-size: 12px; color: var(--text-mute); font-style: italic; }
+.cn-livre-fait { font-family: system-ui, sans-serif; font-size: 13px; color: var(--text-mute); }
+.cn-livre-gens { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.cn-livre-gens small { color: var(--text-mute); }
+.cn-livre-gens .v { font-size: 12.5px; color: var(--text-mute); font-style: italic; padding-left: 10px; }
 .cn-details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
 .cn-details > summary { cursor: pointer; color: var(--text-mute); font-size: 13px; padding: 4px 0; }
 @media (max-width: 600px) { .cn-monde { aspect-ratio: 1 / 0.85; } }

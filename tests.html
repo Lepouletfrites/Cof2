@@ -37,7 +37,10 @@ function ajouter(nom, ok, detail) {
   if (detail) d.querySelector('small').textContent = detail;
   res.appendChild(d); if (ok) nbOk++; else nbKo++;
 }
-function test(nom, f) {
+/* chaque test rend la main au navigateur avant de s'exécuter : la page reste réactive */
+async function test(nom, f) {
+  await new Promise(function (r) { setTimeout(r, 0); });
+  resume.textContent = 'Tests en cours… ' + nom;
   try { var r = f(); ajouter(nom, r === true || (r && r.ok), r && r.detail); }
   catch (e) { ajouter(nom, false, e.message + '\n' + String(e.stack || '').split('\n').slice(1, 3).join('\n')); }
 }
@@ -110,15 +113,15 @@ async function lancer() {
     sauvegarder();
     localStorage.setItem('cof2.mode', 'aventure');
 
-    test('Modules du moteur présents', function () {
-      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons', 'Culture']
+    await test('Modules du moteur présents', function () {
+      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons', 'Culture', 'Recit', 'Legende', 'Combats', 'Vie', 'Rumeurs', 'Plume', 'Echoppes', 'Village', 'Donjons', 'Routes', 'Bandes']
         .filter(function (m) { return !COF[m]; });
       return { ok: !manquants.length, detail: manquants.length ? 'manquants : ' + manquants.join(', ') : '' };
     });
 
     /* 2. cache hors ligne : chaque script de la page doit être dans sw.js */
     var sw = await (await fetch('sw.js', { cache: 'no-store' })).text();
-    test('Cache hors ligne (sw.js) complet', function () {
+    await test('Cache hors ligne (sw.js) complet', function () {
       var absents = scripts.filter(function (s) { return sw.indexOf("'" + s + "'") < 0; });
       var v = /CACHE_VERSION = '([^']+)'/.exec(sw);
       return { ok: !absents.length && !!v, detail: (v ? 'version ' + v[1] : 'version introuvable') + (absents.length ? '\nabsents : ' + absents.join(', ') : '') };
@@ -134,7 +137,7 @@ async function lancer() {
     p.voies = COF.PROFILS.pretre.voies.map(function (v) { return { key: 'profil.' + v.id, rang: 3 }; });
     COF.Store.equiperDepart(p); COF.Store.reinitialiser(p); p.bourse = { po: 200, pa: 0, pc: 0 }; COF.Store.sauver(p); COF.Store.setActif(p.id);
 
-    test('Effets des voies : tous les profils au rang 5', function () {
+    await test('Effets des voies : tous les profils au rang 5', function () {
       var pb = [];
       Object.keys(COF.PROFILS).forEach(function (k) {
         var h = COF.Store.nouveau({ nom: 'T', profil: k, peuple: 'humain' }); h.id = 't_' + k; h.niveau = 12;
@@ -155,9 +158,11 @@ async function lancer() {
     for (var n = 0; n < 120; n++) {
       try { c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif(); var pr = proposition(c); if (pr) jouerScene(c, pr, textes); }
       catch (e) { erreurs.push(e.message + ' — ' + String(e.stack || '').split('\n')[1]); }
+      if (n % 5 === 4) { resume.textContent = 'Tests en cours… simulation ' + (n + 1) + '/120'; await new Promise(function (r) { setTimeout(r, 0); }); }
     }
     ajouter('Simulation de 120 scènes sans erreur', !erreurs.length, erreurs.slice(0, 5).join('\n'));
 
+    await new Promise(function (r) { setTimeout(r, 0); });
     /* 5. chaque activité de temps libre, chaque nuit */
     var errL = [];
     COF.Loisirs.ACTIVITES.forEach(function (a) {
@@ -169,6 +174,7 @@ async function lancer() {
     });
     ajouter('Temps libre et nuits : ' + COF.Loisirs.ACTIVITES.length + ' activités jouées', !errL.length, errL.join('\n'));
 
+    await new Promise(function (r) { setTimeout(r, 0); });
     /* 6. chaque type de petite affaire */
     var types = Object.keys(COF.Missions.TYPES), vus = {}, errM = [];
     /* en ville : certaines affaires (le concours) ne se proposent qu'en lieu habité */
@@ -177,9 +183,11 @@ async function lancer() {
       c = K.actif(); var o = COF.Missions.generer(c); if (vus[o.type]) continue; vus[o.type] = true;
       try { if (K.sceneCourante(c)) K.clore(c, true, ''); var f = COF.Missions.accepter(K.actif(), o); jouerScene(K.actif(), { type: 'mission', filId: f.id, titre: f.nom }, textes); }
       catch (e) { errM.push(o.type + ' : ' + e.message); }
+      await new Promise(function (r) { setTimeout(r, 0); });
     }
     ajouter('Petites affaires : ' + Object.keys(vus).length + ' / ' + types.length + ' types jouées', !errM.length && Object.keys(vus).length === types.length, errM.join('\n'));
 
+    await new Promise(function (r) { setTimeout(r, 0); });
     /* 7. chaque finale de quête majeure */
     var errF = [], finales = Object.keys(COF.Saga.FINALES);
     finales.forEach(function (fi) {
@@ -193,20 +201,21 @@ async function lancer() {
     ajouter('Finales : ' + finales.length + ' quêtes majeures jouées', !errF.length, errF.join('\n'));
 
     /* 8. conversations, factions */
-    test('Conversations avec les PNJ', function () {
+    await test('Conversations avec les PNJ', function () {
       c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
       var x = K.ajouterListe(c, 'pnj', { nom: 'Bertille', attitude: 'neutre', genre: 'féminin' }); x.lieuId = c.position; K.sauver(c);
       for (var i = 0; i < 4; i++) { c = K.actif(); jouerScene(c, { type: 'dialogue', titre: 'Conversation', dialogue: { pnjId: x.id } }, textes); }
       var y = K.actif().pnj.filter(function (z) { return z.id === x.id; })[0];
       return { ok: !!(y && y.perso && typeof y.rel === 'number'), detail: y ? 'relation ' + y.rel + ' · ' + y.attitude : '' };
     });
-    test('Factions : réputation et faveur', function () {
-      c = K.actif(); COF.Factions.changer(c, 'temple', 3); var f = COF.Factions.faveur(c, 'temple');
+    await test('Factions : réputation et faveur', function () {
+      c = K.actif(); var fid = (COF.Factions.liste(c).filter(function (x) { return x.id === 'temple'; })[0] || COF.Factions.liste(c)[0]).id;
+      COF.Factions.changer(c, fid, 3); var f = COF.Factions.faveur(c, fid);
       return { ok: !!f, detail: f || 'aucune faveur' };
     });
 
     /* compagnons vivants : talent, tempérament, répliques, réactions */
-    test('Compagnons : talents, tempéraments, répliques', function () {
+    await test('Compagnons : talents, tempéraments, répliques', function () {
       c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
       var x = K.ajouterListe(c, 'pnj', { nom: 'Odon', attitude: 'allié' }); x.compagnon = { actif: true, role: 'combattant', niveau: 3, loyaute: 6 }; K.sauver(c);
       var ctx = COF.Conteur.contexte(c, null), lignes = [], pb = [];
@@ -224,7 +233,7 @@ async function lancer() {
         detail: COF.Troupe.lib(y) + ' · loyauté ' + cp.loyaute + '/10 · ' + lignes.length + ' répliques' + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
     });
     /* conséquences : chaque type finit par ressurgir */
-    test('Conséquences qui durent', function () {
+    await test('Conséquences qui durent', function () {
       c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
       var x = K.ajouterListe(c, 'pnj', { nom: 'Gaspard', attitude: 'neutre' }); x.lieuId = c.position;
       var types = Object.keys(COF.Echos.TYPES), vus = {}, pb = [];
@@ -243,7 +252,7 @@ async function lancer() {
       return { ok: Object.keys(vus).length === types.length && !pb.length, detail: Object.keys(vus).length + ' / ' + types.length + ' types ressurgis' + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
     });
     /* saisons, météo, fêtes */
-    test('Saisons, météo et fêtes de village', function () {
+    await test('Saisons, météo et fêtes de village', function () {
       c = K.actif(); var S = COF.Saisons, j0 = c.jour, noms = [1, 31, 61, 91, 121].map(function (j) { c.jour = j; return S.info(c).nom + (S.info(c).annee > 1 ? '2' : ''); });
       var okN = noms.join(',') === 'printemps,été,automne,hiver,printemps2';
       c.jour = 95; var hiver = S.meteos(c, 'plaine'); c.jour = 35; var ete = S.meteos(c, 'plaine');
@@ -258,7 +267,7 @@ async function lancer() {
     });
 
     /* cultures : noms et peuples cohérents avec le terrain et la région */
-    test('Noms cohérents : peuples, lieux, villages', function () {
+    await test('Noms cohérents : peuples, lieux, villages', function () {
       var C = COF.Culture, pb = [], exemples = [];
       /* une région de montagne isolée : surtout des nains, des noms nains */
       c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
@@ -291,8 +300,384 @@ async function lancer() {
       return { ok: !pb.length, detail: (pb.length ? pb.slice(0, 6).join('\n') + '\n' : '') + exemples.join('\n') };
     });
 
+    /* récit vivant : variété des choix, phrases de récit, revers au danger maximum */
+    await test('Choix variés d’une action à l’autre', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var C = COF.Conteur, vus = {}, premiers = {}, pb = [];
+      K.nouvelleScene(c, 'Enquête', '', { type: 'libre', sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+      C.ouvrir(c, s).forEach(function (e) { K.ajouterEntree(c, e); });
+      for (var i = 0; i < 40; i++) {
+        s.jeu.prog = 0; s.jeu.danger = 0; s.jeu.fini = null; s.jeu.evt = null;
+        if (!s.jeu.choix.length) C.reprendre(c, s);
+        var ch = C.choix(c, s); if (!ch.length) { pb.push('aucun choix'); break; }
+        premiers[s.jeu.choix[0]] = true; s.jeu.choix.forEach(function (id) { vus[id] = true; });
+        if (new Set(s.jeu.choix).size !== s.jeu.choix.length) pb.push('doublon : ' + s.jeu.choix.join(','));
+        C.agir(c, s, Math.floor(Math.random() * ch.length)); c = K.actif(); s = K.sceneCourante(c) || s;
+        if (c.rencontre) { c.rencontre = null; s.jeu.menace = false; }
+        s.entrees.slice(-2).forEach(function (e) { if (e.txt) textes.push(e.txt); });
+      }
+      K.clore(c, true, '');
+      var nb = Object.keys(vus).length, nbP = Object.keys(premiers).length;
+      return { ok: !pb.length && nb >= 7 && nbP >= 4, detail: nb + ' actions différentes proposées, ' + nbP + ' différentes en première position' + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+    await test('Danger au maximum : revers adaptés, pas toujours un combat', function () {
+      var R = COF.Recit, out = [], pb = [], stats = {};
+      ['libre', 'voyage', 'donjon', 'explorer', 'ville', 'complication', 'loisir'].forEach(function (g) {
+        var combats = 0, n = 40;
+        for (var i = 0; i < n; i++) {
+          c = K.actif();
+          var s = { jeu: { genre: g, prog: 0, progMax: 3, danger: 3, dangerMax: 3, bonus: false, choix: [] } };
+          var r = R.rupture(c, s, COF.Conteur.contexte(c, null, g));
+          if (r.combat) combats++; else { textes.push(r.txt); if (CASSE.test(r.txt) || CASSE.test(r.m)) pb.push(g + ' : ' + r.txt + ' | ' + r.m); }
+          K.sauver(c);
+        }
+        stats[g] = combats + '/' + n + ' combats';
+      });
+      var ok = !pb.length && +stats.loisir.split('/')[0] === 0 && +stats.ville.split('/')[0] < 20 && +stats.libre.split('/')[0] < 30;
+      return { ok: ok, detail: Object.keys(stats).map(function (g) { return g + ' ' + stats[g]; }).join(' · ') + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+
+    /* la plume : phrases composées, toutes bien formées, rarement répétées */
+    await test('Plume : morceaux de récit bien formés (héros et héroïne)', function () {
+      c = K.actif(); var P = COF.Plume, pb = [], n = 0;
+      var ctx0 = COF.Conteur.contexte(c, null);
+      [false, true].forEach(function (fem) {
+        var ctx = Object.assign({}, ctx0, { _vus: null, h: fem ? 'Ysolde' : 'Aldric', he: fem ? 'e' : '', hil: fem ? 'elle' : 'il', hle: fem ? 'la' : 'le' });
+        var listes = [];
+        Object.keys(P.APPROCHE).forEach(function (k) { listes.push(P.APPROCHE[k]); });
+        Object.keys(P.ISSUE).forEach(function (k) { listes.push(P.ISSUE[k]); });
+        P.HEURE.forEach(function (l) { listes.push(l); });
+        Object.keys(P.TEMPS).forEach(function (k) { listes.push(P.TEMPS[k]); });
+        ['debut', 'milieu'].forEach(function (k) { listes.push(P.AVANCE[k]); });
+        ['monte', 'imminent'].forEach(function (k) { listes.push(P.MENACE[k]); });
+        /* les actions du récit (ok et ko) */
+        Object.keys(COF.Recit.ACTIONS).forEach(function (id) { var a = COF.Recit.ACTIONS[id]; if (a.ok) listes.push(a.ok); if (a.ko) listes.push(a.ko); });
+        var cx = Object.assign({ indice: 'une piste sérieuse', rumeurTaverne: 'on parle d’un trésor.', verdict: 'Tout se recoupe.', compagnon: 'Odon', compagnon_il: 'il', surnom: 'le Fléau des loups', meteoId: 'pluie' }, ctx);
+        listes.forEach(function (l) {
+          if (typeof l === 'function') l = l(cx).concat(l(Object.assign({}, cx, { donjon: true })));
+          l.forEach(function (t) {
+            for (var k = 0; k < 4; k++) { var s = COF.Conteur.dire(t, cx); n++; if (CASSE.test(s) || /[\[\]{}]/.test(s) || /\s[,.]/.test(s)) pb.push(s); }
+          });
+        });
+        ['progres', 'danger', 'echec'].forEach(function (k) { for (var i = 0; i < 6; i++) { var s = P.pensee(k, cx); n++; if (CASSE.test(s) || /[\[\]{}]/.test(s)) pb.push(s); } });
+      });
+      return { ok: !pb.length, detail: n + ' phrases générées' + (pb.length ? '\n' + pb.slice(0, 5).join('\n') : '') };
+    });
+    await test('Récit vivant : peu de répétitions, action et verdict notés', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var C = COF.Conteur, phrases = [], sansActe = 0, total = 0, pb = [], actions = {};
+      for (var sc = 0; sc < 6; sc++) {
+        K.nouvelleScene(c, 'Enquête', '', { type: ['libre', 'explorer', 'voyage', 'ville', 'donjon', 'libre'][sc], sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+        if (s.type === 'voyage') { var ici = COF.Monde.ici(c), dl = (c.lieux || []).filter(function (l) { return !ici || l.id !== ici.id; })[0]; s.voyage = { dest: dl.id, destNom: dl.nom, departNom: ici ? ici.nom : 'ici', jours: 3, env: dl.env }; }
+        C.ouvrir(c, s).forEach(function (e) { K.ajouterEntree(c, e); }); K.sauver(c); c = K.actif(); s = K.sceneCourante(c);
+        for (var i = 0; i < 12 && s && s.jeu && !s.jeu.fini; i++) {
+          s.jeu.danger = 0; s.jeu.evt = null;
+          if (!s.jeu.choix.length) C.reprendre(c, s);
+          var ch = C.choix(c, s); if (!ch.length) break;
+          var k0 = s.entrees.length;
+          C.agir(c, s, Math.floor(Math.random() * ch.length)); c = K.actif(); s = K.sceneCourante(c) || s;
+          if (c.rencontre) { c.rencontre = null; s.jeu.menace = false; }
+          s.entrees.slice(k0).forEach(function (e) {
+            if (e.t !== 'recit' || e.rappel || e.evt) return;
+            if (e.m && !/^danger au maximum/.test(e.m) && /contre \d|sans jet/.test(e.m)) { total++; if (!e.a) sansActe++; else actions[e.a] = 1; }
+            textes.push(e.txt); String(e.txt).split(/(?<=[.!?»])\s+/).forEach(function (ph) { if (ph.length > 25) phrases.push(ph); });
+          });
+          if (s.jeu.prog >= s.jeu.progMax - 1) s.jeu.prog = 0;
+        }
+        if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      }
+      var uniq = new Set(phrases).size, ratio = phrases.length ? uniq / phrases.length : 0;
+      return { ok: ratio >= 0.7 && !sansActe && total > 20 && Object.keys(actions).length >= 15,
+        detail: phrases.length + ' phrases, ' + Math.round(ratio * 100) + ' % différentes · ' + Object.keys(actions).length + ' actions différentes jouées · ' + total + ' actions' + (sansActe ? ' · ' + sansActe + ' sans libellé' : '') };
+    });
+
+    /* échoppes, artisans et économie */
+    await test('Échoppes : bâtiments et noms selon la taille et le peuple', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var E = COF.Echoppes, pb = [], parTaille = {}, ex = [];
+      ['hameau', 'village', 'bourg', 'ville', 'cite'].forEach(function (t) {
+        for (var i = 0; i < 6; i++) {
+          var l = COF.Monde.obtenirLieu(c, 'Essai ' + t + ' ' + i, null, '', 'urbain'); COF.Villes.assurer(l); l.ville.taille = t; l.peuple = ['nain', 'humain', 'elfesylvain', 'halfelin', 'gnome', 'humain'][i];
+          var bs = E.batiments(c, l); parTaille[t] = (parTaille[t] || 0) + bs.length;
+          bs.forEach(function (b) { if (CASSE.test(b.nom) || /\{|\}|\s\s/.test(b.nom) || !b.owner.prenom) pb.push(t + ' : ' + b.nom); });
+          if (i === 0) ex.push(t + ' : ' + bs.map(function (b) { return E.TYPES[b.type].ic + ' ' + b.nom + ' (' + b.owner.nom + ')'; }).join(', '));
+          if (!bs.some(function (b) { return b.type === 'bazar'; })) pb.push(t + ' sans bazar');
+        }
+        parTaille[t] = Math.round(parTaille[t] / 6 * 10) / 10;
+      });
+      c.lieux = c.lieux.filter(function (l) { return !/^Essai /.test(l.nom); }); K.sauver(c);
+      var croissant = parTaille.hameau < parTaille.village && parTaille.village <= parTaille.bourg && parTaille.bourg < parTaille.ville;
+      return { ok: !pb.length && croissant, detail: 'bâtiments en moyenne : ' + JSON.stringify(parTaille) + '\n' + ex.join('\n') + (pb.length ? '\n' + pb.slice(0, 4).join('\n') : '') };
+    });
+    await test('Échoppes : acheter, vendre, marchander, commander, fabriquer, services', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var E = COF.Echoppes, h = COF.Store.get(p.id), pb = [], fait = {}, ex = [];
+      h.bourse = { po: 5000, pa: 0, pc: 0 }; h.pv = 1; COF.Store.sauver(h);
+      var l = COF.Villes.decouvrir(c); l.ville.taille = 'ville'; delete l.ville.batiments; COF.Monde.seRendre(c, l.id); K.sauver(c);
+      var bs = E.batiments(c, l), n0 = c.scenes.length;
+      bs.forEach(function (b) {
+        c = K.actif(); l = COF.Monde.ici(c); b = E.batiment(c, l, b.id);
+        E.entrer(c, l, b); c = K.actif(); l = COF.Monde.ici(c); b = E.batiment(c, l, b.id);
+        var st = E.stock(c, l, b);
+        if (st.length) { var r = E.acheter(c, l, b, 0); if (r.ok) fait.acheter = 1; else pb.push(b.nom + ' achat : ' + r.err); }
+        var ov = E.offresVente(c, l, b).filter(function (x) { return x.pr && !x.refus; })[0];
+        if (ov) { var rv = E.vendre(c, l, b, ov.i); if (rv.ok) fait.vendre = 1; }
+        if (st.length) { E.marchander(c, l, b); fait.marchander = 1; }
+        var cs = E.commandesPossibles(c, l, b);
+        if (cs.length) { var rc = E.commander(c, l, b, cs[0].k); if (rc.ok) fait.commander = 1; else pb.push(b.nom + ' commande : ' + rc.err); }
+        var rs = E.recettes(c, l, b);
+        if (rs.length) { E.fabriquer(c, l, b, rs[0].k); fait.fabriquer = 1; }
+        E.services(c, l, b).forEach(function (sv) { var rr = E.service(c, l, b, sv.k); if (rr.ok) fait['service-' + sv.k] = 1; });
+        var x = E.pnj(c, l, b); if (!x || x.lieuId !== l.id) pb.push('artisan sans fiche PNJ');
+        E.sortir(c); c = K.actif();
+      });
+      /* les commandes se retirent une fois le délai passé */
+      c = K.actif(); c.jour += 40; K.sauver(c); l = COF.Monde.ici(c);
+      var arr = E.arrivee(c, l.id); if (E.enCours(c).length && !arr.length) pb.push('pas d’avis de commande prête');
+      E.pretes(c, l.id).forEach(function (y) { var b = E.batiment(c, l, y.batId), rr = E.retirer(c, l, b, y.id); if (rr.ok) fait.retirer = 1; else pb.push('retrait : ' + rr.err); });
+      if (K.sceneCourante(c)) E.sortir(c);
+      c = K.actif();
+      c.scenes.slice(n0).forEach(function (s) { s.entrees.forEach(function (e) { if (e.txt) { textes.push(e.txt); if (CASSE.test(e.txt) || /[\[\]{}]/.test(e.txt)) pb.push(e.txt); } if (e.m && CASSE.test(e.m)) pb.push(e.m); if (e.a === 'Marchander' && !e.v) pb.push('verdict du marchandage non enregistré'); }); });
+      if (!c.scenes.slice(n0).some(function (s) { return s.entrees.some(function (e) { return /^Entrer /.test(e.a || ''); }); })) pb.push('entrée dans l’échoppe perdue');
+      ex = c.scenes.slice(n0, n0 + 1).map(function (s) { return s.titre + ' : ' + s.entrees.slice(0, 3).map(function (e) { return (e.a ? '› ' + e.a + ' — ' : '') + e.txt; }).join(' | '); });
+      /* économie : pénurie et saison font varier les prix */
+      var b0 = bs.filter(function (b) { return b.type === 'bazar'; })[0], art = { nom: 'Pain', pa: 10, cat: 'vivres' };
+      l.ville.eco = { prosperite: 0, penurie: null }; c.jour = 20; var p1 = E.prix(c, l, b0, art);
+      l.ville.eco.penurie = 'vivres'; var p2 = E.prix(c, l, b0, art);
+      l.ville.eco.penurie = null; c.jour = 100; var p3 = E.prix(c, l, b0, art);
+      var eco = p2 > p1 && p3 > p1;
+      /* cueillette */
+      var cu = E.cueillir(c, 2); if (!/simples/.test(cu)) pb.push('cueillette');
+      h = COF.Store.get(p.id); h.bourse = { po: 200, pa: 0, pc: 0 }; COF.Store.sauver(h); K.sauver(c);
+      var attendus = ['acheter', 'vendre', 'marchander', 'commander', 'fabriquer', 'retirer'];
+      var manque = attendus.filter(function (k) { return !fait[k]; });
+      return { ok: !pb.length && !manque.length && eco, detail: Object.keys(fait).join(', ') + (manque.length ? '\nmanque : ' + manque.join(', ') : '') + '\nprix du pain : ' + p1 + ' → pénurie ' + p2 + ' → hiver ' + p3 + ' pa\n' + ex.join('\n').slice(0, 600) + (pb.length ? '\n' + pb.slice(0, 5).join('\n') : '') };
+    });
+
+    /* village vivant, petits boulots, chez-soi, donjons, bandes, routes, transfert */
+    function verifTextes(c0, n0, pb) {
+      c0.scenes.slice(n0).forEach(function (s) { s.entrees.forEach(function (e) { if (e.txt) { textes.push(e.txt); if (CASSE.test(e.txt) || /[\[\]{}]/.test(e.txt)) pb.push(e.txt); } if (e.m && CASSE.test(e.m)) pb.push(e.m); }); });
+    }
+    await test('Village : événements, prix et marchand de passage', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var V = COF.Village, E = COF.Echoppes, pb = [], vus = {}, ex = [];
+      var l = COF.Villes.decouvrir(c); l.ville.taille = 'bourg'; COF.Monde.seRendre(c, l.id); E.batiments(c, l);
+      var bz = E.batiments(c, l).filter(function (b) { return b.type === 'bazar'; })[0], art = { nom: 'Pain', pa: 10, cat: 'vivres' }, p0 = E.prix(c, l, bz, art);
+      Object.keys(V.EVTS).forEach(function (t) {
+        l.ville.evts = []; var e = V.declencher(c, l, t);
+        if (!e) { if (t !== 'incendie') pb.push('pas de ' + t); return; }
+        vus[t] = 1; if (CASSE.test(e.txt) || /[{}]/.test(e.txt)) pb.push(e.txt); if (ex.length < 3) ex.push(e.txt);
+        if (t === 'disette' && !(E.prix(c, l, bz, art) > p0)) pb.push('la disette ne fait pas monter le pain');
+        if (t === 'abondance' && !(E.prix(c, l, bz, art) < p0)) pb.push('l’abondance ne fait pas baisser le pain');
+        if (t === 'colporteur') { var rb = E.batiment(c, l, e.batId); if (!rb || !rb.temp || !E.stock(c, l, rb).length) pb.push('roulotte vide'); }
+        if (t === 'incendie') { var fb = E.batiment(c, l, e.batId); if (!V.ferme(c, l, fb)) pb.push('échoppe incendiée non fermée'); }
+      });
+      l.ville.evts = []; c.jour += 30; V.arrivee(c, l.id);
+      if (E.batiments(c, l).some(function (b) { return b.temp && b.temp < c.jour; })) pb.push('la roulotte n’est pas repartie');
+      var nv = V.nouvelle(c); if (nv && CASSE.test(nv)) pb.push(nv);
+      K.sauver(c);
+      return { ok: !pb.length && Object.keys(vus).length >= 7, detail: Object.keys(vus).join(', ') + '\n' + ex.join('\n') + (nv ? '\n' + nv : '') + (pb.length ? '\n' + pb.slice(0, 4).join('\n') : '') };
+    });
+    await test('Petits boulots, estime et apprentissage', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var V = COF.Village, E = COF.Echoppes, pb = [], h = COF.Store.get(p.id), n0 = c.scenes.length;
+      h.bourse = { po: 300, pa: 0, pc: 0 }; COF.Store.sauver(h);
+      var l = COF.Monde.ici(c), forge = E.batiments(c, l).filter(function (b) { return b.type === 'forge' || b.type === 'herboriste' || b.type === 'menuisier'; })[0];
+      if (!forge) { forge = E.creerTemp(c, l, 'forge', 999); forge.temp = null; }
+      var j0 = c.jour, gain = 0;
+      for (var i = 0; i < 4 && !V.peutApprendre(c, l, forge); i++) { var r = V.travailler(c, l, forge, 3); gain += r.gain || 0; E.sortir(c); }
+      if (c.jour <= j0) pb.push('le temps ne passe pas');
+      forge.estime = Math.max(forge.estime || 0, 3);
+      var ra = V.apprendre(c, l, forge); if (!ra.ok) pb.push('apprentissage : ' + ra.err);
+      var rang = ra.voie ? COF.Artisanat.etat(COF.Store.get(p.id)).recettes[ra.voie] : 0;
+      E.sortir(c); c = K.actif(); verifTextes(c, n0, pb); K.sauver(c);
+      return { ok: !pb.length && gain > 0 && rang >= 1, detail: 'gagné : ' + E.fmt(gain) + ' en ' + (c.jour - j0) + ' jours · appris : ' + ra.voie + ' rang ' + rang + (pb.length ? '\n' + pb.slice(0, 4).join('\n') : '') };
+    });
+    await test('Chez-soi : chambre, maison, coffre, atelier, nuit', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var V = COF.Village, E = COF.Echoppes, pb = [], h = COF.Store.get(p.id), n0 = c.scenes.length, l = COF.Monde.ici(c);
+      h.bourse = { po: 3000, pa: 0, pc: 0 }; h.pv = 1; COF.Store.sauver(h);
+      if (!V.seLoger(c, l, 'chambre').ok) pb.push('chambre');
+      if (!V.logisIci(c, l) || !V.valide(c, V.logisIci(c, l))) pb.push('chambre non valide');
+      if (!V.seLoger(c, l, 'maison').ok) pb.push('maison');
+      ['atelier', 'jardin', 'autel', 'coffreFort'].forEach(function (k) { if (!V.seLoger(c, l, 'am-' + k).ok) pb.push('aménagement ' + k); });
+      h = COF.Store.get(p.id); var nInv = h.inventaire.length;
+      if (!V.deposer(c, h.inventaire.findIndex(function (o) { return !o.equipe; })).ok) pb.push('dépôt');
+      if (COF.Store.get(p.id).inventaire.length !== nInv - 1 || V.logis(c).coffre.length !== 1) pb.push('coffre incohérent');
+      V.reprendre(c, 0);
+      var j0 = c.jour; if (!V.dormir(c, l).ok) pb.push('dormir'); c = K.actif();
+      if (c.jour !== j0 + 1 || COF.Store.get(p.id).pv !== COF.Calc.pvMax(COF.Store.get(p.id))) pb.push('la nuit ne repose pas');
+      var am = V.atelierMaison(c, l), rs = am ? E.recettes(c, l, am) : [];
+      if (!rs.length) pb.push('atelier de la maison vide'); else { if (rs[0].cout > 6) pb.push('l’atelier de la maison se paie encore : ' + rs[0].cout); E.entrer(c, l, am); E.fabriquer(c, l, am, rs[0].k); E.sortir(c); }
+      c = K.actif(); c.jour += 5; var notes = V.arrivee(c, l.id);
+      if (!notes.some(function (n) { return /jardin/.test(n); })) pb.push('le jardin ne donne rien');
+      c = K.actif(); verifTextes(c, n0, pb);
+      V.seLoger(c, l, 'vendre'); if (V.logis(c)) pb.push('maison non vendue');
+      K.sauver(c);
+      return { ok: !pb.length, detail: notes.join(' | ') + (pb.length ? '\n' + pb.slice(0, 5).join('\n') : '') };
+    });
+    await test('Donjons : pièges, énigmes, coffres, remonter avec le butin', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var D = COF.Donjons, C = COF.Conteur, pb = [], types = {}, n0 = c.scenes.length, remonte = false;
+      for (var essai = 0; essai < 5; essai++) {
+        K.nouvelleScene(c, 'Profondeurs', '', { type: 'donjon', sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+        C.ouvrir(c, s).forEach(function (e) { K.ajouterEntree(c, e); }); K.sauver(c); c = K.actif(); s = K.sceneCourante(c);
+        for (var i = 0; i < 25 && s.jeu && !s.jeu.fini; i++) {
+          s.jeu.evt = null; s.jeu.danger = 0; if (c.rencontre) { c.rencontre = null; s.jeu.menace = false; }
+          var t = D.trait(s); if (t) types[t.type] = 1;
+          if (!s.jeu.choix.length) C.reprendre(c, s);
+          var ch = C.choix(c, s); if (!ch.length) break;
+          if (t && t.type !== 'rien' && !t.fait && !ch.some(function (o) { return D.ACTIONS[o.id] && D.ACTIONS[o.id].si(c, s); })) pb.push('salle « ' + t.type + ' » sans action adaptée');
+          var k = essai === 4 ? ch.findIndex(function (o) { return o.id === 'remonter'; }) : -1;
+          C.agir(c, s, k >= 0 ? k : Math.floor(Math.random() * ch.length)); c = K.actif(); s = K.sceneCourante(c) || s;
+          if (k >= 0) remonte = true;
+        }
+        if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      }
+      verifTextes(c, n0, pb);
+      return { ok: !pb.length && Object.keys(types).length >= 4 && remonte, detail: 'salles : ' + Object.keys(types).join(', ') + ' · remonté : ' + remonte + (pb.length ? '\n' + pb.slice(0, 4).join('\n') : '') };
+    });
+    await test('Bandes : naissance, croissance, prix, repaire vaincu', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var B = COF.Bandes, pb = [], notes = [], l = COF.Monde.ici(c), n0 = c.scenes.length;
+      var b = B.creer(c); if (!b) return { ok: false, detail: 'aucune bande créée' };
+      if (CASSE.test(b.nom + b.chef)) pb.push(b.nom + ' / ' + b.chef);
+      for (var i = 0; i < 6; i++) { c.jour += 4; B.tick(c).forEach(function (n) { notes.push(n); if (CASSE.test(n) || /[{}]/.test(n)) pb.push(n); }); }
+      b = B.liste(c).filter(function (x) { return x.id === b.id; })[0];
+      if (b.force < 4) pb.push('la bande ne grandit pas : ' + b.force);
+      var lr = COF.Monde.lieu(c, b.lieuId); if (!lr) pb.push('repaire absent de la carte');
+      var mp = B.multPrix(c, lr); if (!(mp > 1)) pb.push('pas d’effet sur les prix');
+      COF.Monde.seRendre(c, b.lieuId); var pr = B.propositions(c)[0]; if (!pr) pb.push('pas de proposition d’assaut');
+      if (pr) {
+        K.nouvelleScene(c, pr.titre, pr.attendu, { type: 'donjon', filId: pr.filId, sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+        var en = COF.Directeur.preparerScene(c, s, pr); if (!c.rencontre || !/Repaire|repaire/.test(c.rencontre.test || '')) pb.push('pas de chef au repaire');
+        c.rencontre = null; s.jeu = { genre: 'donjon', fini: 'reussite', prog: 3, progMax: 3, danger: 0, dangerMax: 3, choix: [] };
+        C = COF.Conteur; C.conclure(c, s).forEach(function (n) { notes.push(n); }); K.clore(c, true, '');
+      }
+      c = K.actif(); COF.Monde.seRendre(c, l.id);
+      if (!B.liste(c).filter(function (x) { return x.id === b.id; })[0].vaincue) pb.push('repaire non nettoyé');
+      notes.forEach(function (n) { textes.push(n); if (CASSE.test(n)) pb.push(n); });
+      K.sauver(c);
+      return { ok: !pb.length, detail: b.nom + ', chef ' + b.chef + ' · force ' + b.force + ' · prix ×' + mp.toFixed(2) + '\n' + notes.slice(0, 3).concat(notes.slice(-3)).join('\n') + (pb.length ? '\n' + pb.slice(0, 4).join('\n') : '') };
+    });
+    await test('Routes : monture, relais, réfugiés, colporteur, bac', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var R = COF.Routes, C = COF.Conteur, pb = [], vus = {}, h = COF.Store.get(p.id), n0 = c.scenes.length;
+      h.bourse = { po: 100, pa: 0, pc: 0 }; c.ressources = { rations: 10, torches: 3 }; COF.Store.sauver(h); K.sauver(c);
+      var ici = COF.Monde.ici(c), dl = (c.lieux || []).filter(function (x) { return x.id !== ici.id; })[0];
+      function voyage(jours) {
+        K.nouvelleScene(c, 'Route', '', { type: 'voyage', sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+        s.voyage = { dest: dl.id, destNom: dl.nom, departNom: ici.nom, jours: jours, env: 'plaine' };
+        C.ouvrir(c, s).forEach(function (e) { K.ajouterEntree(c, e); }); K.sauver(c); c = K.actif(); s = K.sceneCourante(c);
+        var pm = s.jeu.progMax;
+        for (var i = 0; i < 12 && s.jeu && !s.jeu.fini; i++) {
+          s.jeu.evt = null; s.jeu.danger = 0; if (c.rencontre) { c.rencontre = null; s.jeu.menace = false; }
+          if (!s.jeu.choix.length) C.reprendre(c, s);
+          var ch = C.choix(c, s); if (!ch.length) break;
+          var k = ch.findIndex(function (o) { return R.ACTIONS[o.id] && !vus[o.id]; }); if (k >= 0) vus[ch[k].id] = 1;
+          C.agir(c, s, k >= 0 ? k : 0); c = K.actif(); s = K.sceneCourante(c) || s;
+          if (s.jeu && s.jeu.prog >= s.jeu.progMax - 1 && Object.keys(vus).length < 5) s.jeu.prog = 0;
+        }
+        K.clore(c, true, ''); c = K.actif(); COF.Monde.seRendre(c, ici.id); K.sauver(c);
+        return pm;
+      }
+      var pied = voyage(4);
+      for (var n = 0; n < 3; n++) voyage(4);
+      h = COF.Store.get(p.id); COF.Store.ajouterObjet(h, { nom: 'Cheval de selle', qte: 1 }); COF.Store.sauver(h);
+      var cheval = voyage(4);
+      if (!(cheval < pied)) pb.push('la monture ne raccourcit pas la route (' + pied + ' → ' + cheval + ')');
+      c = K.actif(); verifTextes(c, n0, pb);
+      return { ok: !pb.length && Object.keys(vus).length >= 4, detail: 'à pied ' + pied + ' étapes, à cheval ' + cheval + ' · vus : ' + Object.keys(vus).join(', ') + (pb.length ? '\n' + pb.slice(0, 4).join('\n') : '') };
+    });
+    await test('Transfert : code de l’aventure, aller et retour', function () {
+      c = K.actif(); var js = COF.Campagne.exporter(c), code = 'COF2-' + btoa(unescape(encodeURIComponent(js)));
+      var retour = decodeURIComponent(escape(atob(code.slice(5)))), nAv = JSON.parse(localStorage.getItem('cof2.carnets') || '[]').length;
+      var ri = COF.Campagne.importer(retour), nAp = JSON.parse(localStorage.getItem('cof2.carnets') || '[]').length;
+      K.setActif(c.id); COF.Store.setActif(p.id);   /* on reste sur l'aventure de test */
+      return { ok: retour === js && !ri.erreur && nAp > nAv, detail: Math.round(code.length / 1024) + ' Ko · ' + (ri.nb || 0) + ' aventure(s) réimportée(s)' + (ri.erreur ? ' · ' + ri.erreur : '') };
+    });
+
+    /* combats racontés, légende, PNJ vivants, rumeurs trompeuses, chronique */
+    await test('Combats racontés et leurs suites', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var B = COF.Combats, pb = [], ex = [], nbPnj = c.pnj.length;
+      var info = { adv: ['Loup 1', 'Loup 2', 'Chef bandit'], rounds: 4, infl: 30, subi: 14, pvMax: 20, tombes: ['Loup 1'], fuis: ['Chef bandit'], rendus: ['Loup 2'], herosKo: [],
+        meilleur: { par: 'Testeur', sur: 'Loup 1', arme: 'masse', dm: 9, crit: true } };
+      ['victoire', 'fuite', 'defaite'].forEach(function (iss) {
+        for (var i = 0; i < 6; i++) { var t = B.raconter(c, iss, Object.assign({}, info, { rounds: 1 + i * 2 })); textes.push(t); if (CASSE.test(t)) pb.push(t); if (!i) ex.push(t); }
+      });
+      var r = { lots: [{ id: 'x', nom: 'Chef bandit', nb: 1, role: 'chef' }] };
+      var n1 = B.suites(c, 'victoire', info, r), n2 = B.suites(c, 'defaite', info, r);
+      n1.concat(n2).forEach(function (n) { textes.push(n); if (CASSE.test(n)) pb.push(n); });
+      var fuyard = c.pnj.length > nbPnj && c.pnj.some(function (x) { return /Chef bandit/.test(x.nom) && x.attitude === 'hostile'; });
+      K.sauver(c);
+      return { ok: !pb.length && fuyard && n1.length >= 2, detail: ex[0] + '\n' + n1.concat(n2).join('\n') + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+    await test('Légende : talents, cicatrices, surnoms', function () {
+      c = K.actif(); var L = COF.Legende, notes = [], nbCic0 = L.etat(c).cicatrices.length;
+      for (var i = 0; i < 10; i++) { var n = L.action(c, 'escalader', true); if (n) notes.push(n); }
+      var b = L.bonus(c, 'escalader');
+      for (var k = 0; k < 3; k++) { L.victoire(c, ['Loup géant 1', 'Loup géant 2']); notes.push(L.cicatrice(c, ['combat', 'chute', 'piege'][k], 'un loup géant')); }
+      L.verifier(c).forEach(function (n) { notes.push(n); });
+      var sn = L.surnom(c), pb = notes.concat([L.titre(c)]).filter(function (t) { return CASSE.test(t); });
+      notes.forEach(function (t) { textes.push(t); });
+      K.sauver(c);
+      return { ok: b === 2 && !!sn && L.etat(c).cicatrices.length === Math.min(6, nbCic0 + 3) && !pb.length && !/de un |\bà le |« escalader »/.test(notes.join(' ')) && /loups géants/.test(JSON.stringify(L.etat(c).surnoms)),
+        detail: 'talent escalader +' + b + ' · titre : ' + L.titre(c) + '\n' + notes.join('\n') };
+    });
+    await test('PNJ qui vivent sans le héros', function () {
+      c = K.actif(); var V = COF.Vie, vus = {}, pb = [], ex = [];
+      var v = COF.Villes.decouvrir(c); COF.Monde.seRendre(c, v.id);
+      for (var tour = 0; tour < 12; tour++) {
+        for (var i = 0; i < 5; i++) { var x = K.ajouterListe(c, 'pnj', { nom: 'Villageois ' + tour + '-' + i, attitude: ['allié', 'neutre', 'hostile'][i % 3], genre: i % 2 ? 'féminin' : 'masculin', peuple: 'humain' }); x.lieuId = v.id; x.jour = c.jour; }
+        c.jour += 6;
+        V.arrivee(c, v.id, true).forEach(function (t) { textes.push(t); if (CASSE.test(t)) pb.push(t); if (ex.length < 4) ex.push(t); });
+      }
+      c.pnj.forEach(function (x) { (x.vie || []).forEach(function () {}); ['marie', 'enfant', 'titre', 'ruine', 'riche', 'rivalId', 'malade', 'mort'].forEach(function (k) { if (x[k]) vus[k] = true; }); });
+      var le = V.lettre(c); if (le) { textes.push(le); if (CASSE.test(le)) pb.push(le); }
+      var morts = c.pnj.filter(function (x) { return x.mort; }).length;
+      /* les morts ne parlent plus : pas d'écho, pas de dialogue */
+      var muet = c.pnj.filter(function (x) { return x.mort; }).every(function (x) { return !x.lieuId; });
+      K.sauver(c);
+      return { ok: !pb.length && Object.keys(vus).length >= 5 && muet, detail: Object.keys(vus).join(', ') + ' · ' + morts + ' décès\n' + ex.join('\n') + (le ? '\n' + le : '') + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+    await test('Rumeurs qui mentent', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var R = COF.Rumeurs, comptes = {}, pb = [], ex = [], doutFausse = 0, nbFausse = 0;
+      for (var i = 0; i < 200; i++) {
+        var f = K.ajouterListe(c, 'fils', { nom: 'Rumeur : essai ' + i, note: '' });
+        comptes[f.verite] = (comptes[f.verite] || 0) + 1;
+        if (f.verite === 'fausse') { nbFausse++; if (f.source === 'douteuse') doutFausse++; }
+        if (CASSE.test(f.fiabilite)) pb.push(f.fiabilite);
+      }
+      /* chaque vérité éclate proprement */
+      ['vraie', 'exageree', 'fausse', 'piege', 'mieux'].forEach(function (v) {
+        var f = c.fils.filter(function (x) { return x.verite === v; })[0]; if (!f) { pb.push('aucune rumeur ' + v); return; }
+        var t = COF.Saga.resoudreRumeur(c, f, true); textes.push(t); ex.push(v + ' → ' + t); if (CASSE.test(t)) pb.push(t);
+      });
+      /* recouper pendant une scène */
+      var fr = c.fils.filter(function (x) { return x.ouvert && x.verite && !x.verifie; })[0];
+      K.nouvelleScene(c, 'Rumeur', '', { filId: fr.id, sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+      COF.Conteur.ouvrir(c, s).forEach(function (e) { K.ajouterEntree(c, e); });
+      var possible = COF.Recit.possible(c, s, 'recouper'), ctx = COF.Conteur.contexte(c, s), m = R.verifier(c, s, ctx);
+      if (CASSE.test(ctx.verdict + m)) pb.push(ctx.verdict + m);
+      var plusPossible = !COF.Recit.possible(c, s, 'recouper');
+      K.clore(c, true, '');
+      var nv = R.nouvelle(c); if (nv && CASSE.test(nv)) pb.push(nv);
+      /* ménage : on retire les rumeurs d'essai */
+      c = K.actif(); c.fils = c.fils.filter(function (x) { return !/^Rumeur : essai/.test(x.nom); }); K.sauver(c);
+      var okDist = comptes.vraie > 60 && comptes.fausse > 10 && comptes.piege > 5;
+      return { ok: !pb.length && okDist && possible && plusPossible && doutFausse >= nbFausse * 0.3,
+        detail: Object.keys(comptes).map(function (k) { return k + ' ' + comptes[k]; }).join(' · ') + ' · fausses à source douteuse : ' + doutFausse + '/' + nbFausse + '\n' + ctx.verdict + ' → ' + m + '\n' + ex.join('\n') + (pb.length ? '\n' + pb.slice(0, 3).join('\n') : '') };
+    });
+    await test('Chronique : raconter son histoire', function () {
+      c = K.actif(); var b = COF.Chronique.livre(c), t = COF.Chronique.livreTexte(c), pb = [];
+      if (/undefined|NaN|\bnull\b|\[object/.test(t)) pb.push('texte cassé');
+      return { ok: !pb.length && b.chapitres.length >= 1 && t.length > 500, detail: b.chapitres.length + ' chapitre(s) · ' + t.split(/\s+/).length + ' mots · ' + b.gens.length + ' personnages\n' + b.chapitres.map(function (ch) { return ch.n + '. ' + ch.titre; }).slice(0, 6).join('\n') };
+    });
+
     /* 9. campagne : fin d'aventure et chapitre suivant, récit complet */
-    test('Campagne : fin d’aventure, niveau, chapitre suivant', function () {
+    await test('Campagne : fin d’aventure, niveau, chapitre suivant', function () {
       c = K.actif(); var niv = COF.Store.get(p.id).niveau;
       var fin = COF.Saga.terminerAventure(c), n2 = COF.Saga.suite(K.get(c.id), '');
       var ok = COF.Store.get(p.id).niveau === niv + 1 && n2.campagne && n2.campagne.numero === 2;

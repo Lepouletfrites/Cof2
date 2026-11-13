@@ -187,12 +187,27 @@ COF.UI.Carnet = (function () {
       '<div class="s">' + esc(txt) + '</div>' + (t.modif ? '<div class="e">🌀 ' + esc(t.modif) + '</div>' : '') +
       (t.histoire ? '<div class="e">🔀 ' + esc(t.histoire.texte) + '</div>' : '') + '</div>';
   }
+  /* ---------- Mode récit : les dés s'effacent derrière l'histoire ---------- */
+  function immersif() { try { return localStorage.getItem('cof2.recit.chiffres') !== '1'; } catch (er) { return true; } }
+  var VERDICTS = { crit: '✦ éclatant', ok: '✓ réussi', juste: '≈ de justesse', ko: '✗ raté', fumble: '✗ désastre' };
+  var CARACS = { FOR: 'Force', AGI: 'Agilité', CON: 'Constitution', PER: 'Perception', CHA: 'Charisme', INT: 'Intelligence', VOL: 'Volonté' };
+  var MECA = /^(FOR|AGI|CON|PER|CHA|INT|VOL) [+−-]?\d|contre \d|^(réussite|échec|de justesse|réussite critique|échec critique)( \(|$)|^voies :|^talent \+|^action libre|^sans jet$|^\(dé bonus|^danger au maximum$/;
+  /* En mode récit, on ne garde à la vue que les conséquences (or, PV, fils, talents…) ; le détail des dés se déplie. */
+  function htmlMeca(m, imm) {
+    if (!imm) return '<div class="cn-meca">🎲 ' + esc(m) + '</div>';
+    var vis = m.split(' · ').filter(function (x) { return x && !MECA.test(x.trim()); }).map(function (x) { return x.replace(/^dé bonus au prochain jet$/, 'un avantage pour la suite').replace(/^objectif \+1( de plus)?$/, 'l’affaire avance'); });
+    return (vis.length ? '<div class="cn-csq">' + esc(vis.join(' · ')) + '</div>' : '') +
+      '<details class="cn-meca-d"><summary>🎲</summary><div class="cn-meca">' + esc(m) + '</div></details>';
+  }
+  function motChance(pc) { return pc >= 80 ? 'excellentes' : pc >= 60 ? 'bonnes' : pc >= 40 ? 'incertaines' : pc >= 20 ? 'minces' : 'désespérées'; }
   function htmlEntree(e) {
     var corps;
     if (e.t === 'recit') {
-      return '<div class="cn-recit' + (e.rappel ? ' rappel' : '') + (e.fin ? ' fin' : '') + (e.evt ? ' evt' : '') + (e.ok === false ? ' ko' : '') + '">' +
-        (e.fin ? '<span class="cn-recit-fin">❧</span>' : '') + (e.evt ? '<div class="cn-recit-evt">⚡ ' + esc(e.titre || 'Imprévu') + '</div>' : '') + '<p>' + esc(e.txt) + '</p>' +
-        (e.m ? '<div class="cn-meca">🎲 ' + esc(e.m) + '</div>' : '') + '</div>';
+      var imm = immersif();
+      return '<div class="cn-recit' + (e.rappel ? ' rappel' : '') + (e.fin ? ' fin' : '') + (e.evt ? ' evt' : '') + (e.ok === false ? ' ko' : '') + (e.a ? ' acte' : '') + '">' +
+        (e.fin ? '<span class="cn-recit-fin">❧</span>' : '') + (e.evt ? '<div class="cn-recit-evt">⚡ ' + esc(e.titre || 'Imprévu') + '</div>' : '') +
+        (e.a ? '<div class="cn-acte">' + esc(e.a) + (e.v && VERDICTS[e.v] ? ' <span class="cn-v v-' + e.v + '">' + VERDICTS[e.v] + '</span>' : '') + '</div>' : '') +
+        '<p>' + esc(e.txt) + '</p>' + (e.m ? htmlMeca(e.m, imm) : '') + '</div>';
     }
     if (e.t === 'texte') corps = '<div class="cn-txt">' + esc(e.txt).replace(/\n/g, '<br>') + '</div>';
     else if (e.t === 'oracle') {
@@ -238,33 +253,42 @@ COF.UI.Carnet = (function () {
     var q = Math.max(0.05, Math.min(0.95, (21 - (diff - mod)) / 20));
     return Math.round((bonus ? 1 - (1 - q) * (1 - q) : q) * 100);
   }
-  function jauges(j) {
+  function jauges(j, imm) {
     if (j.genre === 'confrontation') return '<div class="cn-jauges"><span>⚔️ Vaincre les adversaires</span></div>';
     var r = function (ch, vide, n, max) { var t = ''; for (var i = 0; i < max; i++) t += i < n ? ch : vide; return t; };
+    var rp = j.prog / Math.max(1, j.progMax), rd = j.dangerMax - j.danger;
+    var humeur = (rp === 0 ? 'Tout reste à faire' : rp < 0.5 ? 'L’affaire s’engage' : rp < 1 ? 'Le but est proche' : 'C’est presque fini') + ' · ' +
+      (j.danger === 0 ? 'le calme règne' : rd >= 3 ? 'une ombre plane' : rd === 2 ? 'la menace grandit' : 'le danger est imminent');
     return '<div class="cn-jauges"><span title="Objectif">🎯 ' + r('◆', '◇', Math.min(j.prog, j.progMax), j.progMax) + '</span>' +
-      '<span class="dg" title="Danger">⚠️ ' + r('●', '○', Math.min(j.danger, j.dangerMax), j.dangerMax) + '</span>' +
-      (j.bonus ? '<span class="bn">🎲 dé bonus</span>' : '') + '</div>';
+      '<span class="dg' + (rd <= 1 ? ' fort' : '') + '" title="Danger">⚠️ ' + r('●', '○', Math.min(j.danger, j.dangerMax), j.dangerMax) + '</span>' +
+      (j.bonus ? '<span class="bn">🎲 ' + (imm ? 'un avantage' : 'dé bonus') + '</span>' : '') + '</div>' +
+      (imm ? '<div class="cn-humeur">' + esc(humeur) + '</div>' : '');
   }
   function htmlChoix(c, s) {
-    var j = s.jeu; if (!j) return '';
+    var j = s.jeu; if (!j) return s.echoppe ? htmlEchoppe(c, s) : '';
     var p = perso(c), nom = p ? p.nom : 'le héros';
     if (j.fini) return '<div class="cn-choix"><button class="btn btn-plein btn-bloc cn-gros" data-cn="suite">▶ La suite' +
       '<small>' + (j.fini === 'reussite' ? 'Scène réussie · tension −1' : 'La situation a échappé au héros · tension +1') + '</small></button></div>';
     if (c.rencontre) return '<div class="cn-choix"><div class="note">⚔️ Il faut d’abord régler la rencontre : combattre, ou tenter une approche avec les boutons ci-dessus.</div></div>';
-    var l = COF.Conteur.choix(c, s);
-    var h = '<div class="cn-choix' + (j.evt ? ' evt' : '') + '"><div class="cn-choix-q">' + (j.evt ? '⚡ ' + esc(j.evt.titre) + ' — que fait ' : 'Que fait ') + esc(nom) + ' ?</div>' + jauges(j);
+    var l = COF.Conteur.choix(c, s), imm = immersif();
+    var QUESTIONS = ['Que fait ' + nom + ' ?', 'Et maintenant, ' + nom + ' ?', 'À ' + nom + ' de jouer.', nom + ' hésite. Que faire ?', 'Que décide ' + nom + ' ?', 'Le moment est venu de choisir.'];
+    var q = imm ? QUESTIONS[(s.entrees.length + s.n) % QUESTIONS.length] : 'Que fait ' + nom + ' ?';
+    var h = '<div class="cn-choix' + (j.evt ? ' evt' : '') + '"><div class="cn-choix-q">' + (j.evt ? '⚡ ' + esc(j.evt.titre) + ' — que fait ' + esc(nom) + ' ?' : esc(q)) +
+      '<button class="cn-chiffres" data-cn="chiffres" aria-label="Afficher ou masquer les dés">' + (imm ? '🎲' : '📖') + '</button></div>' + jauges(j, imm);
     if (!l.length && j.genre === 'confrontation') h += '<button class="cn-opt ko" data-cn="provoquer"><b>⚔️ Aller au-devant du danger</b><small>les adversaires se montrent</small></button>';
     h += l.map(function (o) {
-      return '<button class="cn-opt" data-cn="choix" data-v="' + o.i + '"><b>' + esc(o.nom) + '</b><small>' +
-        (o.auto ? 'sans jet · ' + esc(o.aide || 'réussite assurée') : o.carac + ' ' + sgn(o.mod) + ' · difficulté ' + o.diff + ' · ≈ ' + chance(o.mod, o.diff, j.bonus || o.deBonus) + ' %' +
-          (o.voies && o.voies.length ? ' · <span class="cn-voiebonus">' + esc(o.voies.join(', ')) + '</span>' : '')) + '</small></button>';
+      var pc = o.auto ? 100 : chance(o.mod, o.diff, j.bonus || o.deBonus);
+      var detail = o.auto ? (imm ? '' : 'sans jet · ') + esc(o.aide || 'réussite assurée')
+        : (imm ? esc(CARACS[o.carac] || o.carac) + ' · chances ' + motChance(pc) : o.carac + ' ' + sgn(o.mod) + ' · difficulté ' + o.diff + ' · ≈ ' + pc + ' %') +
+          (o.voies && o.voies.length ? ' · <span class="cn-voiebonus">' + esc(o.voies.join(', ')) + '</span>' : '');
+      return '<button class="cn-opt' + (imm && !o.auto ? ' ch-' + (pc >= 60 ? 'haut' : pc >= 35 ? 'moyen' : 'bas') : '') + '" data-cn="choix" data-v="' + o.i + '"><b>' + esc(o.nom) + '</b><small>' + detail + '</small></button>';
     }).join('');
     /* magie et capacités hors combat du héros */
     COF.Conteur.capacitesHorsCombat(c, s).forEach(function (k) {
       h += '<button class="cn-opt cn-opt-cap" data-cn="cap" data-v="' + esc(k.cle) + '"' + (k.possible ? '' : ' disabled') + '><b>' + (k.soin ? '💚 ' : '✨ ') + esc(k.nom) + '</b><small>' +
         (k.cout ? k.cout + ' PM' + (k.possible ? '' : ' (pas assez de PM)') + ' · ' : '') + esc(k.voie) + ' · ' + (k.soin ? 'soigne le héros' : 'objectif +1 et dé bonus') + '</small></button>';
     });
-    if (j.genre === 'ville' && !j.evt) h += '<button class="cn-opt" data-cn="aller" data-v="marche"><b>🛒 Parcourir les échoppes</b><small>le marché du village : sa spécialité, ses objets rares</small></button>';
+    if (j.genre === 'ville' && !j.evt && COF.Echoppes) h += '<button class="cn-opt" data-cn="village"><b>🏘️ Entrer dans une échoppe</b><small>forge, herboriste, bazar, temple… acheter, vendre, commander, fabriquer</small></button>';
     return h + '<button class="cn-opt autre" data-cn="libre"><b>✍️ Autre chose…</b><small>écrivez ce que fait ' + esc(nom) + ' : l’app comprend et lance le dé</small></button></div>';
   }
   function htmlScene(c) {
@@ -286,6 +310,8 @@ COF.UI.Carnet = (function () {
       var chg = der ? der.entrees.filter(function (e) { return e.clot; }).slice(-6) : [];
       if (chg.length) h += '<div class="cn-changes">' + chg.map(function (e) { return '<div>' + esc(e.txt).replace(/\n/g, '<br>') + '</div>'; }).join('') + '</div>';
       h += htmlSaga(c);
+      /* rappel discret : sauvegarder ses parties */
+      if (COF.Sauvegarde && COF.Sauvegarde.aRappeler()) { var agS = COF.Sauvegarde.age(); h += '<button class="cn-rappel-sv" data-cn="transfert">💾 ' + (agS === null ? 'Aucune sauvegarde de vos aventures pour l’instant' : 'Dernière sauvegarde il y a ' + agS + ' jours') + ' · <u>sauvegarder</u></button>'; }
       /* Le directeur propose les scènes qui découlent de l'aventure */
       h += '<div class="carte"><h2>🎬 Et maintenant ?</h2><div class="carte-corps"><div class="cn-props">' +
         (function () {
@@ -302,6 +328,8 @@ COF.UI.Carnet = (function () {
         '<div class="champ"><label>Titre (facultatif)</label><input id="cn-sc-titre" placeholder="Scène ' + (c.scenes.length + 1) + '"></div>' +
         '<div class="champ"><label>Ce que vous attendez</label><textarea id="cn-sc-attendu" rows="3" placeholder="Le héros arrive au village à la tombée de la nuit et cherche l’auberge…"></textarea></div>' +
         '<button class="btn btn-plein btn-bloc" data-cn="jouer">🎬 Jouer la scène</button></details></div></div>';
+      /* les rues du village : échoppes, artisans, temple… */
+      h += htmlVillage(c);
       /* les gens à qui parler ici */
       if (COF.Dialogues) { var gens = COF.Dialogues.interlocuteurs(c); if (gens.length) h += '<div class="carte"><h2>💬 Parler à…</h2><div class="carte-corps"><div class="cn-loisirs">' + gens.map(function (x) {
         COF.Dialogues.profil(x);
@@ -318,7 +346,7 @@ COF.UI.Carnet = (function () {
     }
     var fS = s.filId ? c.fils.filter(function (f) { return f.id === s.filId; })[0] : null;
     h += '<div class="carte cn-scene"><h2>' + s.n + '. ' + esc(s.titre) + '<span class="h2-action" data-cn="clore">🏁 Clore</span></h2><div class="carte-corps">' +
-      (fS ? '<div class="cn-filtag">🧵 ' + esc(fS.nom) + (fS.quete && fS.quete.etape < 5 ? ' · ' + COF.Directeur.ETAPES[fS.quete.etape].ic + ' ' + esc(COF.Directeur.ETAPES[fS.quete.etape].nom) : '') + '</div>' : '') +
+      (fS ? '<div class="cn-filtag">🧵 ' + esc(fS.nom) + (fS.quete && fS.quete.etape < 5 ? ' · ' + COF.Directeur.ETAPES[fS.quete.etape].ic + ' ' + esc(COF.Directeur.ETAPES[fS.quete.etape].nom) : '') + (fS.fiabilite ? '<small style="display:block;opacity:.85">' + esc(fS.fiabilite) + '</small>' : '') + '</div>' : '') +
       (function () { var t = COF.Conteur.infoTemps(c); return '<div class="cn-temps">' + t.heure + (t.meteo ? ' · ' + esc(t.meteo) : '') + (t.saison ? ' · ' + esc(t.saison) : '') + ' · Jour ' + c.jour + '</div>'; })() +
       (s.attendu && !s.jeu ? '<div class="note" style="margin-bottom:8px">Attendu : ' + esc(s.attendu) + '</div>' : '') + bandeauTest(s.test) + '</div></div>';
     h += '<div id="cn-fil" class="cn-fil">' + (s.entrees.length ? s.entrees.map(htmlEntree).join('') :
@@ -550,11 +578,13 @@ COF.UI.Carnet = (function () {
     items.forEach(function (x) {
       var att = l === 'pnj' ? ATTITUDES.filter(function (a) { return a[0] === x.attitude; })[0] || ATTITUDES[1] : null;
       h += '<div class="cn-item' + (l === 'fils' && !x.ouvert ? ' ferme' : '') + '" data-cn="editer" data-l="' + l + '" data-id="' + x.id + '">' +
-        '<div class="info"><div class="t">' + (l === 'fils' && !x.ouvert ? '✓ ' : '') +
+        '<div class="info"><div class="t">' + (l === 'fils' && !x.ouvert ? '✓ ' : '') + (l === 'pnj' && x.mort ? '✝ ' : '') +
           (l === 'lieux' && COF.Monde ? ((COF.Monde.envDe(x.env) || {}).ic || '') + ' ' : '') + (l === 'lieux' && x.id === c.position ? '📍 ' : '') + esc(x.nom) +
           (att ? ' <span class="puce" style="border-color:' + att[1] + ';color:' + att[1] + '">' + esc(att[0]) + '</span>' : '') +
           (x.compagnon && x.compagnon.actif ? ' <span class="puce" style="border-color:var(--or);color:var(--or-clair)">🤝 ' + esc((X.ROLES[x.compagnon.role] || {}).nom || 'compagnon') + ' niv. ' + x.compagnon.niveau + '</span>' : '') + '</div>' +
           (x.quete ? htmlEtapes(x.quete) : '') +
+          (l === 'pnj' && x.vie && x.vie.length ? '<div class="s cn-vie">🕰️ Jour ' + x.vie[x.vie.length - 1].jour + ' : ' + esc(x.vie[x.vie.length - 1].txt) + '</div>' : '') +
+          (l === 'fils' && x.fiabilite ? '<div class="s cn-vie">' + esc(x.fiabilite) + '</div>' : '') +
           (x.note ? '<div class="s">' + esc(x.note.length > 140 ? x.note.slice(0, 140) + '…' : x.note) + '</div>' : '') + '</div>' +
         (l === 'fils' ? '<button class="btn btn-sm" data-cn="basculer" data-id="' + x.id + '" aria-label="' + (x.ouvert ? 'Résoudre' : 'Rouvrir') + '">' + (x.ouvert ? '✓' : '↺') + '</button>' : '') +
         '</div>';
@@ -716,13 +746,210 @@ COF.UI.Carnet = (function () {
       '<div class="cn-grille cn-g3" style="margin-top:8px"><button data-cn="copier-export" class="on">📋 Copier</button><button data-cn="dl-export">⬇️ .txt</button>' +
       (navigator.share ? '<button data-cn="partager-export">📤 Partager</button>' : '<button disabled>📤</button>') + '</div>', { type: 'export', fichier: fichier });
   }
+  /* ---------- Les échoppes du village ---------- */
+  function villeIci(c) { var l = COF.Monde && COF.Monde.ici(c); return l && (l.ville || l.env === 'urbain') && COF.Echoppes ? l : null; }
+  function ligneBat(c, l, b) {
+    var E = COF.Echoppes, inf = E.infos(c, l, b);
+    if (inf.ferme) return '<button class="cn-loisir cn-bat" disabled><span class="ic">🔥</span><span>' + esc(b.nom) + '<small>fermé après l’incendie · rouvre au jour ' + inf.ferme.fin + '</small></span></button>';
+    return '<button class="cn-loisir cn-bat' + (b.temp ? ' temp' : '') + '" data-cn="bat" data-id="' + b.id + '"><span class="ic">' + inf.ic + '</span><span>' + esc(b.nom) + (b.temp ? ' <i>(de passage)</i>' : '') +
+      '<small>' + esc(b.owner.prenom) + ', ' + esc(inf.metier) + ' · <span class="cn-q">' + inf.qualite.etoiles + '</span> · ' + esc(inf.trait) +
+      (inf.pretes.length ? ' · <b class="cn-pret">📦 commande prête</b>' : (inf.enCours.length ? ' · ⏳ commande jour ' + inf.enCours[0].pret : '')) + '</small></span></button>';
+  }
+  function htmlVillage(c) {
+    var l = villeIci(c); if (!l) return '';
+    var bs = COF.Echoppes.batiments(c, l), e = l.ville.eco, V = COF.Village, evs = V ? V.actifs(c, l) : [], g = V ? V.logisIci(c, l) : null;
+    var bd = COF.Bandes ? COF.Bandes.proche(c, l) : null;
+    return '<div class="carte"><h2>🏘️ Les rues ' + esc(COF.Conteur.formes(l.nom).de) + '</h2><div class="carte-corps">' +
+      (evs.length ? '<div class="cn-changes" style="margin-bottom:8px">' + evs.map(function (x) { return '<div>' + V.EVTS[x.type].ic + ' <b>' + esc(V.EVTS[x.type].lib) + '</b> · jusqu’au jour ' + x.fin + '</div>'; }).join('') + '</div>' : '') +
+      (e ? '<div class="note" style="margin-bottom:8px">' + esc(e.lib) + (bd && bd.force >= 2 ? ' ' + esc(maj(bd.nom)) + ' rôdent dans la région : les marchands augmentent leurs prix.' : '') + '</div>' : '') +
+      '<div class="cn-loisirs cn-bats">' + bs.map(function (b) { return ligneBat(c, l, b); }).join('') +
+      (V ? '<button class="cn-loisir cn-bat" data-cn="logis"><span class="ic">🏠</span><span>' + (g ? (g.type === 'maison' ? 'Votre maison' : 'Votre chambre à l’auberge') + '<small>' + (V.valide(c, g) ? 'dormir, coffre' + (g.type === 'maison' ? ', aménagements' : ' · payée jusqu’au jour ' + g.payeJusqu) : 'loyer à régler') + '</small>'
+        : 'Se loger ici<small>louer une chambre, ou acheter une maison</small>') + '</span></button>' : '') + '</div></div></div>';
+  }
+  function sheetVillage(c) {
+    var l = villeIci(c); if (!l) { flash('Pas d’échoppe ici'); return; }
+    ouvrir('🏘️ ' + l.nom, '<div class="note" style="margin-bottom:8px">' + esc((l.ville.eco || {}).lib || '') + '</div><div class="cn-loisirs cn-bats">' +
+      COF.Echoppes.batiments(c, l).map(function (b) { return ligneBat(c, l, b); }).join('') + '</div>', { type: 'village' });
+  }
+  /* ---------- Le chez-soi ---------- */
+  function sheetLogis(c) {
+    var V = COF.Village, E = COF.Echoppes, l = villeIci(c); if (!V || !l) return;
+    var g = V.logisIci(c, l), ailleurs = V.logis(c) && !g ? V.logis(c) : null, hP = perso(c), h = '';
+    h += '<div class="mc-bourse"><span>💰 ' + esc(hP ? hP.nom : '') + '</span><b>' + esc(E.fmt(E.bourse(hP || {}))) + '</b></div>';
+    if (ailleurs) h += '<div class="note" style="margin-bottom:8px">Vous avez déjà ' + (ailleurs.type === 'maison' ? 'une maison' : 'une chambre') + ' à ' + esc(ailleurs.lieuNom) + '. Vous installer ici y mettra fin (vos affaires vous suivent).</div>';
+    if (g && V.valide(c, g)) {
+      h += '<div class="cn-grille" style="margin-bottom:8px"><button data-cn="logis-dormir" class="on">🛏️ Dormir chez soi<small style="display:block;font-size:11px">PV, PM, DR +1 · jusqu’au matin</small></button>' +
+        (g.amelios && g.amelios.atelier ? '<button data-cn="logis-atelier">⚒️ L’atelier<small style="display:block;font-size:11px">fabriquer sans location</small></button>' : '<button disabled>⚒️ Pas d’atelier</button>') + '</div>';
+      if (g.amelios && Object.keys(g.amelios).length) h += '<div class="note" style="margin-bottom:8px">' + Object.keys(g.amelios).map(function (k) { return V.AMELIOS[k].ic + ' ' + esc(V.AMELIOS[k].nom); }).join(' · ') + '</div>';
+      h += '<label class="cn-lbl2">🧰 Le coffre (' + (g.coffre || []).length + ')</label>';
+      (g.coffre || []).forEach(function (o, i) { h += '<div class="cn-item"><div class="info"><div class="t">' + esc(o.nom) + (o.qte > 1 ? ' <span class="puce">×' + o.qte + '</span>' : '') + '</div></div><button class="btn btn-sm" data-cn="logis-reprendre" data-v="' + i + '">Reprendre</button></div>'; });
+      if (hP && (hP.inventaire || []).length) h += '<details class="cn-details"><summary>Déposer des affaires au coffre</summary>' + hP.inventaire.map(function (o, i) {
+        return o.equipe ? '' : '<div class="cn-item"><div class="info"><div class="t">' + esc(o.nom) + (o.qte > 1 ? ' <span class="puce">×' + o.qte + '</span>' : '') + '</div></div><button class="btn btn-sm" data-cn="logis-deposer" data-v="' + i + '">Déposer</button></div>';
+      }).join('') + '</details>';
+    }
+    var of = V.offresLogis(c, l);
+    if (of.length) h += '<label class="cn-lbl2" style="margin-top:10px">' + (g ? 'Votre logis' : 'Se loger ' + esc(COF.Conteur.formes(l.nom).a)) + '</label>';
+    of.forEach(function (x) {
+      h += '<div class="cn-item"><div class="info"><div class="t">' + esc(x.nom) + ' <span class="puce">' + (x.prix < 0 ? '+' + esc(E.fmt(-x.prix)) : esc(E.fmt(x.prix))) + '</span></div><div class="s">' + esc(x.aide) + '</div></div>' +
+        '<button class="btn btn-sm btn-or" data-cn="logis-offre" data-k="' + x.k + '">' + (x.k === 'vendre' ? 'Vendre' : x.k === 'chambre' ? 'Louer' : x.k === 'maison' ? 'Acheter' : 'Aménager') + '</button></div>';
+    });
+    ouvrir('🏠 ' + (g ? (g.type === 'maison' ? 'Votre maison' : 'Votre chambre') + ' · ' + l.nom : 'Se loger à ' + l.nom), h, { type: 'logis' });
+  }
+  /* ---------- Sauvegarder et transférer l'aventure ---------- */
+  function codeDe(json) { return 'COF2-' + btoa(unescape(encodeURIComponent(json))); }
+  function jsonDe(code) { code = String(code || '').trim().replace(/\s+/g, ''); if (!/^COF2-/.test(code)) throw new Error('code'); return decodeURIComponent(escape(atob(code.slice(5)))); }
+  function sheetTransfert(c) {
+    var S = COF.Sauvegarde, age = S ? S.age() : null;
+    ouvrir('💾 Sauvegarder et transférer', '<div class="note" style="margin-bottom:8px">Vos aventures vivent dans ce navigateur, qui peut être vidé. Gardez-en une copie, ou passez-la sur un autre appareil.' +
+      (S ? ' Dernière sauvegarde complète : <b>' + (age === null ? 'jamais' : age === 0 ? 'aujourd’hui' : 'il y a ' + age + ' jour' + (age > 1 ? 's' : '')) + '</b>.' : '') + '</div>' +
+      '<button class="btn btn-plein btn-bloc cn-gros" data-cn="fichier-campagne">💾 Télécharger le fichier de cette campagne<small>le héros et tous les chapitres, en un fichier .json</small></button>' +
+      '<button class="btn btn-bloc cn-gros" style="margin-top:8px" data-cn="transfert-copier">📋 Copier un code de transfert<small>à coller dans un message, puis sur l’autre appareil</small></button>' +
+      '<label class="cn-lbl2" style="margin-top:12px">Reprendre une aventure</label>' +
+      '<textarea id="cn-code" class="cn-export-txt" style="min-height:70px" placeholder="Collez ici un code COF2-…"></textarea>' +
+      '<div class="cn-grille" style="margin-top:6px"><button data-cn="transfert-coller" class="on">📥 Importer le code</button><button data-cn="import-campagne">📂 Importer un fichier</button></div>' +
+      '<div class="note" style="margin-top:6px">L’import ajoute une copie : rien n’est écrasé.</div>' +
+      (S ? '<button class="btn btn-bloc" style="margin-top:10px" data-rg="sauver">🗄️ Sauvegarde complète de l’app (tous les héros et aventures)</button>' : ''), { type: 'transfert' });
+  }
+  /* La visite en cours : ce que le héros peut faire chez l'artisan. */
+  function htmlEchoppe(c, s) {
+    var E = COF.Echoppes, l = COF.Monde.lieu(c, s.echoppe.lieuId), b = l && E.batiment(c, l, s.echoppe.batId); if (!b) return '';
+    var inf = E.infos(c, l, b), nom = (perso(c) || {}).nom || 'le héros', st = inf.peutAcheter ? E.stock(c, l, b) : [];
+    var nbSt = st.reduce(function (n, a) { return n + (a.qte > 0 ? 1 : 0); }, 0);
+    var o = function (act, ic, t, sm, extra) { return '<button class="cn-opt" data-cn="' + act + '" data-id="' + b.id + '"' + (extra || '') + '><b>' + ic + ' ' + esc(t) + '</b>' + (sm ? '<small>' + esc(sm) + '</small>' : '') + '</button>'; };
+    var h = '<div class="cn-choix"><div class="cn-choix-q">Que fait ' + esc(nom) + ' ' + esc(E.formes(b.nom).a) + ' ?</div>' +
+      '<div class="cn-humeur">💰 ' + esc(E.fmt(E.bourse(perso(c) || {}))) + ' en poche' + (E.marchande(c, b) ? ' · ' + (E.marchande(c, b).mult < 1 ? 'prix négociés aujourd’hui' : 'prix gonflés aujourd’hui') : '') + '</div>';
+    if (b.maison) {
+      return h + o('bat-vue', '⚒️', 'Travailler à l’établi', 'fabriquer chez soi, sans location', ' data-v="fabriquer"') + o('logis', '🏠', 'Retour à la maison', 'dormir, coffre, aménagements') + o('bat-sortir', '🚪', 'Sortir', 'retour dans la rue') + '</div>';
+    }
+    inf.pretes.forEach(function (y) { h += o('bat-retirer', '📦', 'Retirer la commande : ' + y.nom, 'solde à régler : ' + E.fmt(y.solde), ' data-k="' + y.id + '"'); });
+    if (inf.peutAcheter) h += o('bat-vue', '🛒', 'Regarder la marchandise', nbSt ? nbSt + ' article' + (nbSt > 1 ? 's' : '') + ' en rayon · renouvelé tous les 5 jours' : 'les rayons sont presque vides', ' data-v="acheter"');
+    if (inf.peutVendre) h += o('bat-vue', '💰', 'Proposer quelque chose à vendre', b.owner.prenom + ' rachète selon son métier · caisse ' + E.fmt(b.caisse || 0), ' data-v="vendre"');
+    if ((inf.peutAcheter || inf.peutCommander) && !E.marchande(c, b)) h += o('bat-marchander', '🗣️', 'Marchander', 'Charisme · une fois par jour');
+    if (inf.peutCommander) h += inf.enCours.length ? '<div class="note">⏳ ' + esc(b.owner.prenom) + ' travaille à votre commande (' + esc(inf.enCours[0].nom) + ') : prête au jour ' + inf.enCours[0].pret + '.</div>'
+      : o('bat-vue', '📜', 'Passer commande', 'une pièce sur mesure : acompte, délai, retrait plus tard', ' data-v="commander"');
+    if (inf.atelier) h += o('bat-vue', '⚒️', 'Louer l’atelier et travailler soi-même', 'fabriquer avec ses compétences d’artisan', ' data-v="fabriquer"');
+    E.services(c, l, b).forEach(function (sv) { h += o('bat-service', '🙏', sv.nom, sv.aide, ' data-k="' + sv.k + '"'); });
+    if (inf.travail) {
+      h += o('bat-travail', '🔨', 'Travailler une journée chez ' + b.owner.prenom, inf.travail.nom + ' · ' + E.fmt(inf.travail.paieJour) + ' par jour bien fait · estime : ' + (b.estime || 0), ' data-v="1"');
+      h += o('bat-travail', '🔨', 'S’embaucher pour trois jours', 'la paie, l’estime… et peut-être un apprentissage', ' data-v="3"');
+    }
+    if (inf.apprendre) h += o('bat-apprendre', '🎓', 'Devenir l’apprenti' + (perso(c) && perso(c).genre === 'féminin' ? 'e' : '') + ' de ' + b.owner.prenom, '3 jours · ' + E.fmt(50 * ((b.apprentissages || 0) + 1)) + ' · un rang de recette d’artisan');
+    h += o('bat-parler', '💬', 'Bavarder avec ' + b.owner.prenom, 'une conversation : rumeurs, services, amitié…');
+    h += o('bat-sortir', '🚪', 'Sortir', 'retour dans la rue');
+    return h + '</div>';
+  }
+  function sheetBatiment(c, id, vue) {
+    var E = COF.Echoppes, l = villeIci(c), b = l && E.batiment(c, l, id); if (!b) return;
+    var inf = E.infos(c, l, b), hP = perso(c), imm = immersif(), h = '';
+    h += '<div class="cn-lieu-tete">' + inf.ic + ' ' + esc(inf.lib) + ' · ' + esc(b.owner.nom) + ', ' + esc(inf.metier) + ' · ' + inf.qualite.etoiles + ' ' + esc(inf.qualite.lib) + ' · ' + esc(inf.trait) + '</div>' +
+      '<div class="mc-bourse"><span>💰 ' + esc(hP ? hP.nom : '') + '</span><b>' + esc(E.fmt(E.bourse(hP || {}))) + '</b></div>';
+    var row = function (t, sous, btn) { return '<div class="cn-item"><div class="info"><div class="t">' + t + '</div>' + (sous ? '<div class="s">' + sous + '</div>' : '') + '</div>' + btn + '</div>'; };
+    if (vue === 'acheter') {
+      var st = E.stock(c, l, b);
+      if (!st.some(function (a) { return a.qte > 0; })) h += '<div class="vide">Les rayons sont vides. Revenez dans quelques jours.</div>';
+      st.forEach(function (a, i) {
+        if (a.qte < 1) return;
+        var pr = E.prix(c, l, b, a);
+        h += row((a.magique ? '✨ ' : '') + esc(a.nom) + ' <span class="puce">' + esc(E.fmt(pr)) + '</span>' + (a.qte > 1 ? ' <span class="puce">×' + a.qte + '</span>' : ''),
+          esc(a.note ? (a.note.length > 110 ? a.note.slice(0, 110) + '…' : a.note) : ''), '<button class="btn btn-sm btn-or" data-cn="bat-acheter" data-id="' + b.id + '" data-v="' + i + '">Acheter</button>');
+      });
+    } else if (vue === 'vendre') {
+      var of = E.offresVente(c, l, b);
+      h += '<div class="note" style="margin-bottom:6px">' + esc(b.owner.prenom) + ' dispose de ' + esc(E.fmt(b.caisse || 0)) + ' en caisse.</div>';
+      if (!of.length) h += '<div class="vide">Rien à vendre dans votre sac.</div>';
+      of.forEach(function (x) {
+        h += row(esc(x.o.nom) + (x.o.qte > 1 ? ' <span class="puce">×' + x.o.qte + '</span>' : '') + (x.o.equipe ? ' <span class="puce">équipé</span>' : ''),
+          x.pr && !x.refus ? 'Offre : ' + esc(E.fmt(x.pr)) + (x.o.qte > 1 ? ' l’unité' : '') : esc(x.refus || ''),
+          x.pr && !x.refus ? '<button class="btn btn-sm btn-or" data-cn="bat-vendre" data-id="' + b.id + '" data-v="' + x.i + '">Vendre</button>' : '');
+      });
+    } else if (vue === 'commander') {
+      var cs = E.commandesPossibles(c, l, b);
+      h += '<div class="note" style="margin-bottom:6px">Acompte de moitié à la commande, solde au retrait. Revenez au village une fois le délai passé.</div>';
+      if (!cs.length) h += '<div class="vide">' + esc(b.owner.prenom) + ' n’a rien à vous proposer sur mesure.</div>';
+      cs.forEach(function (x) {
+        h += row(esc(x.nom) + ' <span class="puce">' + esc(E.fmt(x.total)) + '</span>', 'Acompte ' + esc(E.fmt(x.acompte)) + ' · ' + x.jours + ' jour' + (x.jours > 1 ? 's' : '') + (x.niveau > 1 ? ' · objet de niveau ' + x.niveau : '') + (x.effet ? ' · ' + esc(x.effet.length > 90 ? x.effet.slice(0, 90) + '…' : x.effet) : ''),
+          '<button class="btn btn-sm btn-or" data-cn="bat-commander" data-id="' + b.id + '" data-k="' + esc(x.k) + '">Commander</button>');
+      });
+    } else if (vue === 'fabriquer') {
+      var rs = E.recettes(c, l, b);
+      h += '<div class="note" style="margin-bottom:6px">Le prix comprend les matières et la location de l’atelier. Ce que vous fabriquez se garde ou se revend.' + (E.SIMPLES ? ' Les simples cueillis en chemin allègent les préparations.' : '') + '</div>';
+      if (!rs.length) h += '<div class="vide">Aucun travail possible ici.</div>';
+      rs.forEach(function (r) {
+        var ch = imm ? 'chances ' + (r.chance >= 80 ? 'excellentes' : r.chance >= 60 ? 'bonnes' : r.chance >= 40 ? 'incertaines' : r.chance >= 20 ? 'minces' : 'désespérées') : '≈ ' + r.chance + ' %';
+        h += row((r.connue ? '📘 ' : '') + esc(r.nom) + ' <span class="puce">' + esc(E.fmt(r.cout)) + '</span>',
+          esc(r.compNom) + ' · ' + ch + ' · ' + (r.jours ? r.jours + ' jour' + (r.jours > 1 ? 's' : '') : (r.temps * 6) + ' h') + (r.simples ? ' · 🌿 ' + r.simples + ' simple' + (r.simples > 1 ? 's' : '') : '') + (r.valeur ? ' · vaut ~' + esc(E.fmt(r.valeur)) : ''),
+          '<button class="btn btn-sm btn-or" data-cn="bat-fabriquer" data-id="' + b.id + '" data-k="' + esc(r.k) + '">Fabriquer</button>');
+      });
+    }
+    if (!vue) h += htmlEchoppe(c, { echoppe: { lieuId: l.id, batId: b.id } });   /* depuis une scène de ville : les actions dans la fiche */
+    else h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="' + (K.sceneCourante(c) && K.sceneCourante(c).jeu ? 'bat-vue' : 'fermer') + '" data-id="' + b.id + '">↩ Retour à la boutique</button>';
+    ouvrir(inf.ic + ' ' + b.nom, h, { type: 'bat', id: b.id, vue: vue });
+  }
+  /* Entre (au besoin) dans l'échoppe, puis affiche la boutique dans le récit. */
+  function entrerBat(c, id) {
+    var l = villeIci(c), b = l && COF.Echoppes.batiment(c, l, id); if (!b) return null;
+    var s = K.sceneCourante(c);
+    if (!s || !s.echoppe || s.echoppe.batId !== id) {
+      if (s && s.jeu && !s.jeu.fini) { s.echoppe = { lieuId: l.id, batId: id }; K.sauver(c); fermer(); sheetBatiment(c, id, null); return b; }
+      COF.Echoppes.entrer(c, l, b);
+    }
+    return b;
+  }
+  function apresBat(c, r, id, vue) {
+    if (r && r.err) { flash(r.err); return; }
+    c = K.actif(); var s = K.sceneCourante(c);
+    if (s && s.jeu) { rendre(); sheetBatiment(c, id, vue || null); return; }
+    if (vue && sheet && sheet.type === 'bat') sheetBatiment(c, id, vue); else fermer();
+    apresEntree();
+  }
+  /* ---------- Le livre : la chronique de l'aventure ---------- */
+  function sheetLivre(cx) {
+    var b = COF.Chronique.livre(cx), h = '<div class="cn-livre">';
+    h += '<div class="cn-livre-tete"><div class="t">' + esc(b.titre) + '</div><div class="s">Chronique de ' + esc(b.heros) + (b.surnom ? ', <i>' + esc(b.surnom) + '</i>' : '') +
+      (b.niveau ? ' · niveau ' + b.niveau : '') + ' · jour ' + b.jour + '</div>' + (b.menace ? '<div class="s">🌑 ' + esc(b.menace) + '</div>' : '') + '</div>';
+    if (b.avant) h += '<p class="cn-livre-avant">' + esc(b.avant) + '</p>';
+    if (!b.chapitres.length) h += '<div class="vide">L’histoire n’a pas encore commencé : jouez quelques scènes, et la chronique s’écrira.</div>';
+    b.chapitres.forEach(function (ch) {
+      h += '<h3 class="cn-livre-ch"><span>Chapitre ' + ch.n + '</span>' + esc(ch.titre) + '<small>' + (ch.debut === ch.fin ? 'jour ' + ch.debut : 'jours ' + ch.debut + ' à ' + ch.fin) + '</small></h3>';
+      ch.scenes.forEach(function (s) {
+        h += '<p>' + s.paras.map(function (t) { return /^[\u{1F300}-\u{1FAFF}☀-➿]/u.test(t) ? '<span class="cn-livre-fait">' + esc(t) + '</span>' : esc(t); }).join(' ') + '</p>';
+      });
+    });
+    if (b.epilogue) h += '<h3 class="cn-livre-ch"><span>❧</span>Épilogue</h3><p>' + esc(b.epilogue) + '</p>';
+    if (b.gens.length) h += '<h3 class="cn-livre-ch"><span>👥</span>Ceux qui ont croisé sa route</h3><div class="cn-livre-gens">' + b.gens.map(function (g) {
+      return '<div><b>' + esc(g.nom) + '</b> <small>' + esc(g.role) + (g.titre ? ', ' + esc(g.titre) : '') + '</small>' + g.vie.map(function (v) { return '<div class="v">' + esc(v) + '</div>'; }).join('') + '</div>';
+    }).join('') + '</div>';
+    if (b.surnoms.length || b.talents.length || b.cicatrices.length || b.trophees.length) {
+      h += '<h3 class="cn-livre-ch"><span>⭐</span>Sa légende</h3><div class="cn-livre-gens">' +
+        (b.surnoms.length ? '<div>🏷️ On l’appelle ' + b.surnoms.map(function (s) { return '<i>' + esc(s) + '</i>'; }).join(', ') + '.</div>' : '') +
+        (b.talents.length ? '<div>🌱 ' + esc(b.talents.join(', ')) + '</div>' : '') +
+        (b.cicatrices.length ? '<div>🩹 ' + esc(b.cicatrices.join(' ; ')) + '</div>' : '') +
+        (b.trophees.length ? '<div>🏆 ' + esc(b.trophees.join(' ; ')) + '</div>' : '') + '</div>';
+    }
+    if (b.enCours.length && !b.epilogue) h += '<h3 class="cn-livre-ch"><span>…</span>À suivre</h3><div class="cn-livre-gens">' + b.enCours.map(function (n) { return '<div>🧵 ' + esc(n) + '</div>'; }).join('') + '</div>';
+    h += '</div><button class="btn btn-bloc" style="margin-top:12px" data-cn="livre-texte" data-id="' + cx.id + '">📋 Copier ou partager le texte</button>';
+    ouvrir('📖 ' + cx.titre, h, { type: 'livre' });
+  }
+  /* La légende du héros : surnoms, talents, cicatrices, trophées. */
+  function htmlLegende(c) {
+    if (!COF.Legende) return '';
+    var l = COF.Legende.etat(c), tal = Object.keys(l.talents);
+    var h = '<div class="carte"><h2>⭐ Légende de ' + esc((perso(c) || {}).nom || 'du héros') + '</h2><div class="carte-corps">';
+    if (!l.surnoms.length && !tal.length && !l.cicatrices.length && !l.trophees.length) h += '<div class="vide">Rien encore. Les habitudes deviennent des talents, les coups durs laissent des cicatrices, et les exploits valent des surnoms.</div>';
+    if (l.surnoms.length) h += '<div class="cn-l"><span>🏷️</span><div>' + l.surnoms.map(function (s) { return '<i>' + esc(s.txt) + '</i>'; }).join(' · ') + '</div></div>';
+    tal.forEach(function (k) { var t = l.talents[k]; h += '<div class="cn-l"><span>' + (t.niveau > 1 ? '🌳' : '🌱') + '</span><div>' + esc(t.nom) + ' <small>+' + t.niveau + ' · depuis le jour ' + t.jour + '</small></div></div>'; });
+    l.cicatrices.forEach(function (s) { h += '<div class="cn-l"><span>🩹</span><div>' + esc(s.txt) + ' <small>jour ' + s.jour + '</small></div></div>'; });
+    l.trophees.slice(-6).forEach(function (s) { h += '<div class="cn-l"><span>🏆</span><div>' + esc(s.txt) + ' <small>jour ' + s.jour + '</small></div></div>'; });
+    return h + '<div class="note" style="margin-top:8px">Une action réussie 4 fois devient un talent (+1 à ce test), 10 fois une maîtrise (+2).</div></div></div>';
+  }
   /* Aventure terminée (lecture seule) : épilogue et exports. */
   function htmlArchive(cx, compact) {
     var t = cx.termine || {};
     return (compact ? '' : '<div class="cn-recit fin"><span class="cn-recit-fin">❧</span><p>' + esc(t.epilogue || '') + '</p></div>') +
       (t.niveau && !compact ? '<div class="cn-changes"><div>⬆️ ' + esc((perso(cx) || {}).nom || 'Le héros') + ' atteint le <b>niveau ' + t.niveau + '</b>.' +
         (perso(cx) && COF.Calc.pointsCapacite(perso(cx)).reste > 0 ? ' <a href="#" data-cn="rangs-niveau">Choisir ses nouveaux rangs</a>' : '') + '</div></div>' : '') +
-      '<button class="btn btn-plein btn-bloc cn-gros" data-cn="export-aventure" data-id="' + cx.id + '">📜 Exporter le récit complet<small>toutes les scènes à la suite, en un seul texte</small></button>' +
+      '<button class="btn btn-plein btn-bloc cn-gros" data-cn="livre" data-id="' + cx.id + '">📖 Raconter son histoire<small>la chronique, chapitre par chapitre</small></button>' +
+      '<button class="btn btn-bloc cn-gros" style="margin-top:8px" data-cn="export-aventure" data-id="' + cx.id + '">📜 Exporter le récit complet<small>toutes les scènes à la suite, en un seul texte</small></button>' +
       '<label class="cn-lbl2" style="margin-top:10px">Une scène seule</label><div class="cn-comps">' + cx.scenes.map(function (s) {
         return '<button data-cn="export-scene" data-c="' + cx.id + '" data-id="' + s.id + '"><b>' + s.n + '.</b> ' + esc(s.titre) + '<small>jour ' + (s.jour || 1) + '</small></button>';
       }).join('') + '</div>';
@@ -775,7 +1002,7 @@ COF.UI.Carnet = (function () {
     return '<div class="carte"><h2>🏛️ Factions</h2><div class="carte-corps">' + COF.Factions.liste(c).map(function (f) {
       var j = ''; for (var i = -3; i <= 3; i++) j += '<span class="' + (i === 0 ? 'z ' : '') + ((f.rep > 0 && i > 0 && i <= f.rep) || (f.rep < 0 && i < 0 && i >= f.rep) ? (f.rep > 0 ? 'on' : 'neg') : '') + '"></span>';
       return '<div class="cn-fac"><div class="t">' + f.ic + ' ' + esc(f.nom) + ' <small>' + COF.Factions.lib(f.rep) + '</small></div><div class="cn-fac-j">' + j + '</div></div>';
-    }).join('') + '<div class="note" style="margin-top:8px">Les petites affaires, les imprévus et les conversations font bouger ces réputations. À +2, une faction accorde une faveur ; à −2, elle agit contre le héros. Aider l’une fâche parfois sa rivale.</div></div></div>' + htmlEchos(c);
+    }).join('') + '<div class="note" style="margin-top:8px">Les petites affaires, les imprévus et les conversations font bouger ces réputations. À +2, une faction accorde une faveur ; à −2, elle agit contre le héros. Aider l’une fâche parfois sa rivale.</div></div></div>' + htmlLegende(c) + htmlEchos(c);
   }
   /* Ce que le monde n'a pas oublié (conséquences à venir et passées). */
   function htmlEchos(c) {
@@ -789,7 +1016,8 @@ COF.UI.Carnet = (function () {
   }
   /* ---------- Onglet Journal ---------- */
   function htmlJournal(c) {
-    var h = '<div class="cn-export"><button class="btn btn-or" data-cn="export-aventure">📜 Récit complet (texte)</button>' +
+    var h = '<button class="btn btn-plein btn-bloc cn-gros" style="margin-bottom:8px" data-cn="livre">📖 Raconter mon histoire<small>la chronique de l’aventure, chapitre par chapitre</small></button>' +
+      '<div class="cn-export"><button class="btn btn-or" data-cn="export-aventure">📜 Récit complet (texte)</button>' +
       '<button class="btn" data-cn="partager">📤 Détaillé</button><button class="btn" data-cn="telecharger">⬇️ .md</button></div>';
     if (!c.scenes.length) return h + '<div class="vide">Le journal se remplit au fil des scènes.</div>';
     c.scenes.slice().reverse().forEach(function (s, i) {
@@ -932,7 +1160,7 @@ COF.UI.Carnet = (function () {
       }).join('');
     }
     h += '<div class="champ" style="margin-top:12px"><label>Nouvelle aventure</label><div class="cn-ajout"><input id="cn-m-new" placeholder="Titre…"><button class="btn btn-plein" data-cn="creer-menu">＋</button></div></div>' +
-      '<div class="cn-grille" style="margin-top:6px"><button data-cn="campagne">📚 Campagne</button><button data-cn="import-campagne">📥 Importer</button></div>' +
+      '<div class="cn-grille" style="margin-top:6px"><button data-cn="campagne">📚 Campagne</button><button data-cn="transfert">💾 Sauver / transférer</button></div>' +
       (c.termine ? '' : '<button class="btn btn-bloc" style="margin-top:6px" data-cn="fin-aventure">🏁 Terminer cette aventure</button>') +
       '<button class="btn btn-bloc" style="margin-top:6px" data-cn="rencontres-auto">🎲 Rencontres aléatoires en début de scène : <b>' + (c.rencontresAuto === false ? 'désactivées' : 'activées') + '</b></button>' +
       '<div class="cn-grille" style="margin-top:6px"><button data-rg="sauver">💾 Tout sauvegarder</button><button data-rg="ouvrir">⚙️ Réglages</button></div>' +
@@ -1155,6 +1383,9 @@ COF.UI.Carnet = (function () {
       add(x.lieuId, x.attitude === 'hostile' ? '⚔️' : '👤', (x.attitude === 'hostile' ? '⚔️ ' : '👤 ') + x.nom + (x.attitude ? ' (' + x.attitude + ')' : ''));
     });
     if (COF.Echos) COF.Echos.enAttente(c).forEach(function (e) { if (e.lieuId) add(e.lieuId, '', COF.Echos.libelle(c, e)); });
+    if (COF.Bandes) COF.Bandes.actives(c).forEach(function (b) { add(b.lieuId, '🐺', '🐺 Repaire ' + COF.Bandes.de(b.nom) + ' (' + b.chef + ', force ' + b.force + '/5)'); });
+    if (COF.Village && COF.Village.logis(c)) add(COF.Village.logis(c).lieuId, '🏠', '🏠 Votre ' + (COF.Village.logis(c).type === 'maison' ? 'maison' : 'chambre'));
+    if (COF.Echoppes) COF.Echoppes.enCours(c).forEach(function (y) { add(y.lieuId, '📦', '📦 Commande chez ' + y.artisan + ' : ' + y.nom + (y.pret <= c.jour ? ' (prête)' : ' (jour ' + y.pret + ')')); });
     return out;
   }
   function demarrerScene(c, titre, attendu, prop) {
@@ -1231,7 +1462,7 @@ COF.UI.Carnet = (function () {
         var scC = K.sceneCourante(c); if (!scC) return;
         rendre.ancre = scC.entrees.length;
         var res = COF.Conteur.agir(c, scC, +v); rendre();
-        if (res.marche) { COF.UI.aller('marche'); return; }   /* « faire le tour des étals » ouvre le marché du lieu */
+        if (res.marche) { if (COF.Echoppes && villeIci(K.actif())) sheetVillage(K.actif()); else COF.UI.aller('marche'); return; }   /* « faire le tour des étals » : les échoppes du village */
         if (res.menace) flash('⚠️ Le danger se concrétise !');
         return;
       }
@@ -1363,6 +1594,75 @@ COF.UI.Carnet = (function () {
         K.setActif(node.getAttribute('data-id')); fermer(); onglet = 'scene'; rendre(); return;
       }
       case 'archive': { var ca = K.get(node.getAttribute('data-id')); if (ca) sheetArchive(ca); return; }
+      /* ----- Échoppes et artisans ----- */
+      case 'village': sheetVillage(c); return;
+      case 'bat': {
+        var bE = entrerBat(c, node.getAttribute('data-id')); if (!bE) return;
+        c = K.actif(); var sE = K.sceneCourante(c);
+        if (!(sE && sE.jeu)) { fermer(); onglet = 'scene'; apresEntree(); }
+        return;
+      }
+      case 'bat-vue': sheetBatiment(c, node.getAttribute('data-id'), v || null); return;
+      case 'bat-acheter': case 'bat-vendre': case 'bat-marchander': case 'bat-commander': case 'bat-retirer': case 'bat-fabriquer': case 'bat-service': {
+        var E0 = COF.Echoppes, lB = villeIci(c), idB = node.getAttribute('data-id'), bB = lB && E0.batiment(c, lB, idB), kB = node.getAttribute('data-k'); if (!bB) return;
+        var rB = act === 'bat-acheter' ? E0.acheter(c, lB, bB, +v) : act === 'bat-vendre' ? E0.vendre(c, lB, bB, +v) : act === 'bat-marchander' ? E0.marchander(c, lB, bB)
+          : act === 'bat-commander' ? E0.commander(c, lB, bB, kB) : act === 'bat-retirer' ? E0.retirer(c, lB, bB, kB) : act === 'bat-fabriquer' ? E0.fabriquer(c, lB, bB, kB) : E0.service(c, lB, bB, kB);
+        if (rB && !rB.err) flash({ 'bat-acheter': '🛒 Acheté', 'bat-vendre': '💰 Vendu', 'bat-marchander': rB.ok ? '🗣️ Prix négociés' : '🗣️ Raté', 'bat-commander': '📜 Commande passée', 'bat-retirer': '📦 Commande retirée', 'bat-fabriquer': rB.ok ? '⚒️ Réussi !' : '⚒️ Raté…', 'bat-service': '🙏 C’est fait' }[act]);
+        apresBat(c, rB, idB, act === 'bat-acheter' ? 'acheter' : act === 'bat-vendre' ? 'vendre' : null);
+        return;
+      }
+      case 'bat-travail': case 'bat-apprendre': {
+        var lT = villeIci(c), bT = lT && COF.Echoppes.batiment(c, lT, node.getAttribute('data-id')); if (!bT || !COF.Village) return;
+        var sT = K.sceneCourante(c); if (sT && sT.jeu && !sT.jeu.fini) { flash('Terminez d’abord la scène en cours'); return; }
+        var rT = act === 'bat-travail' ? COF.Village.travailler(c, lT, bT, +v || 1) : COF.Village.apprendre(c, lT, bT);
+        if (rT.err) { flash(rT.err); return; }
+        flash(act === 'bat-travail' ? '🔨 +' + COF.Echoppes.fmt(rT.gain) : '🎓 ' + rT.voie);
+        fermer(); apresEntree(); return;
+      }
+      case 'logis': sheetLogis(c); return;
+      case 'logis-offre': case 'logis-dormir': case 'logis-deposer': case 'logis-reprendre': {
+        var lL = villeIci(c), VL = COF.Village; if (!lL || !VL) return;
+        var sL = K.sceneCourante(c); if ((act === 'logis-dormir' || act === 'logis-offre') && sL && sL.jeu && !sL.jeu.fini) { flash('Terminez d’abord la scène en cours'); return; }
+        if ((act === 'logis-dormir' || act === 'logis-offre') && sL && sL.type === 'echoppe') { COF.Echoppes.sortir(c, true); c = K.actif(); }
+        var rL = act === 'logis-offre' ? VL.seLoger(c, lL, node.getAttribute('data-k')) : act === 'logis-dormir' ? VL.dormir(c, lL) : act === 'logis-deposer' ? VL.deposer(c, +v) : VL.reprendre(c, +v);
+        if (rL.err) { flash(rL.err); return; }
+        if (act === 'logis-dormir') { flash('🛏️ Bonne nuit'); fermer(); apresEntree(); return; }
+        c = K.actif(); rendre(); sheetLogis(c); return;
+      }
+      case 'logis-atelier': { var lA = villeIci(c); if (!lA) return; var sA = K.sceneCourante(c); if (sA && sA.jeu && !sA.jeu.fini) { flash('Terminez d’abord la scène en cours'); return; } entrerBat(c, 'maison'); fermer(); onglet = 'scene'; apresEntree(); return; }
+      case 'transfert': sheetTransfert(c); return;
+      case 'transfert-copier': {
+        var code = codeDe(COF.Campagne.exporter(c));
+        var fini = function () { if (COF.Sauvegarde) COF.Sauvegarde.marquer(); flash('📋 Code copié (' + Math.round(code.length / 1024) + ' Ko)'); };
+        var ta5 = $('#cn-code'); if (ta5) { ta5.value = code; ta5.select(); }
+        if (navigator.clipboard) navigator.clipboard.writeText(code).then(fini, function () { try { document.execCommand('copy'); fini(); } catch (er) { flash('Sélectionnez le code et copiez-le'); } });
+        else { try { document.execCommand('copy'); fini(); } catch (er) { flash('Sélectionnez le code et copiez-le'); } }
+        return;
+      }
+      case 'transfert-coller': {
+        var ta6 = $('#cn-code'), js;
+        try { js = jsonDe(ta6 ? ta6.value : ''); } catch (er) { flash('Ce n’est pas un code COF2 valide'); return; }
+        var ri2 = COF.Campagne.importer(js);
+        if (ri2.erreur) { flash(ri2.erreur); return; }
+        fermer(); onglet = 'scene'; rendre.haut = true; rendre(); flash('📥 « ' + ri2.nom + ' » : ' + ri2.nb + ' aventure(s) importée(s)'); return;
+      }
+      case 'bat-parler': {
+        var lP = villeIci(c), bP = lP && COF.Echoppes.batiment(c, lP, node.getAttribute('data-id')); if (!bP) return;
+        var xP = COF.Echoppes.pnj(c, lP, bP); c = K.actif();
+        var sP = K.sceneCourante(c);
+        if (sP && sP.jeu && !sP.jeu.fini) { flash('Terminez d’abord la scène en cours'); return; }
+        COF.Echoppes.sortir(c, true); c = K.actif(); fermer();
+        demarrerScene(c, 'Conversation avec ' + xP.nom, '', { type: 'dialogue', dialogue: { pnjId: xP.id } }); return;
+      }
+      case 'bat-sortir': { COF.Echoppes.sortir(c); fermer(); onglet = 'scene'; rendre.haut = true; rendre(); return; }
+      case 'chiffres': {
+        var avant = immersif();
+        try { localStorage.setItem('cof2.recit.chiffres', avant ? '1' : '0'); } catch (er) {}
+        flash(avant ? '🎲 Les dés et les chiffres sont visibles' : '📖 Mode récit : les dés s’effacent derrière l’histoire');
+        rendre(); return;
+      }
+      case 'livre': { var cl = K.get(node.getAttribute('data-id') || c.id) || c; sheetLivre(cl); return; }
+      case 'livre-texte': { var ct = K.get(node.getAttribute('data-id') || c.id) || c; sheetExport('📖 ' + ct.titre, COF.Chronique.livreTexte(ct), ct.titre + ' - chronique'); return; }
       case 'export-aventure': { var cx = K.get(node.getAttribute('data-id') || c.id) || c; sheetExport('📜 ' + cx.titre, COF.Chronique.aventure(cx), cx.titre); return; }
       case 'export-scene': {
         var cs = K.get(node.getAttribute('data-c') || c.id) || c, sx = cs.scenes.filter(function (x) { return x.id === node.getAttribute('data-id'); })[0];
@@ -1389,6 +1689,7 @@ COF.UI.Carnet = (function () {
         var blobC = new Blob([COF.Campagne.exporter(c)], { type: 'application/json' }), aC = document.createElement('a');
         aC.href = URL.createObjectURL(blobC); aC.download = COF.Campagne.nomFichier(c);
         document.body.appendChild(aC); aC.click(); setTimeout(function () { URL.revokeObjectURL(aC.href); aC.remove(); }, 500);
+        if (COF.Sauvegarde) COF.Sauvegarde.marquer();
         flash('💾 Fichier de campagne prêt'); return;
       }
       case 'import-campagne': {
@@ -1530,10 +1831,14 @@ COF.UI.Carnet = (function () {
         var cb0 = c.combat; if (!cb0) return;
         A.syncAllies(c);
         /* Bilan automatique du combat dans le récit */
-        if (COF.UI.Arene && COF.UI.Arene.bilan) {
-          var bil = COF.UI.Arene.bilan(v);
-          K.ajouterEntree(c, { t: 'note', titre: '⚔️ Récit du combat', txt: bil.texte });
+        var bil = COF.UI.Arene && COF.UI.Arene.bilan ? COF.UI.Arene.bilan(v) : null;
+        if (bil) {
+          /* le combat raconté en quelques phrases, puis le détail */
+          var rc0 = COF.Combats ? COF.Combats.raconter(c, v, bil.info) : '';
+          K.ajouterEntree(c, { t: 'note', titre: '⚔️ Récit du combat', txt: (rc0 ? rc0 + '\n\n' : '') + bil.texte });
         }
+        /* les suites : trophée, prisonnier, fuyard rancunier, cicatrice, surnom */
+        if (COF.Combats && (v === 'victoire' || v === 'defaite')) COF.Combats.suites(c, v, bil ? bil.info : null, cb0.r).forEach(function (n) { K.ajouterEntree(c, { t: 'evt', txt: n }); });
         if (v === 'victoire') {
           var bt = A.butinDe(cb0.r);
           c.tension = Math.max(1, c.tension - 1);

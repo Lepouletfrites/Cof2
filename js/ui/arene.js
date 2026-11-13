@@ -297,7 +297,10 @@ COF.UI.Arene = (function () {
         (subi > infl ? ' La victoire a coûté cher.' : '') + (fuis.length ? ' ' + fuis.join(' et ') + ' s’échappe' + (fuis.length > 1 ? 'nt' : '') + ' : on pourrait le' + (fuis.length > 1 ? 's' : '') + ' revoir.' : '');
     } else if (issue === 'fuite') recit = 'Le groupe rompt le combat et se replie, laissant le champ libre à ses adversaires.';
     else recit = 'Le combat tourne mal : ' + (herosKo.length ? herosKo.join(' et ') + ' s’effondre' + (herosKo.length > 1 ? 'nt' : '') : 'le héros est débordé') + '.';
-    return { lignes: L, recit: recit, fil: fil, texte: recit + (fil.length ? '\n\n' + fil.join('\n') : '') + '\n\n' + L.join('\n') };
+    var pj = heros.filter(function (c) { return c.type === 'pj'; })[0], dpj = pj ? donnees(pj) : null;
+    var info = { adv: adv.map(function (c) { return c.nom; }), rounds: s.round, infl: infl, subi: pj ? (st.subi[pj.nom] || 0) : subi, pvMax: dpj ? dpj.pvMax : 0,
+      tombes: tombes, fuis: fuis, rendus: rendus, herosKo: herosKo, meilleur: st.meilleur || null };
+    return { info: info, lignes: L, recit: recit, fil: fil, texte:recit + (fil.length ? '\n\n' + fil.join('\n') : '') + '\n\n' + L.join('\n') };
   }
   /* Récupération rapide proposée en fin de combat (1 DR). */
   function recupRapide(cb) {

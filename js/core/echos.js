@@ -78,7 +78,7 @@ COF.Echos = (function () {
     var cand = liste(c).filter(function (e) {
       if (e.fait || c.jour - e.jour < TYPES[e.type].delai) return false;
       var x = e.pnjId ? pnj(c, e.pnjId) : null;
-      if (e.pnjId && (!x || (x.compagnon && x.compagnon.actif))) return false;
+      if (e.pnjId && (!x || x.mort || (x.compagnon && x.compagnon.actif))) return false;
       if (s && s.dialogue && s.dialogue.pnjId === e.pnjId) return false;
       if (ici && e.lieuId === ici.id) return true;
       return Math.random() < TYPES[e.type].partout;

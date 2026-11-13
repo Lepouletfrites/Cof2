@@ -4,7 +4,7 @@
    Incrémentez CACHE_VERSION à chaque modification des fichiers
    listés ci-dessous pour forcer leur mise à jour chez les joueurs.
    ============================================================ */
-var CACHE_VERSION = 'cof2-v64';
+var CACHE_VERSION = 'cof2-v69';
 
 var FICHIERS = [
   './',
@@ -85,6 +85,17 @@ var FICHIERS = [
   'js/core/echos.js',
   'js/core/saisons.js',
   'js/core/culture.js',
+  'js/core/plume.js',
+  'js/core/recit.js',
+  'js/core/legende.js',
+  'js/core/combats.js',
+  'js/core/vie.js',
+  'js/core/rumeurs.js',
+  'js/core/echoppes.js',
+  'js/core/village.js',
+  'js/core/donjons.js',
+  'js/core/routes.js',
+  'js/core/bandes.js',
   'js/core/lieux.js',
   'js/core/quetes.js',
   'js/core/voyage.js',

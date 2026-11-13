@@ -648,12 +648,13 @@ COF.Imprevus = (function () {
       var jet = T().jet(c, s, carac, T().difficulteBase(c));
       reussi = jet.reussi; meca.push(jet.m);
       txt = T().dire(reussi ? ch.ok : (ch.ko || ['Ça ne marche pas.']), ctx);
+      if (COF.Plume) { var io = COF.Plume.issue(jet.r, reussi, T().difficulteBase(c), ctx); if (io) txt += ' ' + io; }
       codes = reussi ? ch.eff : ch.effKo;
     }
     var res = appliquer(c, s, codes, ctx, evt);
     if (res.m) meca.push(res.m);
     j.evt = null;
-    K().ajouterEntree(c, { t: 'recit', txt: txt, m: meca.join(' · '), ok: reussi });
+    K().ajouterEntree(c, { t: 'recit', txt: txt, m: meca.join(' · '), ok: reussi, a: T().dire(ch.nom, ctx), v: ch.auto ? null : T().verdict(Object.assign({ diff: T().difficulteBase(c) }, jet)) });
     var out = {};
     if (res.combat) out.menace = T().engager(c, s, evt.v.rencontre || null);
     else T().reprendre(c, s);

@@ -295,9 +295,16 @@ COF.Saga = (function () {
       if (f.echecs >= 2) { f.ouvert = false; return '🧵 « ' + f.nom + ' » : la piste est froide. La rumeur est abandonnée.'; }
       return '🧵 « ' + f.nom + ' » : rien de concret pour l’instant, mais la piste reste ouverte.';
     }
+    /* toute rumeur ne dit pas vrai : fausse, exagérée, piège… ou plus belle que prévu */
+    var vr = COF.Rumeurs ? COF.Rumeurs.resoudre(c, f) : null;
+    if (typeof vr === 'string') return vr;
+    var prime = vr && vr.bonus ? '\n' + vr.bonus : '';
+    return resoudreVraie(c, f) + prime;
+  }
+  function resoudreVraie(c, f) {
     f.ouvert = false;
     var r = Math.random(), s = c.saga && !c.saga.fini ? c.saga : null;
-    if (s && r < 0.25) return '🧵 La rumeur « ' + f.nom + ' » mène tout droit à ' + s.nom + '.\n' + indice(c);
+    if (s && r < 0.25) return '🧵 La rumeur « ' + f.nom + ' » mène tout droit ' + ('à ' + s.nom).replace(/^à le /i, 'au ').replace(/^à les /i, 'aux ') + '.\n' + indice(c);
     if (r < 0.6) {
       var q = D().creerQuete(c); q.note = 'Née de la rumeur : ' + f.nom + '.\n' + (q.note || '');
       return '🧵 La rumeur « ' + f.nom + ' » était fondée : elle devient une quête, « ' + q.nom + ' ».';

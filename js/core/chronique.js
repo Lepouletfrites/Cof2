@@ -59,5 +59,73 @@ COF.Chronique = (function () {
     }
     return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
-  return { scene: scene, aventure: aventure };
+  /* ================= Le livre : l'histoire racontée, chapitre par chapitre ================= */
+  var ROMAINS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+  function romain(n) { return ROMAINS[n - 1] || String(n); }
+  var MARQUANT = /^(🏆|🩹|🏷️|☠️|🏘️|✉️|💢|🗣️|🪤|✨|🌱|🌳|🎉)/;
+  function nettoyer(t) { return String(t || '').replace(/\s+/g, ' ').trim(); }
+  /* Les moments d'une scène : ouverture, temps forts, dénouement. */
+  function moments(s) {
+    var out = [], es = s.entrees || [];
+    var ouv = es.filter(function (e) { return e.t === 'recit' && !e.rappel && !e.fin; })[0];
+    if (ouv) out.push(nettoyer(ouv.txt));
+    es.forEach(function (e) {
+      if (e.t === 'note' && /Récit du combat/.test(e.titre || '')) out.push(nettoyer(premierParagraphe(e.txt)));
+      else if (e.t === 'evt' && MARQUANT.test(e.txt || '')) out.push(nettoyer(e.txt));
+    });
+    var fin = s.jeu && s.jeu.resume ? s.jeu.resume : (s.resume || '');
+    if (fin) out.push(nettoyer(fin));
+    if (!out.length) { var t = es.filter(function (e) { return e.t === 'texte'; })[0]; if (t) out.push(nettoyer(t.txt)); }
+    return out.filter(Boolean);
+  }
+  function livre(c) {
+    var p = c.persoId && COF.Store ? COF.Store.get(c.persoId) : null, chapitres = [], cur = null;
+    function nouveau(titre, jour) { cur = { titre: titre, debut: jour, fin: jour, scenes: [] }; chapitres.push(cur); }
+    c.scenes.forEach(function (s) {
+      if (s.type === 'voyage' && s.voyage) nouveau('La route ' + (COF.Conteur ? COF.Conteur.formes(s.voyage.destNom).de : 'de ' + s.voyage.destNom), s.jour || 1);
+      else if (!cur) nouveau(c.precedent ? 'Le retour' : 'Les débuts', s.jour || 1);
+      var m = moments(s); if (!m.length) return;
+      cur.fin = Math.max(cur.fin, s.jour || 1);
+      cur.scenes.push({ titre: s.titre, jour: s.jour || 1, paras: m, issue: s.jeu ? s.jeu.fini : null });
+    });
+    chapitres = chapitres.filter(function (ch) { return ch.scenes.length; });
+    chapitres.forEach(function (ch, i) { ch.n = romain(i + 1); });
+    var lg = c.legende || {};
+    var gens = (c.pnj || []).filter(function (x) { return x.attitude === 'allié' || x.attitude === 'hostile' || x.nemesis || x.mort || (x.compagnon && x.compagnon.actif) || (x.vie && x.vie.length); })
+      .map(function (x) {
+        return { nom: x.nom, role: x.mort ? 'disparu' + (x.genre === 'féminin' ? 'e' : '') : x.nemesis ? 'ennemi juré' : (x.compagnon && x.compagnon.actif) ? 'compagnon de route' : x.attitude,
+          titre: x.titre || '', vie: (x.vie || []).map(function (v) { return 'Jour ' + v.jour + ' : ' + v.txt; }) };
+      });
+    return {
+      titre: c.titre, heros: p ? p.nom : 'Le héros', surnom: COF.Legende ? COF.Legende.surnom(c) : '', niveau: p ? p.niveau : null, jour: c.jour,
+      menace: c.saga ? c.saga.nom : '', avant: c.precedent && c.precedent.epilogue ? c.precedent.epilogue : '', chapitres: chapitres, gens: gens,
+      surnoms: (lg.surnoms || []).map(function (s) { return s.txt; }), cicatrices: (lg.cicatrices || []).map(function (s) { return s.txt; }),
+      talents: Object.keys(lg.talents || {}).map(function (k) { return lg.talents[k].nom + (lg.talents[k].niveau > 1 ? ' (maîtrisé)' : ''); }),
+      trophees: (lg.trophees || []).map(function (s) { return s.txt; }),
+      enCours: (c.fils || []).filter(function (f) { return f.ouvert; }).map(function (f) { return f.nom; }).slice(0, 8),
+      epilogue: c.termine ? c.termine.epilogue : ''
+    };
+  }
+  function livreTexte(c) {
+    var b = livre(c), L = [];
+    L.push(TRAIT, b.titre.toUpperCase(), 'Chronique de ' + b.heros + (b.surnom ? ', ' + b.surnom : ''), TRAIT, '');
+    if (b.avant) L.push('Ce qui s’est passé avant : ' + b.avant, '');
+    b.chapitres.forEach(function (ch) {
+      L.push('Chapitre ' + ch.n + ' — ' + ch.titre + ' (' + (ch.debut === ch.fin ? 'jour ' + ch.debut : 'jours ' + ch.debut + ' à ' + ch.fin) + ')', '');
+      ch.scenes.forEach(function (s) { L.push(s.paras.join(' '), ''); });
+    });
+    if (b.epilogue) L.push(TRAIT, 'ÉPILOGUE', '', b.epilogue, '');
+    if (b.gens.length) { L.push(TRAIT, 'CEUX QUI ONT CROISÉ SA ROUTE'); b.gens.forEach(function (g) { L.push('• ' + g.nom + ' — ' + g.role + (g.titre ? ', ' + g.titre : '')); g.vie.forEach(function (v) { L.push('    ' + v); }); }); L.push(''); }
+    if (b.surnoms.length || b.cicatrices.length || b.talents.length || b.trophees.length) {
+      L.push(TRAIT, 'SA LÉGENDE');
+      if (b.surnoms.length) L.push('On l’appelle : ' + b.surnoms.join(', ') + '.');
+      if (b.talents.length) L.push('Talents : ' + b.talents.join(', ') + '.');
+      if (b.cicatrices.length) L.push('Cicatrices : ' + b.cicatrices.join(' ; ') + '.');
+      if (b.trophees.length) L.push('Trophées : ' + b.trophees.join(' ; ') + '.');
+      L.push('');
+    }
+    if (b.enCours.length && !b.epilogue) L.push(TRAIT, 'À SUIVRE', b.enCours.map(function (n) { return '• ' + n; }).join('\n'));
+    return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+  return { scene: scene, aventure: aventure, livre: livre, livreTexte: livreTexte };
 })();

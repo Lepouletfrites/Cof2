@@ -186,12 +186,12 @@ COF.Missions = (function () {
       return '📨 Un message arrive : ' + c.offreMission.accroche.replace(/\.$/, '') + '. (Nouvelle petite affaire proposée.)';
     },
     function (c) {      /* un allié donne des nouvelles */
-      var al = (c.pnj || []).filter(function (x) { return x.attitude === 'allié'; }); if (!al.length) return null;
+      var al = (c.pnj || []).filter(function (x) { return x.attitude === 'allié' && !x.mort; }); if (!al.length) return null;
       var x = p(al), ru = COF.Aventure.rumeur(); K().ajouterListe(c, 'fils', { nom: ru.nom, note: x.nom + ' l’a fait savoir au héros.\n' + ru.texte });
       return '✉️ Une lettre de ' + x.nom + ' : il est question de ' + ru.nom.replace(/^Rumeur : /, '').toLowerCase() + '. (Nouveau fil.)';
     },
     function (c) {      /* un ennemi agit */
-      var en = (c.pnj || []).filter(function (x) { return x.attitude === 'hostile'; }); if (!en.length) return null;
+      var en = (c.pnj || []).filter(function (x) { return x.attitude === 'hostile' && !x.mort; }); if (!en.length) return null;
       var x = p(en); c.tension = Math.min(9, c.tension + 1); x.vus = (x.vus || 0) + 1;
       return '⚠️ On rapporte que ' + x.nom + ' répand des mensonges sur le héros et cherche à lui nuire. (Tension +1.)';
     },
@@ -207,6 +207,7 @@ COF.Missions = (function () {
     },
     function (c) {      /* une rumeur se confirme ou se dément */
       var fl = (c.fils || []).filter(function (f) { return f.ouvert && !f.quete && !f.mission; }); if (!fl.length) return null;
+      if (COF.Rumeurs && fl.some(function (f) { return f.verite && !f.verifie; })) return COF.Rumeurs.nouvelle(c);
       var f = p(fl);
       if (Math.random() < 0.5) { f.note = (f.note || '') + '\nJour ' + c.jour + ' : de nouveaux témoignages confirment l’affaire.'; return '🧵 Des témoins confirment « ' + f.nom + ' » : la piste se précise.'; }
       f.ouvert = false; return '🧵 « ' + f.nom + ' » n’était qu’une fausse rumeur. Le fil est abandonné.';
@@ -233,6 +234,8 @@ COF.Missions = (function () {
     }
   ];
   NOUVELLES.push(function (c) { return COF.Factions ? COF.Factions.represailles(c) : null; });
+  NOUVELLES.push(function (c) { return COF.Vie ? COF.Vie.lettre(c) : null; });
+  NOUVELLES.push(function (c) { return COF.Village ? COF.Village.nouvelle(c) : null; });
   /* Une affaire acceptée n'attend pas indéfiniment : au bout de 5 jours, elle est perdue. */
   function expirer(c) {
     return ouvertes(c).filter(function (f) { return c.jour - (f.mission.jour || c.jour) > 5; }).map(function (f) {

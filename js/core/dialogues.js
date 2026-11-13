@@ -107,12 +107,14 @@ COF.Dialogues = (function () {
       case 'interroger':
         if (ok) {
           var e = COF.Imprevus.appliquer(c, s, x.rel >= 1 && c.saga && !c.saga.fini && Math.random() < 0.4 ? ['indiceSaga'] : ['rumeur', 'indice'], ctx, { v: {} });
-          txt = T().dire(['{x} parle à voix basse : ce qu’{xil} sait pourrait servir.', '« Puisque tu demandes… » {x} raconte ce qu’il a vu et entendu.'], ctx); if (e.m) m.push(e.m);
-        } else { txt = T().dire(['{x} élude : « Je ne sais rien. »', '« Pourquoi toutes ces questions ? » {x} se ferme.'], ctx); rel(x, -1, m); }
+          txt = T().dire(['{x} parle à voix basse : ce qu’{xil} sait pourrait servir.', '« Puisque tu demandes… » {x} raconte ce qu’{xil} a vu et entendu.',
+            '{x} jette un regard [par-dessus son épaule|vers la porte], puis se penche : « [Ne répète à personne que tu le tiens de moi|Je n’ai rien dit, compris ?]… »', 'Après un long silence, {x} [soupire|hausse les épaules] et lâche ce qu’{xil} a sur le cœur.',
+            '« Drôle de question… mais bon. » {x} [se gratte la tête|baisse la voix] et raconte.'], ctx); if (e.m) m.push(e.m);
+        } else { txt = T().dire(['{x} élude : « Je ne sais rien. »', '« Pourquoi toutes ces questions ? » {x} se ferme.', '{x} [détourne le regard|regarde ses pieds] : « [Je n’ai rien vu|Ça ne me regarde pas]. »', '« Tu poses beaucoup de questions pour quelqu’un qui n’est pas d’ici… » Le ton de {x} s’est refroidi.'], ctx); rel(x, -1, m); }
         break;
       case 'flatter':
-        if (ok) { txt = T().dire(['Quelques compliments bien tournés, et {x} se détend.', '{x} rit de bon cœur. La glace est brisée.'], ctx); rel(x, 1, m); }
-        else { txt = T().dire(['La flatterie sonne faux : {x} n’est pas dupe.', '{x} plisse les yeux : « Tu veux quelque chose, toi. »'], ctx); if (x.perso.trait === 'Orgueilleux') rel(x, -1, m); }
+        if (ok) { txt = T().dire(['Quelques compliments bien tournés, et {x} se détend.', '{x} rit de bon cœur. La glace est brisée.', '{x} rougit [légèrement|jusqu’aux oreilles] : « Oh, vous dites ça… » Mais le sourire ne trompe pas.', 'Un mot sur [son travail|sa maison|son courage], et {x} s’ouvre comme une fleur au soleil.'], ctx); rel(x, 1, m); }
+        else { txt = T().dire(['La flatterie sonne faux : {x} n’est pas dupe.', '{x} plisse les yeux : « Tu veux quelque chose, toi. »', '« Garde tes belles paroles pour d’autres », grince {x}.'], ctx); if (x.perso.trait === 'Orgueilleux') rel(x, -1, m); }
         break;
       case 'menacer':
         if (ok) {
@@ -150,14 +152,16 @@ COF.Dialogues = (function () {
         } else { txt = T().dire('« J’ai ma vie ici. Mais merci de l’avoir proposé. »', ctx); }
         break;
       case 'soi':
-        txt = T().dire(['{h} raconte ses aventures. {x} écoute avec attention.', '{h} se livre un peu. {x} semble touché{xe} par cette confiance.'], ctx);
+        txt = T().dire(['{h} raconte ses aventures. {x} écoute avec attention.', '{h} se livre un peu. {x} semble touché{xe} par cette confiance.', '{h} évoque [son enfance|son premier combat|ce qui l’a poussé{he} sur les routes]. {x} hoche la tête, pensi{xve}.',
+          'Entre deux gorgées, {h} raconte [une anecdote de voyage|une mésaventure cocasse]. {x} éclate de rire.'], Object.assign({ xve: x.genre === 'féminin' ? 've' : 'f' }, ctx));
         if (Math.random() < 0.6) rel(x, 1, m);
         break;
     }
+    if (COF.Plume && jt) { var io = COF.Plume.issue(jt.r, ok, jt.diff, ctx); if (io) txt += ' ' + io; }
     if (COF.Troupe) COF.Troupe.reagir(c, ch.id, ctx).forEach(function (n) { txt += ' ' + n.txt; m.push(n.m); });
     j.prog++; if (!ok) j.danger++;
     txt = txt + (Math.random() < 0.4 ? ' ' + T().dire(TRAITS[x.perso.trait] || DEFAUT, ctx) : '');
-    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · ') || 'sans jet', ok: ok });
+    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · ') || 'sans jet', ok: ok, a: T().dire(ch.nom, ctx), v: jt ? T().verdict(jt) : null });
     s = K().sceneCourante(c);
     if (out.combat) { txt = T().dire('{x} sort une lame. La conversation est terminée.', ctx); out.menace = T().engager(c, s, null); K().sauver(c); return out; }
     if (s.jeu.prog >= s.jeu.progMax || s.jeu.danger >= s.jeu.dangerMax) T().finir(c, s, s.jeu.danger >= s.jeu.dangerMax ? 'echec' : 'reussite');

@@ -147,6 +147,8 @@ COF.Directeur = (function () {
     if (ici && (ici.env === 'ruines' || ici.env === 'souterrain') && !ici.explore)
       out.push({ type: 'donjon', ic: '🗝️', titre: 'Explorer les profondeurs ' + fl(ici.nom).de, lieu: ici.id, attendu: 'Salle après salle : pièges, occupants… et un trésor au fond, peut-être.' });
     if (COF.Villes) COF.Villes.propositions(c).forEach(function (o) { out.push(o); });
+    /* le repaire d'une bande, quand on y est */
+    if (COF.Bandes) COF.Bandes.propositions(c).forEach(function (o) { out.unshift(o); });
     if (ici) M().voisins(c, ici.id).slice(0, 3).forEach(function (v) {
       if (out.some(function (o) { return o.lieu === v.lieu.id && o.type === 'voyage'; })) return;
       out.push({ type: 'voyage', ic: '🗺️', titre: 'Partir pour ' + fl(v.lieu.nom).n, lieu: v.lieu.id, attendu: v.route.jours + ' jour(s) de route.' });
@@ -185,6 +187,7 @@ COF.Directeur = (function () {
         entrees.push({ t: 'rencontre', r: r, txt: 'Confrontation : ' + r.texte });
       }
     }
+    if (prop && prop.bandeId && COF.Bandes && !c.rencontre) entrees = entrees.concat(COF.Bandes.preparer(c, s, prop));
     if (prop && prop.type === 'explorer') {
       var ici = M().ici(c);
       entrees.push({ t: 'detail', txt: COF.Oracle.detailSensoriel(null).detail });

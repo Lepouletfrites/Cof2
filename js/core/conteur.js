@@ -178,7 +178,7 @@ COF.Conteur = (function () {
     explorer: { prog: 2, danger: 3, actions: ['observer', 'fourrager', 'recoin', 'sentier'],
       ouv: ['{moment} {decor} {h} quitte le chemin pour explorer {environs}. {detail}'],
       ok: ['L’exploration a porté ses fruits. {h} reprend la route.', 'La région n’a plus tout à fait les mêmes secrets pour {h}.'],
-      ko: ['L’exploration tourne court. {h} rebrousse chemin, plus prudent qu’à l’aller.'] },
+      ko: ['L’exploration tourne court. {h} rebrousse chemin, plus prudent{he} qu’à l’aller.', 'L’exploration n’a rien donné de bon. {h} rentre, fourbu{he} et déçu{he}.'] },
     fil: { prog: 2, danger: 2, actions: ['fouiller', 'interroger', 'pister', 'savoir', 'guetter', 'temps'],
       ouv: ['{moment} {decor} {h} reprend l’affaire : « {fil} ». {note}'],
       ok: ['L’affaire « {fil} » trouve son issue.', '« {fil} » : voilà une chose réglée.'],
@@ -463,6 +463,7 @@ COF.Conteur = (function () {
         lieuQ_n: formes(q.lieuNom).n, a_lieuQ: formes(q.lieuNom).a, portrait: mt ? q.comNom + ' : ' + pj(min1(sansPoint(mt[1]))) + '.' : '' });
       if (genre === 'piste' || genre === 'confrontation') poserLieu(ici && ici.id === q.lieu ? ici.nom : q.lieuNom);
     }
+    if (COF.Recit) COF.Recit.contexte(c, s, ctx);
     return ctx;
   }
 
@@ -471,22 +472,38 @@ COF.Conteur = (function () {
   function caracHeros(c, k) { var hP = heros(c); return hP && COF.Calc ? COF.Calc.carac(hP, k) : 0; }
   /* Trois actions au plus : la meilleure carac du héros d'abord, une
      action sans jet (sûre mais coûteuse) en dernier. */
-  function tirerChoix(c, g, dernier) {
-    var l = GENRES[g].actions.slice();
+  /* Jusqu'à 3 actions avec jet + 1 sans jet. Les actions possibles dépendent du
+     contexte (ville, nuit, brume, compagnon…) ; celles jouées récemment dans la
+     scène laissent leur place ; une seule est choisie parmi les points forts
+     du héros (pas toujours la même), les autres au hasard. */
+  function melanger(l) { for (var i = l.length - 1; i > 0; i--) { var k = Math.floor(Math.random() * (i + 1)), t = l[i]; l[i] = l[k]; l[k] = t; } return l; }
+  function tirerChoix(c, g, dernier, s) {
+    s = s || K().sceneCourante(c);
+    var l = GENRES[g].actions.filter(function (id) { return ACTIONS[id] && (!COF.Recit || COF.Recit.possible(c, s, id)); });
+    /* ce que la situation impose (piège, énigme, coffre…) est toujours proposé */
+    var prio = l.filter(function (id) { return ACTIONS[id].prioritaire; });
+    if (prio.length) {
+      var reste = l.filter(function (id) { return prio.indexOf(id) < 0; });
+      var pj = prio.filter(function (id) { return !ACTIONS[id].auto; }), pa = prio.filter(function (id) { return ACTIONS[id].auto; });
+      var autres = melanger(reste.filter(function (id) { return !ACTIONS[id].auto && id !== dernier; })).slice(0, Math.max(1, 3 - pj.length));
+      return melanger(pj.concat(autres)).concat(pa.length ? pa.slice(0, 1) : melanger(reste.filter(function (id) { return ACTIONS[id].auto; })).slice(0, 1));
+    }
     if (l.length <= 3) return l;
-    /* les actions sans jet tournent aussi (et la dernière jouée laisse sa place) */
-    var autos = l.filter(function (id) { return ACTIONS[id].auto && id !== dernier; }).sort(function () { return Math.random() - 0.5; }),
-      jets = l.filter(function (id) { return !ACTIONS[id].auto && id !== dernier; });
-    if (!autos.length) autos = l.filter(function (id) { return ACTIONS[id].auto; });
-    jets.sort(function () { return Math.random() - 0.5; });
-    jets.sort(function (a, b) { return caracHeros(c, ACTIONS[b].carac) - caracHeros(c, ACTIONS[a].carac); });
-    var out = [jets[0]].concat(jets.slice(1).sort(function () { return Math.random() - 0.5; }).slice(0, autos.length ? 1 : 2));
-    return out.concat(autos.slice(0, 1));
+    var recents = ((s && s.jeu && s.jeu.vus) || []).slice(-3);
+    function frais(id) { return id !== dernier && recents.indexOf(id) < 0; }
+    var autos = l.filter(function (id) { return ACTIONS[id].auto; }), jets = l.filter(function (id) { return !ACTIONS[id].auto; });
+    var autosF = melanger(autos.filter(frais)); if (!autosF.length) autosF = melanger(autos.filter(function (id) { return id !== dernier; }));
+    var jetsF = melanger(jets.filter(frais)); if (jetsF.length < 3) jetsF = jetsF.concat(melanger(jets.filter(function (id) { return id !== dernier && jetsF.indexOf(id) < 0; })));
+    var forts = jetsF.slice().sort(function (a, b) { return caracHeros(c, ACTIONS[b].carac) - caracHeros(c, ACTIONS[a].carac); }).slice(0, 3);
+    var out = forts.length ? [p(forts)] : [];
+    jetsF.forEach(function (id) { if (out.length < 3 && out.indexOf(id) < 0) out.push(id); });
+    out = melanger(out);
+    return out.concat(autosF.slice(0, 1));
   }
   function difficulte(c, a, g) {
     var rep = g === 'ville' && COF.Saga ? COF.Saga.reputation(M().ici(c)) : 0;   /* une bonne réputation ouvre les portes */
     /* les affaires et les finales sont plus exigeantes */
-    return difficulteBase(c) + (g === 'complication' || g === 'donjon' || /^mission_|^finale_/.test(g) ? 1 : 0) + (a.diff || 0) - rep;
+    return difficulteBase(c) + (g === 'complication' || g === 'donjon' || /^mission_|^finale_/.test(g) ? 1 : 0) + (a.diff || 0) + (a.diffFn ? a.diffFn(c) : 0) - rep;
   }
   /* Compagnons du héros (alliés du Carnet et compagnons de voie). */
   function compagnons(c) {
@@ -556,19 +573,26 @@ COF.Conteur = (function () {
     if (s.test && s.test.resultat === 'modifiee' && s.test.modif) txt += ' ' + polir('Pourtant, quelque chose cloche : ' + min1(s.test.modif));
     if (s.test && s.test.resultat === 'interrompue') txt += ' ' + interruption(s.test.histoire, ctx);
     var plus = ajouts(c, s, ctx); if (plus) txt += ' ' + plus;
+    if (g === 'donjon' && COF.Donjons) { var am0 = COF.Donjons.amenager(c, s); if (am0) txt += ' ' + am0; }
     var progMax = g === 'voyage' ? Math.max(1, Math.min(4, s.voyage.jours)) : (g === 'donjon' ? s.donjon.salles : G0.prog);
+    /* en selle, la route est plus courte */
+    if (g === 'voyage' && COF.Routes) { var mt = COF.Routes.monture(c); if (mt && progMax > 1) { progMax = Math.max(1, Math.ceil(progMax * 0.6)); txt += ' ' + dire(['En selle sur {m}, {h} avale les lieues.', '{h} voyage sur {m} : la route paraîtra moins longue.'], Object.assign({}, ctx, { m: mt.le })); } }
     s.jeu = { genre: g, prog: 0, progMax: progMax, danger: 0, dangerMax: G0.danger, choix: [], fini: null, bonus: false };
     if (g === 'repos') { s.jeu.fini = 'reussite'; s.jeu.resume = dire(G0.ok, ctx); }
-    else s.jeu.choix = tirerChoix(c, g);
+    else s.jeu.choix = tirerChoix(c, g, null, s);
     /* un imprévu peut surgir dès l'ouverture (exploration surtout) */
     s.jeu.evtDiffere = Math.random() < ({ explorer: 0.45, voyage: 0.4, fil: 0.25, libre: 0.25, piste: 0.15, donjon: 0.2 }[g] || 0);
     /* la saison pèse sur la route (neige, orage : un jour de plus) */
     if (COF.Saisons && g !== 'repos') { var sj = COF.Saisons.ajuster(c, s, ctx); if (sj) txt += ' ' + sj; }
+    /* près d'un repaire, la route est moins sûre */
+    if (COF.Bandes && (g === 'voyage' || g === 'explorer')) { var bd = COF.Bandes.danger(c); if (bd) { s.jeu.danger = Math.min(s.jeu.dangerMax - 1, s.jeu.danger + 1); txt += ' ' + dire(['On dit que ' + bd.nom + ' rôdent par ici. Mieux vaut rester sur ses gardes.', 'Des traces fraîches, un feu mal éteint : ' + bd.nom + ' ne sont pas loin.'], ctx); } }
     /* les actes passés ont des suites : une vieille rancune, une dette, de la gratitude */
     var echo = COF.Echos && g !== 'repos' && !/^finale_/.test(g) ? COF.Echos.reveiller(c, s, ctx) : null;
     var out = [];
     if (der && s.n > 1) out.push({ t: 'recit', rappel: true, txt: 'Précédemment : ' + der.resume });
     else if (s.n === 1 && c.precedent && c.precedent.epilogue) out.push({ t: 'recit', rappel: true, txt: 'Précédemment, dans la campagne (« ' + c.precedent.titre + ' ») : ' + c.precedent.epilogue });
+    /* la légende du héros le précède */
+    if (COF.Legende && g !== 'repos') { var lgo = COF.Legende.ouverture(c, ctx); if (lgo) txt += ' ' + lgo; }
     out.push({ t: 'recit', txt: txt });
     if (echo) out.push({ t: 'recit', txt: echo.txt, m: echo.m, ok: echo.ok });
     return out;
@@ -588,6 +612,7 @@ COF.Conteur = (function () {
         o.carac = a.carac; o.mod = caracHeros(c, a.carac); o.diff = difficulte(c, a, s.jeu.genre);
         var hC = heros(c), bt = hC && COF.Effets ? COF.Effets.bonusTest(hC, a.carac, motsPour(id, a.carac)) : null;
         if (bt) { o.mod += bt.bonus; o.deBonus = bt.deBonus; o.voies = bt.sources; }
+        if (COF.Legende) o.mod += COF.Legende.bonus(c, id);
       }
       return o;
     }).filter(Boolean);
@@ -640,6 +665,7 @@ COF.Conteur = (function () {
         return '−' + off + ' po · +' + (h2.pv - av) + ' PV (' + h2.pv + ')';
       }
     }
+    if (COF.Recit && a.effet) return COF.Recit.effet(c, s, a, ctx) || '';
     return '';
   }
   /* Un bon repas (chasse, cueillette, auberge) : quelques PV. */
@@ -676,14 +702,23 @@ COF.Conteur = (function () {
   var MOTS_CARAC = { FOR: ['force', 'athlé'], AGI: ['acrobat', 'discré', 'crochet', 'agil'], CON: ['endur', 'résist'], PER: ['perception', 'vigilan', 'survie'],
     CHA: SOCIAL, INT: ['érudi', 'connaiss', 'savoir', 'mécan'], VOL: ['volonté', 'résist', 'concentr'] };
   function motsPour(id, carac, texte) {
-    var l = (MOTS_ACTION[id] || []).slice();
+    var l = (MOTS_ACTION[id] || (COF.Recit && COF.Recit.MOTS[id]) || []).slice();
     if (texte) String(texte).toLowerCase().split(/[^a-zàâäéèêëîïôöûüç]+/).forEach(function (w) { if (w.length >= 5) l.push(w.slice(0, 6)); });
     return l.length ? l : (MOTS_CARAC[carac] || []);
   }
   function difficulteBase(c) { return 10 + Math.floor((c.tension || 5) / 2) + Math.floor((niveau(c) - 1) / 3) + ((COF.Saga ? COF.Saga.chapitre(c) : 1) - 1); }
   /* Jet d'une caractéristique du héros (dé bonus consommé). */
-  function jet(c, s, carac, diff, mots) {
+  /* Verdict d'un jet, pour l'affichage en mode récit (sans les chiffres). */
+  function verdict(jt) {
+    if (!jt || !jt.r) return null;
+    var r = jt.r;
+    return r.crit ? 'crit' : r.fumble ? 'fumble' : jt.reussi ? (r.total - jt.diff <= 1 ? 'juste' : 'ok') : 'ko';
+  }
+  function jet(c, s, carac, diff, mots, id) {
     var j = s.jeu, mod = caracHeros(c, carac), aide = null, comp = compagnons(c), hJ = heros(c), voie = null;
+    /* talent né de l'habitude (action souvent réussie) */
+    var tal = id && COF.Legende ? COF.Legende.bonus(c, id) : 0;
+    mod += tal;
     /* bonus des voies : compétence correspondante, +N aux tests, dé bonus (héroïque…) */
     if (hJ && COF.Effets) {
       voie = COF.Effets.bonusTest(hJ, carac, mots || MOTS_CARAC[carac]);
@@ -700,7 +735,7 @@ COF.Conteur = (function () {
     var reussi = !!r.reussite;
     return { r: r, reussi: reussi, diff: diff, aide: aide, m: carac + ' ' + (mod >= 0 ? '+' : '') + mod + ' : ' + r.des.join('/') + (r.des.length > 1 ? ' (garde ' + r.garde + ')' : '') +
       ' → ' + r.total + ' contre ' + diff + ' · ' + (r.crit ? 'réussite critique' : r.fumble ? 'échec critique' : reussi ? (r.total - diff <= 1 ? 'de justesse' : 'réussite') : 'échec') +
-      (bonus ? ' (dé bonus' + (aide ? ' : aide de ' + aide : '') + ')' : '') + (voie && voie.sources.length ? ' · voies : ' + voie.sources.join(', ') : '') };
+      (bonus ? ' (dé bonus' + (aide ? ' : aide de ' + aide : '') + ')' : '') + (tal ? ' · talent +' + tal : '') + (voie && voie.sources.length ? ' · voies : ' + voie.sources.join(', ') : '') };
   }
   /* Conséquence concrète d'un échec (scènes physiques). */
   var MENTALES = ['savoir', 'interroger', 'parlementer', 'questionner', 'jauger', 'negocier', 'reclamer', 'exiger'];
@@ -725,6 +760,7 @@ COF.Conteur = (function () {
     if (s.jeu.genre === 'dialogue' && COF.Dialogues && s.dialogue) return COF.Dialogues.agir(c, s, i);
     var id = s.jeu.choix[i], a = ACTIONS[id]; if (!a) return {};
     var j = s.jeu, ctx = contexte(c, s, j.genre), out = {}, m = [], txt, reussi;
+    j.vus = (j.vus || []).concat([id]).slice(-8);   /* les choix récents laissent leur place */
     if (id === 'concours' && ctx.caracConcours) a = Object.assign({}, a, { carac: ctx.caracConcours });   /* l'épreuve du concours */
     if (a.auto) {
       reussi = true;
@@ -736,16 +772,20 @@ COF.Conteur = (function () {
       m.push('sans jet' + (a.danger ? ' · danger +' + a.danger : ''));
       if (efA) m.push(efA);
     } else {
-      var diff = difficulte(c, a, j.genre), jt = jet(c, s, a.carac, diff, motsPour(id, a.carac)), r = jt.r;
+      var diff = difficulte(c, a, j.genre), jt = jet(c, s, a.carac, diff, motsPour(id, a.carac), id), r = jt.r;
       reussi = jt.reussi; m.push(jt.m);
+      if (COF.Legende) { var lg = COF.Legende.action(c, id, reussi); if (lg) m.push(lg); }
+      var PL = COF.Plume, av = PL ? PL.avant(c, s, a, ctx) : '';
       if (reussi) {
         var ef = effet(c, s, a, ctx); if (ef) m.push(ef);
         txt = dire(a.ok, ctx);
-        if (r.crit) txt += ' ' + p(['Un coup de maître.', 'Mieux que tout ce qu’on pouvait espérer !']);
-        else if (r.total - diff <= 1) { avancerTemps(c, 1); txt += ' ' + p(['Mais cela prend un temps fou.', 'De justesse, et au prix de longues heures.']); m.push('une heure perdue'); }
+        if (r.crit) txt += ' ' + (PL ? PL.issue(r, true, diff, ctx) : 'Un coup de maître.');
+        else if (r.total - diff <= 1) { avancerTemps(c, 1); txt += ' ' + (PL ? PL.issue(r, true, diff, ctx) + ' ' + p(['Il a fallu y passer du temps.', 'Le soleil a tourné entre-temps.', 'Cela a pris des heures.']) : p(['Mais cela prend un temps fou.', 'De justesse, et au prix de longues heures.'])); m.push('une heure perdue'); }
+        else if (PL) { var io = PL.issue(r, true, diff, ctx); if (io) txt += ' ' + io; }
         j.prog = a.fin ? j.progMax : j.prog + (r.crit ? 2 : 1);
       } else {
         txt = dire(a.ko, ctx);
+        if (PL) { var ik = PL.issue(r, false, diff, ctx); if (ik) txt += ' ' + ik; }
         if (a.fin) { j.prog = j.progMax; m.push('l’affaire se conclut quand même'); }
         else {
           /* quand la tension est haute, les ennuis s'accumulent plus vite */
@@ -754,7 +794,8 @@ COF.Conteur = (function () {
           if (cs) { txt += ' ' + dire(cs.txt, ctx); if (cs.m) m.push(cs.m); }
         }
       }
-      if (jt.aide) txt = dire(['{x} prête main-forte à {h}.', 'Avec l’aide de {x}, {h} se lance.', '{x} couvre {h}.'], Object.assign({}, ctx, { x: jt.aide })) + ' ' + txt;
+      if (jt.aide) txt = dire(['{x} prête main-forte à {h}.', 'Avec l’aide de {x}, {h} se lance.', '{x} couvre {h}.', '{x} fait diversion pendant que {h} agit.', 'Un signe de tête de {x}, et {h} sait que ses arrières sont couverts.'], Object.assign({}, ctx, { x: jt.aide })) + ' ' + txt;
+      else if (av) txt = av + ' ' + txt;
     }
     /* en voyage, chaque choix est une journée de route : une ration par jour */
     if (j.genre === 'voyage') {
@@ -762,25 +803,30 @@ COF.Conteur = (function () {
       m.push('un jour passe');
       if (COF.Saisons) { var sv = COF.Saisons.journeeRoute(c, s, ctx); if (sv) { txt += ' ' + sv.txt; if (sv.m) m.push(sv.m); } }
     }
+    /* le récit continue : l'affaire progresse, le danger monte, le décor vit */
+    if (COF.Recit) { var ap = COF.Recit.apres(c, s, reussi, ctx); if (ap) txt += ' ' + ap; }
     /* les compagnons réagissent : réplique, approbation ou désaccord */
     if (COF.Troupe) {
       var rq = COF.Troupe.replique(c, j.danger >= j.dangerMax - 1 ? 'danger' : (reussi ? 'succes' : 'echec'), ctx, 0.22);
       if (rq) txt += ' ' + rq;
       COF.Troupe.reagir(c, a.effet === 'flaner' ? 'flaner' : id, ctx).forEach(function (n) { txt += ' ' + n.txt; m.push(n.m); });
     }
-    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · '), ok: reussi });
+    if (COF.Plume) txt = COF.Plume.alleger(txt, ctx);
+    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · '), ok: reussi, a: nomAction(id, ctx), v: verdict(a.auto ? null : jt) });
     s = K().sceneCourante(c);
     /* donjon : chaque avancée mène à la salle suivante */
     if (j.genre === 'donjon' && reussi && s.jeu.prog < s.jeu.progMax) {
       s.donjon.n++; s.donjon.salle = nouvelleSalle();
       var cd = contexte(c, s, 'donjon'), occ = s.donjon.salle.occupant || '';
-      K().ajouterEntree(c, { t: 'recit', txt: dire('Salle ' + s.donjon.n + ' sur ' + s.donjon.salles + ' : {salle}', cd) + (occ ? ' ' + maj(sansPoint(occ)) + '.' : '') });
+      var amS = COF.Donjons ? COF.Donjons.amenager(c, s) : '';
+      K().ajouterEntree(c, { t: 'recit', txt: dire('Salle ' + s.donjon.n + ' sur ' + s.donjon.salles + ' : {salle}', cd) + (occ ? ' ' + maj(sansPoint(occ)) + '.' : '') + (amS ? ' ' + amS : '') });
+      s.jeu.choix = tirerChoix(c, 'donjon', id, s);
       if (occ && !/vide|personne|aucun|abandonn|déserte|rien/i.test(occ) && Math.random() < 0.45) { out.menace = engager(c, s, null); K().sauver(c); return out; }
     }
     if (s.jeu.prog >= s.jeu.progMax) finir(c, s, 'reussite');
     else if (s.jeu.danger >= s.jeu.dangerMax) out.menace = menace(c, s);
     else {
-      s.jeu.choix = tirerChoix(c, s.jeu.genre, id);
+      s.jeu.choix = tirerChoix(c, s.jeu.genre, id, s);
       /* l'imprévu : flâner le provoque, sinon il surgit au hasard (plus souvent quand la tension monte) */
       var calme = ['accroche', 'denouement', 'confrontation', 'repos', 'loisir', 'dialogue'].indexOf(s.jeu.genre) >= 0;
       /* rebondissement : une fois par scène d'enquête, de quête ou d'affaire, une fois l'objectif entamé */
@@ -890,7 +936,9 @@ COF.Conteur = (function () {
       if (cs) { txt += ' ' + dire(cs.txt, ctx); if (cs.m) m.push(cs.m); }
     }
     if (jt.aide) txt = dire('{x} prête main-forte à {h}.', Object.assign({}, ctx, { x: jt.aide })) + ' ' + txt;
-    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · '), ok: jt.reussi });
+    if (COF.Plume && !r.crit) { var il = COF.Plume.issue(r, jt.reussi, diff, ctx); if (il) txt += ' ' + il; }
+    if (COF.Recit) { var apL = COF.Recit.apres(c, s, jt.reussi, ctx); if (apL) txt += ' ' + apL; }
+    K().ajouterEntree(c, { t: 'recit', txt: txt, m: m.join(' · '), ok: jt.reussi, v: verdict(jt) });
     s = K().sceneCourante(c);
     if (s.jeu.prog >= s.jeu.progMax) finir(c, s, 'reussite');
     else if (s.jeu.danger >= s.jeu.dangerMax) out.menace = menace(c, s);
@@ -910,13 +958,25 @@ COF.Conteur = (function () {
     var j = s.jeu;
     if (j.prog >= j.progMax && j.progMax > 0) finir(c, s, 'reussite');
     else if (j.danger >= j.dangerMax) menace(c, s);
-    else j.choix = tirerChoix(c, j.genre);
+    else j.choix = tirerChoix(c, j.genre, null, s);
   }
   /* Le danger déborde : la discussion tourne mal (scène sociale) ou une
      menace surgit (rencontre hostile). */
-  function menace(c, s) {
+  function menace(c, s, force) {
     var ctx = contexte(c, s, s.jeu.genre);
-    if (GENRES[s.jeu.genre].social || c.rencontre) { finir(c, s, 'echec'); return null; }
+    if (c.rencontre) { finir(c, s, 'echec'); return null; }
+    /* un revers qui colle à la situation (la garde, la tempête, l'effondrement…), pas toujours un combat */
+    if (!force && COF.Recit) {
+      var rp = COF.Recit.rupture(c, s, ctx);
+      if (!rp.combat) {
+        K().ajouterEntree(c, { t: 'recit', txt: rp.txt, m: rp.m, ok: false });
+        s = K().sceneCourante(c) || s;
+        if (rp.suite === 'echec') finir(c, s, 'echec');
+        else s.jeu.choix = tirerChoix(c, s.jeu.genre, null, s);
+        return null;
+      }
+    }
+    if (GENRES[s.jeu.genre].social) { finir(c, s, 'echec'); return null; }
     var r = AV().rencontre(c, { env: ctx.env, difficulte: COF.Saga ? COF.Saga.diffMenace(c) : 'ordinaire', style: 'auto', theme: Math.random() < 0.6 });
     if (r.erreur) { finir(c, s, 'echec'); return null; }
     r.test = r.theme && c.saga ? 'Des serviteurs de ' + c.saga.nom : 'Le danger se concrétise';
@@ -927,10 +987,18 @@ COF.Conteur = (function () {
   function provoquer(c) {
     var s = K().sceneCourante(c); if (!s || !s.jeu || s.jeu.fini || c.rencontre) return null;
     s.jeu.danger = s.jeu.dangerMax;
-    var r = menace(c, s); K().sauver(c); return r;
+    var r = menace(c, s, true); K().sauver(c); return r;   /* le héros va au-devant du combat */
   }
   function finir(c, s, issue) {
     /* donjon exploré jusqu'au bout : le trésor du fond */
+    if (s.jeu.genre === 'donjon' && issue === 'reussite' && s.donjon && s.donjon.remonte && !s.donjon.tresor) {
+      /* remonté avant le fond : on garde le butin glané, le trésor attendra */
+      s.donjon.tresor = 'rien de plus';
+      var ctxR = contexte(c, s, 'donjon'); s.jeu.fini = issue; s.jeu.choix = [];
+      s.jeu.resume = dire(['{h} remonte vers la lumière avec ce qu’{hil} a trouvé. Le fond {de_lieu} gardera ses secrets… pour l’instant.', 'De retour à l’air libre, {h} compte son butin. Le cœur {de_lieu} reste inexploré.'], ctxR);
+      K().ajouterEntree(c, { t: 'recit', fin: true, txt: s.jeu.resume });
+      return;
+    }
     if (s.jeu.genre === 'donjon' && issue === 'reussite' && s.donjon && !s.donjon.tresor) {
       var hP = heros(c), b = COF.Recompense.genererCoffre({ niveau: niveau(c), env: (M().ici(c) || {}).env || 'ruines', richesse: 'standard' });
       if (hP) AV().encaisser(hP, b);
@@ -954,7 +1022,7 @@ COF.Conteur = (function () {
       K().ajouterEntree(c, { t: 'recit', txt: dire(['Les adversaires à terre, {h} reprend son souffle. Sur l’un d’eux, un détail retient son attention.', 'Le calme revient. En fouillant les corps, {h} trouve de quoi avancer.'], ctx), m: 'objectif +1', ok: true });
     } else K().ajouterEntree(c, { t: 'recit', txt: dire(['La menace écartée, {h} peut reprendre là où l’affaire en était.', 'Le danger s’éloigne. Il est temps de se remettre à l’ouvrage.'], ctx), ok: true });
     s = K().sceneCourante(c);
-    if (j.prog >= j.progMax) finir(c, s, 'reussite'); else j.choix = tirerChoix(c, j.genre);
+    if (j.prog >= j.progMax) finir(c, s, 'reussite'); else j.choix = tirerChoix(c, j.genre, null, s);
     K().sauver(c);
   }
   /* Clôt une scène jouée : avance le fil (même en cas d'échec : l'histoire
@@ -966,6 +1034,12 @@ COF.Conteur = (function () {
       if (Math.random() < 0.35) { var dl = decouvrirLieu(c); if (dl) notes.push('🗺️ En chemin, le héros a repéré ' + dl.nom + ' (ajouté à la carte).'); }
       M().seRendre(c, s.voyage.dest);
       var dst = M().ici(c); if (dst) notes.push('📍 Arrivée ' + formes(dst.nom).a + '.');
+      /* les gens d'ici ont vécu sans le héros : mariages, départs, disparitions… */
+      if (dst && COF.Vie) COF.Vie.arrivee(c, dst.id).forEach(function (n) { notes.push(n); });
+      /* le village a changé pendant l'absence (foire, incendie…), et chez soi, une visite */
+      if (dst && COF.Village) COF.Village.arrivee(c, dst.id).forEach(function (n) { notes.push(n); });
+      /* une commande passée chez un artisan d'ici est peut-être prête */
+      if (dst && COF.Echoppes) COF.Echoppes.arrivee(c, dst.id).forEach(function (n) { notes.push(n); });
     } else if (f && f.quete) {
       if (!ok) f.quete.revers = (f.quete.revers || 0) + 1;
       if (!ok && f.quete.saga === 'final' && f.quete.etape === 3 && c.saga) c.saga.amere = true;
@@ -973,6 +1047,8 @@ COF.Conteur = (function () {
     } else if (f && f.mission && COF.Missions) COF.Missions.conclure(c, f, ok).forEach(function (n) { notes.push(n); });
     else if (f) notes.push(S ? S.resoudreRumeur(c, f, ok) : (ok ? (f.ouvert = false, '🧵 « ' + f.nom + ' » est résolu.') : ''));
     if (j.genre === 'ville' && S) notes.push(S.changerRep(M().ici(c), ok ? 1 : -1));
+    /* le repaire d'une bande nettoyé */
+    if (s.bandeId && ok && COF.Bandes) COF.Bandes.vaincre(c, s.bandeId).forEach(function (n) { notes.push(n); });
     var nuit;
     if (s.loisir && s.loisir.nuit) {
       /* une vraie nuit : DR +1, PM restaurés, états effacés, et l'on se réveille à l'aube */
@@ -989,6 +1065,9 @@ COF.Conteur = (function () {
       notes.push(S.nouveauJour(c));
       if (!ok && Math.random() < 0.4) notes.push(S.avancer(c, 1));
     }
+    /* les bandes de la région grandissent avec le temps */
+    if (COF.Bandes && j.genre !== 'repos') COF.Bandes.tick(c).forEach(function (n) { notes.push(n); });
+    if (COF.Legende) COF.Legende.verifier(c).forEach(function (n) { notes.push(n); });
     return notes.filter(Boolean);
   }
   function infoTemps(c) {
@@ -1003,7 +1082,7 @@ COF.Conteur = (function () {
     if (s && s.jeu && s.jeu.evtDiffere && COF.Imprevus) { s.jeu.evtDiffere = false; COF.Imprevus.declencher(c, s); K().sauver(c); }
   }
   return { repas: repas, contexte: function (c, s) { return contexte(c, s, s && s.jeu ? s.jeu.genre : genreDe(c, s)); }, heros: heros, niveau: niveau, payer: payer, blesser: blesser,
-    caracHeros: caracHeros, difficulteBase: difficulteBase, jet: jet, engager: engager, reprendre: reprendre, decouvrirLieu: decouvrirLieu, apresOuverture: apresOuverture,
+    caracHeros: caracHeros, difficulteBase: difficulteBase, jet: jet, verdict: verdict, engager: engager, reprendre: reprendre, decouvrirLieu: decouvrirLieu, apresOuverture: apresOuverture,
     formes: formes, ex: ex, polir: polir, dire: dire, GENRES: GENRES, ACTIONS: ACTIONS, genreDe: genreDe,
     finir: finir, capacitesHorsCombat: capacitesHorsCombat, utiliserCapacite: utiliserCapacite, motsPour: motsPour, interpreter: interpreter, agirLibre: agirLibre, titreFinale: titreFinale, ouvrir: ouvrir, choix: choix, agir: agir, provoquer: provoquer, apresCombat: apresCombat, conclure: conclure, avancerTemps: avancerTemps, infoTemps: infoTemps };
 })();

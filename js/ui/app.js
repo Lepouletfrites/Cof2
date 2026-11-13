@@ -64,7 +64,8 @@ COF.UI = COF.UI || {};
     /* Combat : plus de bouton en aventure (les rencontres ouvrent l'Arène d'elles-mêmes) */
     { id: 'combat', ic: '⚔️', tx: 'Combat', cache: true, subs: [['arene', '⚔️ Combat', 'arene']] },
     { id: 'heros', ic: '🛡️', tx: 'Héros', subs: [
-      ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'], ['artisanat', '⚒️ Artisanat', 'artisanat'], ['persos', '👥 Mes héros', 'persos']] },
+      ['fiche', '🛡️ Fiche', 'fiche'], ['voies', '📜 Voies', 'fiche'], ['objets', '🎒 Inventaire', 'fiche'], ['persos', '👥 Mes héros', 'persos']] },
+    /* Artisanat : plus d'onglet en aventure ; on fabrique ou on commande chez les artisans des villages (récit) */
     /* Marché : plus de bouton en aventure ; on y entre par le récit (village, temps libre) */
     { id: 'marche', ic: '🛒', tx: 'Marché', cache: true, subs: [['marche', '🛒 Marché', 'marche']] },
     /* Outils : plus de bouton en aventure (tout passe par le récit ; oracle et tests restent dans le 🧰 de la scène) */
