@@ -73,12 +73,18 @@ COF.Carnet = (function () {
     sauver(c);
     return s;
   }
-  /* controle : true = le héros a gardé la main (tension -1), false = +1 */
+  /* La tension n'est plus choisie par le joueur : le récit la décide
+     (COF.Tension : issue, réussites et échecs, danger, combats, genre).
+     controle ne sert plus que de repli si ce module manque. */
   function clore(c, controle, resume) {
     var s = sceneCourante(c);
     if (!s) return null;
-    s.close = true; s.resume = resume || ''; s.controle = controle;
-    c.tension = Math.max(1, Math.min(9, c.tension + (controle ? -1 : 1)));
+    s.close = true; s.resume = resume || '';
+    var av = c.tension, ev = COF.Tension ? COF.Tension.evaluer(c, s) : { delta: controle ? -1 : 1, raisons: [] };
+    c.tension = Math.max(1, Math.min(9, c.tension + ev.delta));
+    s.controle = ev.delta < 0 ? true : (ev.delta > 0 ? false : null);
+    s.tension = { avant: av, apres: c.tension, raisons: ev.raisons };
+    if (COF.Tension) s.tensionNote = COF.Tension.texte(av, c.tension, ev);
     sauver(c);
     return s;
   }

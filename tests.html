@@ -114,7 +114,7 @@ async function lancer() {
     localStorage.setItem('cof2.mode', 'aventure');
 
     await test('Modules du moteur présents', function () {
-      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons', 'Culture', 'Recit', 'Legende', 'Combats', 'Vie', 'Rumeurs', 'Plume', 'Echoppes', 'Village', 'Donjons', 'Routes', 'Bandes']
+      var manquants = ['Store', 'Calc', 'Effets', 'Carnet', 'Monde', 'Aventure', 'Conteur', 'Directeur', 'Imprevus', 'Villes', 'Saga', 'Chronique', 'Campagne', 'Missions', 'Loisirs', 'Factions', 'Dialogues', 'Troupe', 'Echos', 'Saisons', 'Culture', 'Recit', 'Legende', 'Combats', 'Vie', 'Rumeurs', 'Plume', 'Echoppes', 'Village', 'Donjons', 'Routes', 'Bandes', 'Tension']
         .filter(function (m) { return !COF[m]; });
       return { ok: !manquants.length, detail: manquants.length ? 'manquants : ' + manquants.join(', ') : '' };
     });
@@ -452,6 +452,39 @@ async function lancer() {
       var attendus = ['acheter', 'vendre', 'marchander', 'commander', 'fabriquer', 'retirer'];
       var manque = attendus.filter(function (k) { return !fait[k]; });
       return { ok: !pb.length && !manque.length && eco, detail: Object.keys(fait).join(', ') + (manque.length ? '\nmanque : ' + manque.join(', ') : '') + '\nprix du pain : ' + p1 + ' → pénurie ' + p2 + ' → hiver ' + p3 + ' pa\n' + ex.join('\n').slice(0, 600) + (pb.length ? '\n' + pb.slice(0, 5).join('\n') : '') };
+    });
+
+    /* la tension : décidée par la scène jouée, pas par le joueur */
+    await test('Tension décidée par la scène', function () {
+      c = K.actif(); if (K.sceneCourante(c)) K.clore(c, true, ''); c = K.actif();
+      var pb = [], res = {};
+      function essai(nom, type, jeu, entrees) {
+        c = K.actif(); c.tension = 5; K.sauver(c);
+        K.nouvelleScene(c, nom, '', { type: type, sansTest: true }); c = K.actif(); var s = K.sceneCourante(c);
+        if (jeu) s.jeu = jeu; (entrees || []).forEach(function (e) { K.ajouterEntree(c, e); }); c = K.actif(); s = K.sceneCourante(c); if (jeu) { s.jeu = jeu; K.sauver(c); }
+        var sc = K.clore(c, true, ''); c = K.actif();
+        res[nom] = c.tension - 5;
+        if (!sc.tensionNote || CASSE.test(sc.tensionNote)) pb.push(nom + ' : note de tension absente ou cassée');
+        textes.push(sc.tensionNote);
+        return sc;
+      }
+      var ok = { t: 'recit', txt: 'x', m: 'PER +2 : 15 contre 12 · réussite', ok: true, v: 'ok' }, ko = { t: 'recit', txt: 'x', m: 'PER +2 : 5 contre 12 · échec', ok: false, v: 'ko' };
+      essai('nette', 'libre', { genre: 'libre', fini: 'reussite', prog: 2, progMax: 2, danger: 0, dangerMax: 3 }, [ok, ok]);
+      essai('arrachée', 'libre', { genre: 'libre', fini: 'reussite', prog: 2, progMax: 2, danger: 2, dangerMax: 3 }, [ok, ko, ok]);
+      essai('ratée', 'libre', { genre: 'libre', fini: 'echec', prog: 0, progMax: 2, danger: 3, dangerMax: 3 }, [ko, ko, { t: 'recit', txt: 'revers', m: 'danger au maximum · revers', ok: false }]);
+      essai('repos', 'repos', { genre: 'repos', fini: 'reussite', prog: 1, progMax: 1, danger: 0, dangerMax: 3 }, []);
+      essai('boutique', 'echoppe', null, [{ t: 'recit', txt: 'achat', m: '−3 pa', a: 'Acheter', ok: true }]);
+      essai('à la main', 'libre', null, [{ t: 'jet', txt: 'jet', reussite: false }, { t: 'jet', txt: 'jet', reussite: false }, { t: 'jet', txt: 'jet', reussite: true }]);
+      essai('défaite', 'libre', { genre: 'libre', fini: 'echec', prog: 0, progMax: 2, danger: 2, dangerMax: 3 }, [ko, { t: 'evt', txt: 'Le héros tombe… L’oracle suggère qu’il est capturé.' }]);
+      if (!(res['nette'] === -2)) pb.push('réussite nette : ' + res['nette']);
+      if (!(res['arrachée'] >= -1 && res['arrachée'] <= 0)) pb.push('réussite arrachée : ' + res['arrachée']);
+      if (!(res['ratée'] === 2)) pb.push('échec avec revers : ' + res['ratée']);
+      if (!(res['repos'] < 0)) pb.push('repos : ' + res['repos']);
+      if (res['boutique'] !== 0) pb.push('boutique : ' + res['boutique']);
+      if (!(res['à la main'] > 0)) pb.push('scène à la main : ' + res['à la main']);
+      if (!(res['défaite'] === 2)) pb.push('défaite : ' + res['défaite']);
+      c = K.actif(); c.tension = 5; K.sauver(c);
+      return { ok: !pb.length, detail: Object.keys(res).map(function (k) { return k + ' ' + (res[k] > 0 ? '+' : '') + res[k]; }).join(' · ') + (pb.length ? '\n' + pb.join('\n') : '') };
     });
 
     /* village vivant, petits boulots, chez-soi, donjons, bandes, routes, transfert */

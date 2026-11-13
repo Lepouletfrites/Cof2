@@ -43,6 +43,11 @@ COF.UI.Carnet = (function () {
   function heure(ts) { var d = new Date(ts); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
 
   /* ================= Rendu principal ================= */
+  /* position de défilement de chaque onglet, mise à jour pendant qu'on lit */
+  var memoDefil = {};
+  document.addEventListener('scroll', function (e) {
+    if (e.target && e.target.id === 'cn-corps' && e.target.offsetParent !== null) memoDefil[onglet] = e.target.scrollTop;
+  }, true);
   function rendre() {
     var n = noeud(); if (!n) return;
     var c = K.actif();
@@ -60,7 +65,10 @@ COF.UI.Carnet = (function () {
       }).join('') + '</div>';
     /* Zone centrale : seule partie qui défile (en-tête, onglets et barre
        de saisie restent en place). On conserve sa position de défilement. */
-    var ancien = $('#cn-corps'), pos = ancien && rendre.onglet === onglet ? ancien.scrollTop : 0;
+    /* une zone masquée (on était sur une autre vue : combat, fiche…) a perdu sa position :
+       on reprend celle mémorisée pendant le défilement */
+    var ancien = $('#cn-corps');
+    var pos = memoDefil[onglet] !== undefined ? memoDefil[onglet] : (ancien && rendre.onglet === onglet ? ancien.scrollTop : 0);
     dockCourant = '';
     var corps;
     if (onglet === 'scene') corps = htmlScene(c);
@@ -77,6 +85,12 @@ COF.UI.Carnet = (function () {
       else if (rendre.haut) zc.scrollTop = 0;
       else zc.scrollTop = pos;
     }
+    /* du nouveau dans la scène depuis le dernier affichage (retour de combat, d'une fiche…) :
+       on se place sur le premier passage nouveau, sans avoir à redescendre */
+    var nbFil = zc ? zc.querySelectorAll('#cn-fil > .cn-recit, #cn-fil > .cn-entree').length : 0, scId = (K.sceneCourante(c) || {}).id;
+    if (onglet === 'scene' && !rendre.defiler && !rendre.haut && (rendre.ancre === null || rendre.ancre === undefined) && memoDefil.scene_id === scId && nbFil > (memoDefil.nbFil || 0))
+      rendre.ancre = memoDefil.nbFil || 0;
+    if (onglet === 'scene') { memoDefil.scene_id = scId; memoDefil.nbFil = nbFil; }
     rendre.defiler = false; rendre.haut = false;
     ajusterHauteur();
     /* après un choix : on montre le début de ce qui vient d'être raconté */
@@ -85,6 +99,7 @@ COF.UI.Carnet = (function () {
       if (cib) zc.scrollTop += cib.getBoundingClientRect().top - zc.getBoundingClientRect().top - 6;
     }
     rendre.ancre = null;
+    if (zc) memoDefil[onglet] = zc.scrollTop;
     if (COF.UI.majTitre) COF.UI.majTitre();
   }
 
@@ -110,8 +125,7 @@ COF.UI.Carnet = (function () {
       '<button class="cn-titre" data-cn="menu"><span>' + esc(c.titre) + '</span><span class="cn-sous">' +
         (p ? esc(p.nom) + ' · niv. ' + p.niveau + ' · ' : '') + 'Jour ' + c.jour + ' ▾</span></button>' +
       '<div class="cn-tension"><div class="cn-lbl">Tension <b>' + c.tension + '</b></div>' +
-        '<div class="cn-tension-l"><button data-cn="tension" data-v="-1" aria-label="Baisser la tension">−</button>' + jauge(c) +
-        '<button data-cn="tension" data-v="1" aria-label="Monter la tension">+</button></div></div>' +
+        '<div class="cn-tension-l" title="La tension évolue selon ce qui se passe dans les scènes">' + jauge(c) + '</div></div>' +
       '</div>';
   }
 
@@ -268,7 +282,7 @@ COF.UI.Carnet = (function () {
     var j = s.jeu; if (!j) return s.echoppe ? htmlEchoppe(c, s) : '';
     var p = perso(c), nom = p ? p.nom : 'le héros';
     if (j.fini) return '<div class="cn-choix"><button class="btn btn-plein btn-bloc cn-gros" data-cn="suite">▶ La suite' +
-      '<small>' + (j.fini === 'reussite' ? 'Scène réussie · tension −1' : 'La situation a échappé au héros · tension +1') + '</small></button></div>';
+      '<small>' + (function () { var ap = COF.Tension ? COF.Tension.apercu(c, s) : null; return (j.fini === 'reussite' ? 'Scène réussie' : 'La situation a échappé au héros') + (ap ? ' · tension ' + c.tension + ' → ' + ap.apres : ''); })() + '</small></button></div>';
     if (c.rencontre) return '<div class="cn-choix"><div class="note">⚔️ Il faut d’abord régler la rencontre : combattre, ou tenter une approche avec les boutons ci-dessus.</div></div>';
     var l = COF.Conteur.choix(c, s), imm = immersif();
     var QUESTIONS = ['Que fait ' + nom + ' ?', 'Et maintenant, ' + nom + ' ?', 'À ' + nom + ' de jouer.', nom + ' hésite. Que faire ?', 'Que décide ' + nom + ' ?', 'Le moment est venu de choisir.'];
@@ -419,11 +433,11 @@ COF.UI.Carnet = (function () {
     h += '<div class="cn-monde-ctl"><button data-cn="monde-zoom" data-v="0.7" aria-label="Zoomer">＋</button><button data-cn="monde-zoom" data-v="1.4" aria-label="Dézoomer">−</button>' +
       '<button data-cn="monde-cadrer" aria-label="Autour de moi">📍</button><button data-cn="monde-tout" aria-label="Tout le monde connu">🌍</button></div>';
     h += '</div>';
-    h += '<div class="cn-grille cn-g3" style="margin-top:8px"><button data-cn="monde-ajouter" class="' + (monde.ajouter ? 'on' : '') + '">' + (monde.ajouter ? '✕ Annuler' : '➕ Lieu') + '</button>' +
-      '<button data-cn="monde-ajouter-region" class="' + (monde.ajouterRegion ? 'on' : '') + '">' + (monde.ajouterRegion ? '✕ Annuler' : '🗺️ Région') + '</button>' +
-      (M.ici(c) ? '<button data-cn="monde-lieu" data-id="' + M.ici(c).id + '">📍 Où suis-je ?</button>' : '<button disabled>📍 Inconnue</button>') + '</div>';
+    /* carte en lecture seule : plus d'ajout de lieu ni de région à la main */
+    monde.ajouter = false; monde.ajouterRegion = false; monde.deplacer = null;
+    h += '<div style="margin-top:8px">' + (M.ici(c) ? '<button class="btn btn-bloc" data-cn="monde-lieu" data-id="' + M.ici(c).id + '">📍 Où suis-je ?</button>' : '<button class="btn btn-bloc" disabled>📍 Position inconnue</button>') + '</div>';
     if (M.regions(c).length) h += '<div class="cn-mini" style="margin-top:6px">' + M.regions(c).map(function (rg) {
-      return '<span class="chip" data-cn="monde-reg-suppr" data-id="' + rg.id + '">' + ((M.envDe(rg.env) || {}).ic || '') + ' ' + esc(rg.nom) + ' ✕</span>';
+      return '<span class="chip">' + ((M.envDe(rg.env) || {}).ic || '') + ' ' + esc(rg.nom) + '</span>';
     }).join('') + '</div>';
     h += '<div class="cn-legende">❗ quête · 📌 affaire · ☠️ menace · ⚔️ ennemi · 📍 vous</div>';
     h += '<div class="note" style="margin-top:6px">' + (monde.ajouterRegion ? '🗺️ Touchez le centre de la nouvelle région.' : monde.ajouter ? '➕ Touchez la carte à l’endroit du nouveau lieu.'
@@ -540,27 +554,12 @@ COF.UI.Carnet = (function () {
       var jEst = routeIci ? routeIci.jours : Math.max(1, Math.min(6, Math.round(Math.hypot(ici.x - l.x, ici.y - l.y) / 15)));
       h += '<button class="btn btn-plein btn-bloc" data-cn="monde-recit" data-id="' + id + '">🧭 Partir pour ce lieu (' + jEst + ' j de route' + (routeIci ? '' : ', hors des sentiers') + ')</button>';
     }
-    h += '<details class="cn-details"><summary>✏️ Modifier la carte</summary><label class="cn-lbl2">Type de terrain</label>' + chipsType(l.env, 'monde-type', ' data-l="' + id + '"');
-    h += '<div class="cn-grille" style="margin-top:8px">' +
-      (c.position === id ? '<button disabled>📍 Vous êtes ici</button>' : '<button data-cn="monde-ici" data-id="' + id + '">📍 Je suis ici</button>') +
-      '<button data-cn="monde-deplacer" data-id="' + id + '">✋ Déplacer sur la carte</button></div>';
-    if (vois.length) h += '<label class="cn-lbl2" style="margin-top:12px">Routes</label>' + vois.map(function (v) {
-      return '<div class="cn-resl"><span>' + esc(v.lieu.nom) + ' · ' + v.route.jours + ' j</span><button class="btn btn-sm" data-cn="monde-delier" data-id="' + v.route.id + '" data-l="' + id + '">✕</button></div>';
+    /* la carte se consulte : routes connues, sans outil de modification (tout est généré par le récit) */
+    if (c.position === id) h += '<div class="note" style="margin-top:8px">📍 Vous êtes ici.</div>';
+    if (vois.length) h += '<label class="cn-lbl2" style="margin-top:12px">Routes connues</label>' + vois.map(function (v) {
+      return '<div class="cn-resl"><span>' + ((COF.Monde.envDe(v.route.env) || {}).ic || '🛤️') + ' ' + esc(v.lieu.nom) + ' · ' + v.route.jours + ' jour' + (v.route.jours > 1 ? 's' : '') + '</span>' +
+        '<button class="btn btn-sm" data-cn="monde-lieu" data-id="' + v.lieu.id + '">Voir</button></div>';
     }).join('');
-    var autres = c.lieux.filter(function (x) { return x.id !== id; });
-    if (autres.length) {
-      h += '<label class="cn-lbl2" style="margin-top:12px">🔗 Relier à…</label><div class="cn-mini">' + autres.map(function (x) {
-        return '<span class="chip' + (monde.cible === x.id ? ' on' : '') + '" data-cn="monde-cible" data-id="' + x.id + '" data-l="' + id + '">' + esc(x.nom) + '</span>';
-      }).join('') + '</div>';
-      if (monde.cible) {
-        h += '<div class="grille2" style="align-items:center"><div class="note">Durée</div>' + compteur('monde-jours', monde.jours, 'jour(s)') + '</div>' +
-          '<div class="cn-mini" style="margin-top:6px">' + (COF.ENVIRONNEMENTS || []).map(function (e) {
-            return '<span class="chip' + (monde.env === e.id ? ' on' : '') + '" data-cn="monde-env" data-v="' + e.id + '" data-l="' + id + '">' + e.ic + ' ' + esc(e.nom) + '</span>';
-          }).join('') + '</div>' +
-          '<button class="btn btn-bloc btn-or" data-cn="monde-relier" data-l="' + id + '">🔗 Tracer la route</button>';
-      }
-    }
-    h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="editer" data-l="lieux" data-id="' + id + '">✏️ Nom et notes</button></details>';
     ouvrir('📍 ' + l.nom, h, { type: 'lieu', id: id });
   }
 
@@ -572,12 +571,16 @@ COF.UI.Carnet = (function () {
   }
   function htmlListeBase(c, l, L, items) {
     if (l === 'fils') items.sort(function (a, b) { return (b.ouvert ? 1 : 0) - (a.ouvert ? 1 : 0); });
+    /* fils et lieux : tout naît du récit ; on les consulte, on ne les modifie plus */
+    var lecture = l === 'fils' || l === 'lieux';
     var h = '<div class="carte"><h2>' + esc(L.titre) + '</h2><div class="carte-corps">' +
-      '<div class="cn-ajout"><input id="cn-nouveau" placeholder="' + esc(L.ph) + '"><button class="btn btn-plein" data-cn="ajouter" data-l="' + l + '" aria-label="Ajouter">＋</button></div>';
+      (lecture ? '<div class="note" style="margin-bottom:8px">' + (l === 'fils' ? 'Les fils naissent et se dénouent au fil du récit. Touchez-en un pour lire son histoire.' : 'Les lieux se découvrent en jouant. Touchez-en un pour le voir sur la carte.') + '</div>'
+        : '<div class="cn-ajout"><input id="cn-nouveau" placeholder="' + esc(L.ph) + '"><button class="btn btn-plein" data-cn="ajouter" data-l="' + l + '" aria-label="Ajouter">＋</button></div>');
     if (!items.length) h += '<div class="vide">' + esc(L.vide) + '</div>';
     items.forEach(function (x) {
       var att = l === 'pnj' ? ATTITUDES.filter(function (a) { return a[0] === x.attitude; })[0] || ATTITUDES[1] : null;
-      h += '<div class="cn-item' + (l === 'fils' && !x.ouvert ? ' ferme' : '') + '" data-cn="editer" data-l="' + l + '" data-id="' + x.id + '">' +
+      var clic = l === 'fils' ? 'data-cn="voir-fil"' : l === 'lieux' ? 'data-cn="monde-lieu"' : 'data-cn="editer" data-l="' + l + '"';
+      h += '<div class="cn-item' + (l === 'fils' && !x.ouvert ? ' ferme' : '') + '" ' + clic + ' data-id="' + x.id + '">' +
         '<div class="info"><div class="t">' + (l === 'fils' && !x.ouvert ? '✓ ' : '') + (l === 'pnj' && x.mort ? '✝ ' : '') +
           (l === 'lieux' && COF.Monde ? ((COF.Monde.envDe(x.env) || {}).ic || '') + ' ' : '') + (l === 'lieux' && x.id === c.position ? '📍 ' : '') + esc(x.nom) +
           (att ? ' <span class="puce" style="border-color:' + att[1] + ';color:' + att[1] + '">' + esc(att[0]) + '</span>' : '') +
@@ -586,12 +589,22 @@ COF.UI.Carnet = (function () {
           (l === 'pnj' && x.vie && x.vie.length ? '<div class="s cn-vie">🕰️ Jour ' + x.vie[x.vie.length - 1].jour + ' : ' + esc(x.vie[x.vie.length - 1].txt) + '</div>' : '') +
           (l === 'fils' && x.fiabilite ? '<div class="s cn-vie">' + esc(x.fiabilite) + '</div>' : '') +
           (x.note ? '<div class="s">' + esc(x.note.length > 140 ? x.note.slice(0, 140) + '…' : x.note) + '</div>' : '') + '</div>' +
-        (l === 'fils' ? '<button class="btn btn-sm" data-cn="basculer" data-id="' + x.id + '" aria-label="' + (x.ouvert ? 'Résoudre' : 'Rouvrir') + '">' + (x.ouvert ? '✓' : '↺') + '</button>' : '') +
         '</div>';
     });
-    if (l === 'fils') h += '<button class="btn btn-plein btn-bloc" style="margin-top:10px" data-cn="nouvelle-quete">📜 Nouvelle quête<small style="display:block;font-size:11px;opacity:.8">commanditaire, lieu sur la carte et 5 étapes</small></button>';
-    else h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="aller" data-v="' + L.gen[0] + '">' + esc(L.gen[1]) + ' puis 📌</button>';
+    if (!lecture) h += '<button class="btn btn-bloc" style="margin-top:10px" data-cn="aller" data-v="' + L.gen[0] + '">' + esc(L.gen[1]) + ' puis 📌</button>';
     return h + '</div></div>';
+  }
+  /* Un fil, en lecture seule : son histoire, son étape, où il mène. */
+  function sheetVoirFil(id) {
+    var c = K.actif(), f = (c.fils || []).filter(function (x) { return x.id === id; })[0]; if (!f) return;
+    var q = f.quete, h = '<div class="cn-lieu-tete">' + (f.ouvert ? '🧵 En cours' : '✓ Dénoué') + (q ? ' · quête' + (q.saga === 'final' ? ' majeure' : '') : f.mission ? ' · petite affaire' : f.verite ? ' · rumeur' : '') + '</div>';
+    if (q) h += htmlEtapes(q) + (q.comNom ? '<div class="note" style="margin-top:6px">Commanditaire : ' + esc(q.comNom) + '</div>' : '');
+    if (f.fiabilite) h += '<div class="note" style="margin-top:6px">' + esc(f.fiabilite) + '</div>';
+    if (f.mission && f.mission.jour && f.ouvert) h += '<div class="note" style="margin-top:6px">⌛ Acceptée au jour ' + f.mission.jour + ' : il reste ' + Math.max(0, 5 - (c.jour - f.mission.jour)) + ' jour(s) avant qu’il soit trop tard.</div>';
+    if (f.note) h += '<div class="note" style="margin:10px 0;white-space:pre-line">' + esc(f.note) + '</div>';
+    var lieuId = (q && q.lieu) || (f.mission && f.mission.v && f.mission.v.lieuId) || null;
+    if (lieuId && COF.Monde.lieu(c, lieuId)) h += '<button class="btn btn-bloc" data-cn="monde-lieu" data-id="' + lieuId + '">📍 ' + esc(COF.Monde.lieu(c, lieuId).nom) + ' sur la carte</button>';
+    ouvrir('🧵 ' + f.nom, h, { type: 'voir-fil', id: id });
   }
   /* Progression d'une quête : 📜 → 🔍 → 🌀 → ⚔️ → 🏁 */
   function htmlEtapes(q) {
@@ -621,6 +634,9 @@ COF.UI.Carnet = (function () {
   }
   function htmlExpedition(c) {
     var x = c.expedition, h = '';
+    /* voyages et donjons ne se montent plus à la main : ils naissent du récit */
+    if (!x) return '<div class="carte"><h2>🧭 Voyages et donjons</h2><div class="carte-corps"><div class="note">Les voyages et les explorations se lancent depuis le récit : « Partir pour… » dans les propositions de scène, ou en touchant un lieu sur la carte. Tout est préparé automatiquement (route, durée, terrain, salles).</div>' +
+      '<button class="btn btn-bloc" style="margin-top:10px" data-cn="onglet" data-v="lieux">🗺️ Ouvrir la carte</button></div></div>';
     if (!x) {
       var dernierLieu = COF.Monde && COF.Monde.ici(c) ? COF.Monde.ici(c).nom : (c.lieux[0] ? c.lieux[0].nom : '');
       /* Par défaut, le terrain du lieu actuel (donjon : ruines si on est en ville ou en plaine) */
@@ -1105,8 +1121,10 @@ COF.UI.Carnet = (function () {
           '<small>' + (q ? (et ? et.ic + ' ' + et.nom + ' → ' + (suiv ? suiv.ic + ' ' + suiv.nom : '🏆 quête accomplie') : '') : 'fil simple : il sera marqué résolu') + '</small></button>';
       }).join('') + '</div>';
     }
-    h += '<button class="btn btn-bloc cn-gros ok" data-cn="clore-ok">✅ Le héros a gardé la main<small>tension −1</small></button>' +
-      '<button class="btn btn-bloc cn-gros ko" data-cn="clore-ko">⚠️ La situation lui échappe<small>tension +1</small></button>' +
+    /* la tension n'est plus un choix : le récit la décide, et dit pourquoi */
+    var ap = COF.Tension && s ? COF.Tension.apercu(c, s) : null;
+    if (ap) h += '<div class="cn-changes" style="margin:8px 0"><div>' + esc(ap.texte) + '</div></div>';
+    h += '<button class="btn btn-plein btn-bloc cn-gros" data-cn="clore-ok">🏁 Clore la scène<small>' + (ap ? 'tension ' + c.tension + ' → ' + ap.apres : '') + '</small></button>' +
       '<div class="cn-grille" style="margin-top:10px"><button data-cn="jour" data-v="1">☀️ Jour suivant</button><button data-cn="aller" data-v="solo">🕰️ Passage du temps</button></div>';
     ouvrir('🏁 Clore la scène', h, { type: 'clore', choix: choix });
   }
@@ -1275,9 +1293,9 @@ COF.UI.Carnet = (function () {
   function sheetFinCombat() {
     var b = A.bilanArene();
     var h = '<div class="note" style="margin-bottom:10px">Adversaires : ' + b.total + ' — ' + b.ko + ' à terre, ' + b.fuite + ' en fuite, ' + b.rendu + ' rendu(s), ' + b.debout + ' encore debout.</div>' +
-      '<button class="btn btn-bloc cn-gros ok" data-cn="issue" data-v="victoire">🏆 Victoire<small>butin de la rencontre, tension −1</small></button>' +
+      '<button class="btn btn-bloc cn-gros ok" data-cn="issue" data-v="victoire">🏆 Victoire<small>butin de la rencontre</small></button>' +
       '<button class="btn btn-bloc cn-gros" data-cn="issue" data-v="fuite">🏃 Le héros s’échappe<small>pas de butin</small></button>' +
-      '<button class="btn btn-bloc cn-gros ko" data-cn="issue" data-v="defaite">💀 Le héros tombe<small>tension +1, l’oracle dira ce qu’il advient</small></button>';
+      '<button class="btn btn-bloc cn-gros ko" data-cn="issue" data-v="defaite">💀 Le héros tombe<small>l’oracle dira ce qu’il advient</small></button>';
     ouvrir('🏁 Fin du combat', h, { type: 'fin-combat' });
   }
 
@@ -1427,7 +1445,6 @@ COF.UI.Carnet = (function () {
       case 'creer': { K.creer(val('cn-titre-new'), (COF.Store.actif() || {}).id); onglet = 'scene'; rendre(); return; }
       case 'onglet': onglet = v; rendre.haut = true; rendre(); return;
       case 'menu': sheetMenu(); return;
-      case 'tension': c.tension = Math.max(1, Math.min(9, c.tension + (+v))); K.sauver(c); rendre(); return;
       case 'jouer': demarrerScene(c, val('cn-sc-titre'), val('cn-sc-attendu'), null); return;
       case 'jouer-prop': {
         var pr = COF.Directeur.propositions(c)[+v]; if (!pr) return;
@@ -1470,7 +1487,8 @@ COF.UI.Carnet = (function () {
       case 'suite': {
         var scS = K.sceneCourante(c); if (!scS || !scS.jeu) return;
         var notesS = COF.Conteur.conclure(c, scS);
-        K.clore(c, scS.jeu.fini === 'reussite', scS.jeu.resume);
+        var scF = K.clore(c, scS.jeu.fini === 'reussite', scS.jeu.resume);
+        if (scF && scF.tensionNote) notesS.push(scF.tensionNote);   /* la tension, décidée par la scène */
         c = K.actif();
         var derS = c.scenes[c.scenes.length - 1];
         notesS.forEach(function (n) { derS.entrees.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), quand: Date.now(), t: 'evt', txt: n, clot: true }); });
@@ -1539,7 +1557,8 @@ COF.UI.Carnet = (function () {
       case 'clore-fil': { clore.resume = val('cn-resume'); var ch0 = sheet.choix, idF = node.getAttribute('data-id'); ch0[idF] = !ch0[idF]; sheetClore(ch0); return; }
       case 'clore-ok': case 'clore-ko': {
         var choixF = (sheet && sheet.choix) || {}, notes = [];
-        K.clore(c, act === 'clore-ok', val('cn-resume'));
+        var scT = K.clore(c, true, val('cn-resume'));
+        if (scT && scT.tensionNote) notes.push(scT.tensionNote);
         c = K.actif();
         Object.keys(choixF).forEach(function (id) {
           if (!choixF[id]) return;
@@ -1655,6 +1674,7 @@ COF.UI.Carnet = (function () {
         demarrerScene(c, 'Conversation avec ' + xP.nom, '', { type: 'dialogue', dialogue: { pnjId: xP.id } }); return;
       }
       case 'bat-sortir': { COF.Echoppes.sortir(c); fermer(); onglet = 'scene'; rendre.haut = true; rendre(); return; }
+      case 'voir-fil': sheetVoirFil(node.getAttribute('data-id')); return;
       case 'chiffres': {
         var avant = immersif();
         try { localStorage.setItem('cof2.recit.chiffres', avant ? '1' : '0'); } catch (er) {}
@@ -1840,8 +1860,7 @@ COF.UI.Carnet = (function () {
         /* les suites : trophée, prisonnier, fuyard rancunier, cicatrice, surnom */
         if (COF.Combats && (v === 'victoire' || v === 'defaite')) COF.Combats.suites(c, v, bil ? bil.info : null, cb0.r).forEach(function (n) { K.ajouterEntree(c, { t: 'evt', txt: n }); });
         if (v === 'victoire') {
-          var bt = A.butinDe(cb0.r);
-          c.tension = Math.max(1, c.tension - 1);
+          var bt = A.butinDe(cb0.r);   /* la tension : comptée à la fin de la scène, avec le reste */
           if (cb0.source === 'salle' && c.expedition) { var sv = X.salleCourante(c.expedition); if (sv) sv.vaincue = true; }
           if (cb0.source === 'etape' && c.expedition) { var ev = c.expedition.etapes[c.expedition.etapes.length - 1]; if (ev) ev.vaincue = true; }
           finRencontre(c, 'Victoire');
@@ -1860,8 +1879,7 @@ COF.UI.Carnet = (function () {
           finRencontre(c, 'Le héros s’est échappé');
           K.ajouterEntree(c, { t: 'note', titre: 'Fuite', txt: 'Le héros parvient à s’échapper du combat.' });
         } else {
-          c.tension = Math.min(9, c.tension + 1);
-          var sort = COF.piocher(['capturé et emmené ailleurs', 'laissé pour mort (1 PV), dépouillé de sa bourse', 'sauvé in extremis par un tiers (un PNJ ? un inconnu ?)',
+          var sort =COF.piocher(['capturé et emmené ailleurs', 'laissé pour mort (1 PV), dépouillé de sa bourse', 'sauvé in extremis par un tiers (un PNJ ? un inconnu ?)',
             'abandonné : les ennemis ont eu ce qu’ils voulaient', 'réveillé plus tard, blessé, dans un lieu inconnu']);
           finRencontre(c, 'Défaite');
           K.ajouterEntree(c, { t: 'evt', txt: 'Le héros tombe… L’oracle suggère qu’il est ' + sort + '.' });
